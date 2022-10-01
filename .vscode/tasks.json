@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "dev",
+      "path": "packages/ui",
+      "problemMatcher": [],
+      "label": "npm: dev - packages/ui",
+      "isBackground": true
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "path": "packages/ui",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: build - packages/ui",
+      
+    },
+    {
+      "type": "npm",
+      "script": "serve",
+      "path": "packages/ui",
+      "problemMatcher": [],
+      "label": "npm: serve - packages/ui"
+    },
+    {
+      "type": "process",
+      "command": "cargo",
+      "args": ["run"],
+      "label": "cargo: run",
+      "problemMatcher": ["$rustc"],
+      "isBackground": true
+    },
+    {
+      "type": "process",
+      "command": "cargo",
+      "args": ["build"],
+      "group": "build",
+      "label": "cargo: build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "type": "process",
+      "command": "cargo",
+      "args": ["test"],
+      "group": "test",
+      "label": "cargo: test",
+      "problemMatcher": ["$rustc"]
+    }
+  ]
+}
