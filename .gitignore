@@ -1,6 +1,2 @@
-# Rust
 /target
-
-# TS
-node_modules
-dist
+dist/

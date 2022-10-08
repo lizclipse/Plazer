@@ -2,35 +2,11 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "dev",
-      "path": "packages/ui",
-      "problemMatcher": [],
-      "label": "npm: dev - packages/ui",
-      "isBackground": true
-    },
-    {
-      "type": "npm",
-      "script": "build",
-      "path": "packages/ui",
-      "group": "build",
-      "problemMatcher": [],
-      "label": "npm: build - packages/ui",
-      
-    },
-    {
-      "type": "npm",
-      "script": "serve",
-      "path": "packages/ui",
-      "problemMatcher": [],
-      "label": "npm: serve - packages/ui"
-    },
-    {
       "type": "process",
       "command": "cargo",
-      "args": ["run"],
+      "args": ["run", "--bin", "commonwealthity", "--", "${input:args}"],
       "label": "cargo: run",
-      "problemMatcher": ["$rustc"],
+      "problemMatcher": "$rustc",
       "isBackground": true
     },
     {
@@ -39,7 +15,8 @@
       "args": ["build"],
       "group": "build",
       "label": "cargo: build",
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": "$rustc",
+      "dependsOn": ["trunk: build"]
     },
     {
       "type": "process",
@@ -47,7 +24,41 @@
       "args": ["test"],
       "group": "test",
       "label": "cargo: test",
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": "$rustc"
+    },
+    {
+      "type": "process",
+      "command": "cargo",
+      "args": ["clean"],
+      "label": "cargo: clean",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "type": "process",
+      "command": "trunk",
+      "args": ["build"],
+      "label": "trunk: build",
+      "problemMatcher": []
+    },
+    {
+      "type": "process",
+      "command": "trunk",
+      "args": ["clean"],
+      "label": "trunk: clean",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "crate",
+      "type": "pickString",
+      "description": "Select project run",
+      "options": ["cli", "ui"]
+    },
+    {
+      "id": "args",
+      "type": "promptString",
+      "description": "Give args to include"
     }
   ]
 }
