@@ -35,6 +35,13 @@
     },
     {
       "type": "process",
+      "command": "cargo",
+      "args": ["fmt"],
+      "label": "cargo: fmt",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "type": "process",
       "command": "trunk",
       "args": ["build"],
       "label": "trunk: build",
