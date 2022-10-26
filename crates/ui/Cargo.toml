@@ -1,12 +1,12 @@
 [package]
-name = "commonwealthity_ui"
+name = "c11ity_ui"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-commonwealthity_data = { version = "0.1.0", path = "../data", features = ["client"] }
+c11ity_data = { version = "0.1.0", path = "../data", features = ["client"] }
 sycamore = { version = "0.8.2", features = ["hydrate", "ssr"] }
 sycamore-router = "0.8.0"
 

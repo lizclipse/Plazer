@@ -3,7 +3,9 @@ mod graph;
 use std::ops::Deref;
 
 pub use graph::*;
+use serde::{Serialize, Deserialize};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Account {
     id: String,
     name: Option<String>,
@@ -19,19 +21,20 @@ impl Account {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Post(Node);
 
 impl Post {
-    pub fn text_short(&self) -> Option<&str> {
-        self.text_short.as_ref().map(|x| &**x)
+    pub fn text_short(&self) -> Option<&String> {
+        self.text_short.as_ref()
     }
 
-    pub fn text_long(&self) -> Option<&str> {
-        self.text_long.as_ref().map(|x| &**x)
+    pub fn text_long(&self) -> Option<&String> {
+        self.text_long.as_ref()
     }
 
-    pub fn category(&self) -> Option<&str> {
-        self.label.as_ref().map(|x| &**x)
+    pub fn category(&self) -> Option<&String> {
+        self.label.as_ref()
     }
 }
 
@@ -49,6 +52,7 @@ impl Deref for Post {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Board(Node);
 
 impl From<Node> for Board {
@@ -65,6 +69,7 @@ impl Deref for Board {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Collection(Node);
 
 impl From<Node> for Collection {
