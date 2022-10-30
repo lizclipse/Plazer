@@ -44,8 +44,9 @@
       "type": "process",
       "command": "trunk",
       "args": ["build"],
+      "group": "build",
       "label": "trunk: build",
-      "problemMatcher": []
+      "problemMatcher": "$rustc"
     },
     {
       "type": "process",
@@ -53,7 +54,15 @@
       "args": ["clean"],
       "label": "trunk: clean",
       "problemMatcher": []
-    }
+    },
+    {
+      "type": "process",
+      "command": "trunk",
+      "args": ["serve"],
+      "label": "trunk: build",
+      "problemMatcher": "$rustc",
+      "isBackground": true
+    },
   ],
   "inputs": [
     {
