@@ -2,5 +2,6 @@
 
 members = [
     "crates/cli",
+    "crates/client",
     "crates/ui"
 ]

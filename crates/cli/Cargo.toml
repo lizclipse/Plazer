@@ -9,4 +9,4 @@ edition = "2021"
 actix = "0.13.0"
 actix-web = "4.2.1"
 actix-web-actors = "4.1.0"
-c11ity_data = { version = "0.1.0", path = "../data", features = ["server"] }
+c11ity_common = { version = "0.1.0", path = "../common", features = ["server"] }

@@ -1,9 +1,10 @@
+pub mod api;
 mod graph;
 
 use std::ops::Deref;
 
 pub use graph::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Account {
