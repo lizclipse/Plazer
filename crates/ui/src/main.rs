@@ -1,3 +1,5 @@
+mod api;
+
 use sycamore::prelude::*;
 
 #[component]

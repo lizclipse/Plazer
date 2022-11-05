@@ -7,8 +7,9 @@ edition = "2021"
 
 [dependencies]
 c11ity_data = { version = "0.1.0", path = "../data", features = ["client"] }
-sycamore = { version = "0.8.2", features = ["hydrate", "ssr"] }
+serde = "1.0.147"
+sycamore = { version = "0.8.2", features = ["hydrate", "serde"] }
 sycamore-router = "0.8.0"
 
 [features]
-hydrate = []
+server = ["sycamore/ssr"]
