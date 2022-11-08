@@ -10,6 +10,7 @@ struct Message<I> {
 }
 
 #[derive(Debug, From, Serialize, Deserialize)]
-pub enum Method {
-    Account(account::Method),
+pub enum Method<'a> {
+    #[serde(borrow)]
+    Account(account::Method<'a>),
 }

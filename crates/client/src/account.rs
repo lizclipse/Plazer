@@ -1,25 +1,19 @@
 use c11ity_common::api::account::{LoginReq, LoginRes, Method};
-use serde::Deserialize;
 
-use crate::{ClientInner, Result};
+use crate::{unary, ClientInner};
 
 pub struct Account<'a> {
-    client: &'a mut ClientInner,
+    client: &'a ClientInner,
 }
 
 impl<'a> Account<'a> {
-    pub(crate) fn new(client: &'a mut ClientInner) -> Account<'a> {
+    pub(crate) fn new(client: &'a ClientInner) -> Account<'a> {
         Self { client }
     }
 
-    pub async fn login(&mut self, req: LoginReq) -> Result<LoginRes> {
-        self.call(req.into()).await
-    }
-
-    async fn call<'de, T>(&mut self, req: Method) -> Result<T>
-    where
-        T: Deserialize<'de>,
-    {
-        self.client.call(req.into()).await
-    }
+    unary!(login, Account, Login, LoginReq, LoginRes);
 }
+
+// fn transform<Res>(data: Vec<u8>) -> bincode::Result<Response<Res>> where Res: Deserialize<'_> {
+//     bincode::deserialize(&data).map(|value| Response::new(data, value))
+// }
