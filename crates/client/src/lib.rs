@@ -1,16 +1,18 @@
 mod account;
+#[cfg(feature = "wasm")]
+pub mod wasm;
 
 use std::future::Future;
 use std::marker::PhantomData;
 use std::mem;
-use std::ops::{Deref, DerefMut};
 use std::pin::Pin;
 use std::task::{ready, Poll};
 use std::{fmt::Display, task::Context};
 
 use account::Account;
+use c11ity_common::{api, Container};
 use futures::channel::{mpsc, oneshot};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 type Result<T> = core::result::Result<T, ClientError>;
@@ -21,12 +23,12 @@ pub struct Client {
 }
 
 impl<'a> Client {
-    pub fn new() -> (Self, mpsc::Receiver<Handle>) {
+    pub fn new() -> (Self, mpsc::Receiver<Request>) {
         // A good default for now.
-        Self::new_with(32)
+        Self::new_sized(32)
     }
 
-    pub fn new_with(buffer: usize) -> (Self, mpsc::Receiver<Handle>) {
+    pub fn new_sized(buffer: usize) -> (Self, mpsc::Receiver<Request>) {
         let (tx, rx) = mpsc::channel(buffer);
         (
             Self {
@@ -47,22 +49,27 @@ macro_rules! unary {
         pub fn $name<'input>(
             &self,
             req: $input<'input>,
-        ) -> $crate::Unary<
-            c11ity_common::api::Method<'input>,
-            $output,
-            impl FnOnce(Vec<u8>) -> bincode::Result<$crate::Response<$output>>,
-        > {
+        ) -> impl std::future::Future<
+            Output = $crate::Result<c11ity_common::Container<$crate::RawResponse, $output>>,
+        > + 'input {
             self.client.unary(
                 c11ity_common::api::Method::$method(Method::$internal_method(req)),
-                |data: Vec<u8>| bincode::deserialize(&data).map(|value| $crate::Response::new(data, value)),
+                $crate::transform,
             )
         }
     };
 }
 
+fn transform<Res>(data: RawResponse) -> bincode::Result<Container<RawResponse, Res>>
+where
+    Res: Deserialize<'static>,
+{
+    bincode::deserialize(data.payload).map(|value| (data, value).into())
+}
+
 #[derive(Debug)]
 struct ClientInner {
-    chl: mpsc::Sender<Handle>,
+    chl: mpsc::Sender<Request>,
 }
 
 impl ClientInner {
@@ -70,15 +77,34 @@ impl ClientInner {
     where
         Req: Serialize + Unpin,
         Res: Unpin,
-        Trans: FnOnce(Vec<u8>) -> bincode::Result<Response<Res>>,
+        Trans: FnOnce(RawResponse) -> bincode::Result<Res>,
     {
         Unary::new(self.chl.clone(), inp, trans)
     }
 }
 
 #[derive(Debug)]
-pub enum Handle {
-    Unary(Vec<u8>, oneshot::Sender<Vec<u8>>),
+pub enum Request {
+    Unary(Vec<u8>, oneshot::Sender<RawResponse>),
+}
+
+type RawResponse = Container<Vec<u8>, api::Message<'static>>;
+
+#[derive(Debug, Error)]
+pub enum ClientError {
+    Closed,
+    InvalidRequest(bincode::Error),
+    InvalidResponse(bincode::Error),
+}
+
+impl Display for ClientError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClientError::Closed => write!(f, "channel closed"),
+            ClientError::InvalidRequest(_) => write!(f, "given an invalid request"),
+            ClientError::InvalidResponse(_) => write!(f, "received an invalid response"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -88,7 +114,7 @@ pub struct Unary<Req, Res, Trans> {
 }
 
 impl<Req, Res, Trans> Unary<Req, Res, Trans> {
-    fn new(chl: mpsc::Sender<Handle>, req: Req, trans: Trans) -> Self {
+    fn new(chl: mpsc::Sender<Request>, req: Req, trans: Trans) -> Self {
         Self {
             state: UnaryState::Initial { chl, req, trans },
             _res: Default::default(),
@@ -100,7 +126,7 @@ impl<Req, Res, Trans> Future for Unary<Req, Res, Trans>
 where
     Req: Serialize + Unpin,
     Res: Unpin,
-    Trans: (FnOnce(Vec<u8>) -> bincode::Result<Res>) + Unpin,
+    Trans: (FnOnce(RawResponse) -> bincode::Result<Res>) + Unpin,
 {
     type Output = Result<Res>;
 
@@ -142,14 +168,14 @@ where
                             _ => unreachable!(),
                         };
 
-                    match chl.try_send(Handle::Unary(req, tx)) {
+                    match chl.try_send(Request::Unary(req, tx)) {
                         Ok(_) => {
                             self.state = UnaryState::Receiving { rx, trans };
                         }
                         Err(err) => match err.is_full() {
                             true => {
                                 let (req, tx) = match err.into_inner() {
-                                    Handle::Unary(req, tx) => (req, tx),
+                                    Request::Unary(req, tx) => (req, tx),
                                 };
 
                                 // We need to do this to queue up the waker, but might as well
@@ -204,63 +230,20 @@ where
 #[derive(Debug)]
 enum UnaryState<Req, Trans> {
     Initial {
-        chl: mpsc::Sender<Handle>,
+        chl: mpsc::Sender<Request>,
         req: Req,
         trans: Trans,
     },
     Sending {
-        chl: mpsc::Sender<Handle>,
+        chl: mpsc::Sender<Request>,
         req: Vec<u8>,
-        tx: oneshot::Sender<Vec<u8>>,
-        rx: oneshot::Receiver<Vec<u8>>,
+        tx: oneshot::Sender<RawResponse>,
+        rx: oneshot::Receiver<RawResponse>,
         trans: Trans,
     },
     Receiving {
-        rx: oneshot::Receiver<Vec<u8>>,
+        rx: oneshot::Receiver<RawResponse>,
         trans: Trans,
     },
     Ended,
-}
-
-#[derive(Debug)]
-pub struct Response<T> {
-    _data: Vec<u8>,
-    value: T,
-}
-
-impl<T> Response<T> {
-    fn new(data: Vec<u8>, value: T) -> Self {
-        Self { _data: data, value }
-    }
-}
-
-impl<T> Deref for Response<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.value
-    }
-}
-
-impl<T> DerefMut for Response<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.value
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ClientError {
-    Closed,
-    InvalidRequest(bincode::Error),
-    InvalidResponse(bincode::Error),
-}
-
-impl Display for ClientError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ClientError::Closed => write!(f, "channel closed"),
-            ClientError::InvalidRequest(_) => write!(f, "given an invalid request"),
-            ClientError::InvalidResponse(_) => write!(f, "received an invalid response"),
-        }
-    }
 }

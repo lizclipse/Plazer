@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-c11ity_client = { version = "0.1.0", path = "../client" }
+c11ity_client = { version = "0.1.0", path = "../client", features = ["wasm"] }
 c11ity_common = { version = "0.1.0", path = "../common", features = ["client"] }
 serde = "1.0.147"
 sycamore = { version = "0.8.2", features = ["hydrate", "serde"] }

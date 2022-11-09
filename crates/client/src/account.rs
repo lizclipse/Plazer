@@ -13,7 +13,3 @@ impl<'a> Account<'a> {
 
     unary!(login, Account, Login, LoginReq, LoginRes);
 }
-
-// fn transform<Res>(data: Vec<u8>) -> bincode::Result<Response<Res>> where Res: Deserialize<'_> {
-//     bincode::deserialize(&data).map(|value| Response::new(data, value))
-// }

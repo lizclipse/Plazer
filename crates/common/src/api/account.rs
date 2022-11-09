@@ -8,9 +8,15 @@ pub enum Method<'a> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Account<'a> {
+    pub id: &'a str,
+    pub name: Option<&'a str>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LoginReq<'a> {
-    uname: &'a str,
-    pword: &'a str,
+    pub uname: &'a str,
+    pub pword: &'a str,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

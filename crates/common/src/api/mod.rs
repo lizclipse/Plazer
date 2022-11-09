@@ -4,9 +4,9 @@ use derive_more::From;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Message<I> {
-    nonce: u64,
-    payload: I,
+pub struct Message<'a> {
+    pub nonce: u64,
+    pub payload: &'a [u8],
 }
 
 #[derive(Debug, From, Serialize, Deserialize)]

@@ -14,7 +14,7 @@ pub struct Node {
     pub(crate) text_short: Option<String>,
     pub(crate) text_long: Option<String>,
     pub(crate) attachments: Vec<Attachment>,
-    pub(crate) label: Option<String>,
+    pub(crate) label: Option<String>, // post category
     pub(crate) tags: Option<HashSet<String>>,
 
     pub(crate) edge_in: Option<HashMap<Edge, u64>>,

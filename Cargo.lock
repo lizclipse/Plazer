@@ -381,6 +381,7 @@ dependencies = [
  "gloo-net",
  "serde",
  "thiserror",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
