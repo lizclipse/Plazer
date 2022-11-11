@@ -12,10 +12,11 @@ use std::{fmt::Display, task::Context};
 use account::Account;
 use c11ity_common::{api, Container};
 use futures::channel::{mpsc, oneshot};
+use gloo_net::websocket;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-type Result<T> = core::result::Result<T, ClientError>;
+pub type Result<T> = core::result::Result<T, ClientError>;
 
 #[derive(Debug)]
 pub struct Client {
@@ -50,7 +51,7 @@ macro_rules! unary {
             &self,
             req: $input<'input>,
         ) -> impl std::future::Future<
-            Output = $crate::Result<c11ity_common::Container<$crate::RawResponse, $output>>,
+            Output = $crate::Result<c11ity_common::Container<$crate::ChannelData, $output>>,
         > + 'input {
             self.client.unary(
                 c11ity_common::api::Method::$method(Method::$internal_method(req)),
@@ -60,7 +61,7 @@ macro_rules! unary {
     };
 }
 
-fn transform<Res>(data: RawResponse) -> bincode::Result<Container<RawResponse, Res>>
+fn transform<Res>(data: ChannelData) -> bincode::Result<Container<ChannelData, Res>>
 where
     Res: Deserialize<'static>,
 {
@@ -77,22 +78,24 @@ impl ClientInner {
     where
         Req: Serialize + Unpin,
         Res: Unpin,
-        Trans: FnOnce(RawResponse) -> bincode::Result<Res>,
+        Trans: FnOnce(ChannelData) -> bincode::Result<Res>,
     {
         Unary::new(self.chl.clone(), inp, trans)
     }
 }
 
+pub type ChannelData = Container<Vec<u8>, api::Message<'static>>;
+pub type ChannelResponse = Result<ChannelData>;
+
 #[derive(Debug)]
 pub enum Request {
-    Unary(Vec<u8>, oneshot::Sender<RawResponse>),
+    Unary(Vec<u8>, oneshot::Sender<ChannelResponse>),
 }
-
-type RawResponse = Container<Vec<u8>, api::Message<'static>>;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
     Closed,
+    SendError,
     InvalidRequest(bincode::Error),
     InvalidResponse(bincode::Error),
 }
@@ -101,9 +104,26 @@ impl Display for ClientError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ClientError::Closed => write!(f, "channel closed"),
+            ClientError::SendError => write!(f, "failed to send message"),
             ClientError::InvalidRequest(_) => write!(f, "given an invalid request"),
             ClientError::InvalidResponse(_) => write!(f, "received an invalid response"),
         }
+    }
+}
+
+#[cfg(feature = "wasm")]
+impl From<websocket::WebSocketError> for ClientError {
+    fn from(err: websocket::WebSocketError) -> Self {
+        match err {
+            websocket::WebSocketError::ConnectionClose(_) => ClientError::Closed,
+            _ => ClientError::SendError,
+        }
+    }
+}
+
+impl From<getrandom::Error> for ClientError {
+    fn from(_: getrandom::Error) -> Self {
+        ClientError::SendError
     }
 }
 
@@ -126,7 +146,7 @@ impl<Req, Res, Trans> Future for Unary<Req, Res, Trans>
 where
     Req: Serialize + Unpin,
     Res: Unpin,
-    Trans: (FnOnce(RawResponse) -> bincode::Result<Res>) + Unpin,
+    Trans: (FnOnce(ChannelData) -> bincode::Result<Res>) + Unpin,
 {
     type Output = Result<Res>;
 
@@ -201,7 +221,10 @@ where
                 }
                 UnaryState::Receiving { rx, .. } => {
                     let data = match ready!(Pin::new(rx).poll(cx)) {
-                        Ok(data) => data,
+                        Ok(data) => match data {
+                            Ok(data) => data,
+                            Err(err) => break Poll::Ready(Err(err)),
+                        },
                         Err(_) => break Poll::Ready(Err(ClientError::Closed)),
                     };
 
@@ -237,12 +260,12 @@ enum UnaryState<Req, Trans> {
     Sending {
         chl: mpsc::Sender<Request>,
         req: Vec<u8>,
-        tx: oneshot::Sender<RawResponse>,
-        rx: oneshot::Receiver<RawResponse>,
+        tx: oneshot::Sender<ChannelResponse>,
+        rx: oneshot::Receiver<ChannelResponse>,
         trans: Trans,
     },
     Receiving {
-        rx: oneshot::Receiver<RawResponse>,
+        rx: oneshot::Receiver<ChannelResponse>,
         trans: Trans,
     },
     Ended,
