@@ -4,13 +4,12 @@ use derive_more::From;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Message<'a> {
+pub struct Message<T> {
     pub nonce: u64,
-    pub payload: &'a [u8],
+    pub payload: T,
 }
 
 #[derive(Debug, From, Serialize, Deserialize)]
-pub enum Method<'a> {
-    #[serde(borrow)]
-    Account(account::Method<'a>),
+pub enum Method {
+    Account(account::Method),
 }

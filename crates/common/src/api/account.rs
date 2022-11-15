@@ -2,21 +2,20 @@ use derive_more::From;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, From, Serialize, Deserialize)]
-pub enum Method<'a> {
-    #[serde(borrow)]
-    Login(LoginReq<'a>),
+pub enum Method {
+    Login(LoginReq),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Account<'a> {
-    pub id: &'a str,
-    pub name: Option<&'a str>,
+pub struct Account {
+    pub id: String,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LoginReq<'a> {
-    pub uname: &'a str,
-    pub pword: &'a str,
+pub struct LoginReq {
+    pub uname: String,
+    pub pword: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

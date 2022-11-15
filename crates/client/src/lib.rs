@@ -23,7 +23,7 @@ pub struct Client {
     inner: ClientInner,
 }
 
-impl<'a> Client {
+impl Client {
     pub fn new() -> (Self, mpsc::Receiver<Request>) {
         // A good default for now.
         Self::new_sized(32)
@@ -47,12 +47,12 @@ impl<'a> Client {
 #[macro_export]
 macro_rules! unary {
     ($name: ident, $method: ident, $internal_method: ident, $input: ident, $output: ident) => {
-        pub fn $name<'input>(
+        pub fn $name(
             &self,
-            req: $input<'input>,
+            req: $input,
         ) -> impl std::future::Future<
             Output = $crate::Result<c11ity_common::Container<$crate::ChannelData, $output>>,
-        > + 'input {
+        > {
             self.client.unary(
                 c11ity_common::api::Method::$method(Method::$internal_method(req)),
                 $crate::transform,
@@ -84,7 +84,7 @@ impl ClientInner {
     }
 }
 
-pub type ChannelData = Container<Vec<u8>, api::Message<'static>>;
+pub type ChannelData = Container<Vec<u8>, api::Message<&'static [u8]>>;
 pub type ChannelResponse = Result<ChannelData>;
 
 #[derive(Debug)]
