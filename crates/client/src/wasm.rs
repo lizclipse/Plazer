@@ -1,29 +1,117 @@
 use std::collections::HashMap;
 
-use c11ity_common::api::Message;
-use futures::{channel::oneshot, select, stream::FusedStream, Sink, SinkExt, Stream, StreamExt};
-use getrandom::getrandom;
+use async_trait::async_trait;
+use c11ity_common::{api, Container};
+use futures::{
+    channel::{mpsc, oneshot},
+    select,
+    stream::FusedStream,
+    Sink, SinkExt, Stream, StreamExt,
+};
 use gloo_net::websocket::{self, futures::WebSocket};
+use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
 
-use crate::{ChannelResponse, Client, ClientError, Request};
+use crate::{rand_u64, Account, Client, ClientError, Result};
 
 /// Creates a new client backed by a WASM-based WebSocket.
-pub fn client(ws: WebSocket) -> Client {
-    let (cl, rx) = Client::new();
+pub fn client(ws: WebSocket) -> impl Client {
+    let (cl, rx) = WsClient::new();
     start(ws, rx);
     cl
 }
 
 /// Creates a new client backed by a WASM-based WebSocket with a given
 /// size internal message buffer.
-pub fn client_sized(ws: WebSocket, buffer: usize) -> Client {
-    let (cl, rx) = Client::new_sized(buffer);
+pub fn client_sized(ws: WebSocket, buffer: usize) -> impl Client {
+    let (cl, rx) = WsClient::new_sized(buffer);
     start(ws, rx);
     cl
 }
 
-type WsMessage = Result<websocket::Message, websocket::WebSocketError>;
+#[derive(Debug)]
+struct WsClient {
+    inner: ClientInner,
+}
+
+impl WsClient {
+    fn new() -> (Self, mpsc::Receiver<Request>) {
+        // A good default for now.
+        Self::new_sized(32)
+    }
+
+    fn new_sized(buffer: usize) -> (Self, mpsc::Receiver<Request>) {
+        let (tx, rx) = mpsc::channel(buffer);
+        (
+            Self {
+                inner: ClientInner { chl: tx },
+            },
+            rx,
+        )
+    }
+}
+
+impl Client for WsClient {
+    type Account<'a> = WsAccount<'a>;
+    fn account<'a>(&'a self) -> Self::Account<'a> {
+        WsAccount { inner: &self.inner }
+    }
+}
+
+struct WsAccount<'a> {
+    inner: &'a ClientInner,
+}
+
+#[async_trait]
+impl<'a> Account for WsAccount<'a> {
+    type LoginRes = RequestOutput<api::account::LoginRes<'static>>;
+    async fn login<'b>(&self, req: api::account::LoginReq<'b>) -> Result<Self::LoginRes> {
+        self.inner
+            .unary(api::Method::Account(api::account::Method::Login(req)))
+            .await
+    }
+}
+
+#[derive(Debug)]
+struct ClientInner {
+    chl: mpsc::Sender<Request>,
+}
+
+impl ClientInner {
+    async fn unary<'a, Res>(&self, req: api::Method<'a>) -> Result<RequestOutput<Res>>
+    where
+        Res: Deserialize<'static>,
+    {
+        let mut chl = self.chl.clone();
+
+        // Prepare the request
+        let nonce = rand_u64()?;
+        let req: api::Message<api::Method> = api::Message {
+            nonce,
+            payload: req,
+        };
+        let req = bincode::serialize(&req).map_err(ClientError::InvalidRequest)?;
+
+        // Send it down the channel
+        let (tx, rx) = oneshot::channel();
+        chl.send(Request::Unary(nonce, req, tx)).await?;
+
+        // Wait and handle response
+        let data = rx.await??;
+        let res = bincode::deserialize(data.payload).map_err(ClientError::InvalidResponse)?;
+        Ok((data, res).into())
+    }
+}
+
+#[derive(Debug)]
+pub enum Request {
+    Unary(u64, Vec<u8>, oneshot::Sender<ChannelResponse>),
+}
+
+type ChannelData = Container<Vec<u8>, api::Message<&'static [u8]>>;
+type ChannelResponse = Result<ChannelData>;
+type RequestOutput<T> = Container<ChannelData, T>;
+type WsMessage = core::result::Result<websocket::Message, websocket::WebSocketError>;
 
 #[derive(Debug)]
 enum Item {
@@ -37,7 +125,7 @@ enum Req {
 }
 
 #[derive(Debug)]
-struct WsClient<W> {
+struct WsHandle<W> {
     ws: W,
     pending: HashMap<u64, Req>,
 }
@@ -47,7 +135,7 @@ fn start(ws: WebSocket, mut reqs: impl Stream<Item = Request> + FusedStream + Un
         let (write, read) = ws.split();
         let mut read = read.fuse();
 
-        let mut client = WsClient::new(write);
+        let mut handle = WsHandle::new(write);
 
         loop {
             let item = select! {
@@ -58,15 +146,15 @@ fn start(ws: WebSocket, mut reqs: impl Stream<Item = Request> + FusedStream + Un
 
             if let Some(item) = item {
                 match item {
-                    Item::Req(req) => client.process_req(req).await,
-                    Item::Msg(msg) => client.process_msg(msg).await,
+                    Item::Req(req) => handle.process_req(req).await,
+                    Item::Msg(msg) => handle.process_msg(msg).await,
                 }
             }
         }
     });
 }
 
-impl<W> WsClient<W>
+impl<W> WsHandle<W>
 where
     W: Sink<websocket::Message, Error = websocket::WebSocketError> + Unpin,
 {
@@ -79,31 +167,20 @@ where
 
     async fn process_req(&mut self, req: Request) {
         match req {
-            Request::Unary(data, tx) => match self.req_unary(data).await {
-                Ok(nonce) => {
-                    self.pending.insert(nonce, Req::Unary(tx));
+            Request::Unary(nonce, data, tx) => {
+                match self.ws.send(websocket::Message::Bytes(data)).await {
+                    Ok(_) => {
+                        self.pending.insert(nonce, Req::Unary(tx));
+                    }
+                    Err(err) => {
+                        let _ = tx.send(Err(err.into()));
+                    }
                 }
-                Err(err) => {
-                    let _ = tx.send(Err(err));
-                }
-            },
+            }
         }
-    }
-
-    async fn req_unary(&mut self, data: Vec<u8>) -> crate::Result<u64> {
-        let nonce = rand_u64()?;
-        
-
-        Ok(0)
     }
 
     async fn process_msg(&mut self, msg: WsMessage) {
         todo!()
     }
-}
-
-fn rand_u64() -> Result<u64, getrandom::Error> {
-    let mut buf = [0u8; 8];
-    getrandom(&mut buf)?;
-    Ok(u64::from_le_bytes(buf))
 }

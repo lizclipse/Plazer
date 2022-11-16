@@ -13,3 +13,6 @@ serde_with = "2.0.1"
 [features]
 server = []
 client = []
+
+[dev-dependencies]
+bincode = "1.3.3"

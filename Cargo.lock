@@ -284,6 +284,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e805d94e6b5001b651426cf4cd446b1ab5f319d27bab5c644f61de0a804360c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -375,6 +386,7 @@ dependencies = [
 name = "c11ity_client"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bincode",
  "c11ity_common",
  "futures",
@@ -389,6 +401,7 @@ dependencies = [
 name = "c11ity_common"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "derive_more",
  "serde",
  "serde_with",
