@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, mem};
 
 use async_trait::async_trait;
 use c11ity_common::{api, Container};
@@ -173,6 +173,9 @@ where
                         self.pending.insert(nonce, Req::Unary(tx));
                     }
                     Err(err) => {
+                        // Nothing we can do about a failed send.
+                        // If it fails it means the receiver was dropped anyway, so it doesn't
+                        // actually matter.
                         let _ = tx.send(Err(err.into()));
                     }
                 }
@@ -182,5 +185,19 @@ where
 
     async fn process_msg(&mut self, msg: WsMessage) {
         todo!()
+    }
+}
+
+impl<W> Drop for WsHandle<W> {
+    fn drop(&mut self) {
+        // We need to own the senders, so just replace in an empty map.
+        for (_, req) in mem::replace(&mut self.pending, HashMap::new()) {
+            match req {
+                Req::Unary(tx) => {
+                    // Again, nothing we can do if this fails.
+                    let _ = tx.send(Err(ClientError::Closed));
+                }
+            }
+        }
     }
 }
