@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use c11ity_common::api;
 use futures::channel::{mpsc, oneshot};
 use getrandom::getrandom;
+#[cfg(feature = "wasm")]
 use gloo_net::websocket;
 use thiserror::Error;
 
