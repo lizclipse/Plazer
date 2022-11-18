@@ -1,7 +1,13 @@
-use std::{collections::HashMap, mem};
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 use async_trait::async_trait;
-use c11ity_common::{api, Container};
+use c11ity_common::api;
 use futures::{
     channel::{mpsc, oneshot},
     select,
@@ -9,7 +15,8 @@ use futures::{
     Sink, SinkExt, Stream, StreamExt,
 };
 use gloo_net::websocket::{self, futures::WebSocket};
-use serde::Deserialize;
+use ouroboros::self_referencing;
+use serde::de::DeserializeOwned;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::{rand_u64, Account, Client, ClientError, Result};
@@ -17,7 +24,7 @@ use crate::{rand_u64, Account, Client, ClientError, Result};
 /// Creates a new client backed by a WASM-based WebSocket.
 pub fn client(ws: WebSocket) -> impl Client {
     let (cl, rx) = WsClient::new();
-    start(ws, rx);
+    start(ws, cl.connected.clone(), rx);
     cl
 }
 
@@ -25,13 +32,14 @@ pub fn client(ws: WebSocket) -> impl Client {
 /// size internal message buffer.
 pub fn client_sized(ws: WebSocket, buffer: usize) -> impl Client {
     let (cl, rx) = WsClient::new_sized(buffer);
-    start(ws, rx);
+    start(ws, cl.connected.clone(), rx);
     cl
 }
 
 #[derive(Debug)]
 struct WsClient {
     inner: ClientInner,
+    connected: Arc<AtomicBool>,
 }
 
 impl WsClient {
@@ -45,6 +53,7 @@ impl WsClient {
         (
             Self {
                 inner: ClientInner { chl: tx },
+                connected: Arc::new(AtomicBool::new(true)),
             },
             rx,
         )
@@ -52,6 +61,10 @@ impl WsClient {
 }
 
 impl Client for WsClient {
+    fn connected(&self) -> bool {
+        self.connected.load(Ordering::Acquire)
+    }
+
     type Account<'a> = WsAccount<'a>;
     fn account<'a>(&'a self) -> Self::Account<'a> {
         WsAccount { inner: &self.inner }
@@ -64,7 +77,7 @@ struct WsAccount<'a> {
 
 #[async_trait]
 impl<'a> Account for WsAccount<'a> {
-    type LoginRes = RequestOutput<api::account::LoginRes<'static>>;
+    type LoginRes = api::account::LoginRes;
     async fn login<'b>(&self, req: api::account::LoginReq<'b>) -> Result<Self::LoginRes> {
         self.inner
             .unary(api::Method::Account(api::account::Method::Login(req)))
@@ -78,9 +91,9 @@ struct ClientInner {
 }
 
 impl ClientInner {
-    async fn unary<'a, Res>(&self, req: api::Method<'a>) -> Result<RequestOutput<Res>>
+    async fn unary<'a, Res>(&self, req: api::Method<'a>) -> Result<Res>
     where
-        Res: Deserialize<'static>,
+        Res: DeserializeOwned,
     {
         let mut chl = self.chl.clone();
 
@@ -98,19 +111,26 @@ impl ClientInner {
 
         // Wait and handle response
         let data = rx.await??;
-        let res = bincode::deserialize(data.payload).map_err(ClientError::InvalidResponse)?;
-        Ok((data, res).into())
+        Ok(bincode::deserialize(data.borrow_message().payload)
+            .map_err(ClientError::InvalidResponse)?)
     }
 }
 
 #[derive(Debug)]
-pub enum Request {
+enum Request {
     Unary(u64, Vec<u8>, oneshot::Sender<ChannelResponse>),
 }
 
-type ChannelData = Container<Vec<u8>, api::Message<&'static [u8]>>;
+#[self_referencing]
+#[derive(Debug)]
+struct ChannelData {
+    data: Vec<u8>,
+    #[borrows(data)]
+    #[covariant]
+    message: api::Message<&'this [u8]>,
+}
+
 type ChannelResponse = Result<ChannelData>;
-type RequestOutput<T> = Container<ChannelData, T>;
 type WsMessage = core::result::Result<websocket::Message, websocket::WebSocketError>;
 
 #[derive(Debug)]
@@ -128,16 +148,21 @@ enum Req {
 struct WsHandle<W> {
     ws: W,
     pending: HashMap<u64, Req>,
+    connected: Arc<AtomicBool>,
 }
 
-fn start(ws: WebSocket, mut reqs: impl Stream<Item = Request> + FusedStream + Unpin + 'static) {
+fn start(
+    ws: WebSocket,
+    connected: Arc<AtomicBool>,
+    mut reqs: impl Stream<Item = Request> + FusedStream + Unpin + 'static,
+) {
     spawn_local(async move {
         let (write, read) = ws.split();
         let mut read = read.fuse();
 
-        let mut handle = WsHandle::new(write);
+        let mut handle = WsHandle::new(write, connected);
 
-        loop {
+        while handle.connected.load(Ordering::Acquire) {
             let item = select! {
                 msg = read.next() => msg.map(Item::Msg),
                 req = reqs.next() => req.map(Item::Req),
@@ -158,10 +183,11 @@ impl<W> WsHandle<W>
 where
     W: Sink<websocket::Message, Error = websocket::WebSocketError> + Unpin,
 {
-    fn new(ws: W) -> Self {
+    fn new(ws: W, connected: Arc<AtomicBool>) -> Self {
         Self {
             ws,
             pending: HashMap::new(),
+            connected,
         }
     }
 
@@ -184,20 +210,45 @@ where
     }
 
     async fn process_msg(&mut self, msg: WsMessage) {
-        todo!()
-    }
-}
-
-impl<W> Drop for WsHandle<W> {
-    fn drop(&mut self) {
-        // We need to own the senders, so just replace in an empty map.
-        for (_, req) in mem::replace(&mut self.pending, HashMap::new()) {
-            match req {
-                Req::Unary(tx) => {
-                    // Again, nothing we can do if this fails.
-                    let _ = tx.send(Err(ClientError::Closed));
-                }
+        let msg = match msg {
+            Ok(msg) => msg,
+            Err(err) => {
+                log::warn!("WebSocket closed {:?}", err);
+                self.connected.store(false, Ordering::Release);
+                return;
             }
-        }
+        };
+
+        let data = match msg {
+            websocket::Message::Bytes(msg) => msg,
+            websocket::Message::Text(msg) => {
+                log::warn!("Dropped text message {:?}", msg);
+                return;
+            }
+        };
+
+        let msg = match ChannelData::try_new(data, |data| bincode::deserialize(data)) {
+            Ok(msg) => msg,
+            Err(err) => {
+                log::error!("Unable to deserialise message {:?}", err);
+                return;
+            }
+        };
+
+        let nonce = msg.borrow_message().nonce;
+        let req = match self.pending.remove(&nonce) {
+            Some(req) => req,
+            None => {
+                log::error!("Received unknown message ID {}", nonce);
+                return;
+            }
+        };
+
+        match req {
+            Req::Unary(tx) => {
+                // Nothing we can do about a failed send
+                let _ = tx.send(Ok(msg));
+            }
+        };
     }
 }

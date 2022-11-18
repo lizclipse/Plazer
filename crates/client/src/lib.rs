@@ -2,7 +2,7 @@
 pub mod wasm;
 
 use std::fmt::Display;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 // use account::Account;
 use async_trait::async_trait;
@@ -20,6 +20,8 @@ pub fn rand_u64() -> core::result::Result<u64, getrandom::Error> {
 }
 
 pub trait Client {
+    fn connected(&self) -> bool;
+
     type Account<'a>: Account
     where
         Self: 'a;
@@ -28,7 +30,7 @@ pub trait Client {
 
 #[async_trait]
 pub trait Account {
-    type LoginRes: Deref<Target = api::account::LoginRes<'static>> + DerefMut;
+    type LoginRes: Deref<Target = api::account::LoginRes>;
     async fn login<'a>(&self, req: api::account::LoginReq<'a>) -> Result<Self::LoginRes>;
 }
 
