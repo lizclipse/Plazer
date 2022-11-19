@@ -104,8 +104,8 @@ impl Node {
             None => return,
         };
 
-        // UNDERFLOW: We always start at 1, and remove any entries that hit 0,
-        // so no entry will ever be 0 at this point.
+        // !UNDERFLOW: We always start at 1, and remove any entries that hit 0,
+        // so no entry will ever be 0 before this point.
         *entry = *entry - 1;
 
         if *entry == 0 {

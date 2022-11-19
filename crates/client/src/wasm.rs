@@ -172,7 +172,7 @@ fn start(
             if let Some(item) = item {
                 match item {
                     Item::Req(req) => handle.process_req(req).await,
-                    Item::Msg(msg) => handle.process_msg(msg).await,
+                    Item::Msg(msg) => handle.process_msg(msg),
                 }
             }
         }
@@ -209,7 +209,7 @@ where
         }
     }
 
-    async fn process_msg(&mut self, msg: WsMessage) {
+    fn process_msg(&mut self, msg: WsMessage) {
         let msg = match msg {
             Ok(msg) => msg,
             Err(err) => {
