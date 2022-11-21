@@ -8,8 +8,12 @@ edition = "2021"
 [dependencies]
 c11ity_client = { version = "0.1.0", path = "../client", features = ["wasm"] }
 c11ity_common = { version = "0.1.0", path = "../common", features = ["client"] }
+console_error_panic_hook = "0.1.7"
+console_log = "0.2.0"
+gloo-net = "0.2.4"
+log = "0.4.17"
 serde = "1.0.147"
-sycamore = { version = "0.8.2", features = ["hydrate", "serde"] }
+sycamore = { version = "0.8.2", features = ["hydrate", "serde", "suspense"] }
 sycamore-router = "0.8.0"
 
 [features]

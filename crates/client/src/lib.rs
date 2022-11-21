@@ -2,7 +2,6 @@
 pub mod wasm;
 
 use std::fmt::Display;
-use std::ops::Deref;
 
 // use account::Account;
 use async_trait::async_trait;

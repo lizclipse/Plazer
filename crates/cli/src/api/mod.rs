@@ -2,10 +2,11 @@ mod account;
 
 use c11ity_client::{Account, Client};
 use c11ity_common::api;
+use tracing::instrument;
 
 use self::account::DbAccount;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Db;
 
 impl Db {
@@ -26,6 +27,7 @@ impl DbClient {
         Self
     }
 
+    #[instrument]
     pub async fn dispatch(&self, nonce: u64, req: api::Method<'_>) -> bincode::Result<Vec<u8>> {
         // Method calls are safe to unwrap here because the ClientError result is purely for
         // client-side networking issues, which can't happen here.

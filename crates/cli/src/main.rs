@@ -10,9 +10,12 @@ use axum::{
     Extension, Router,
 };
 use c11ity_common::api::{Message, Method};
+use tracing::{instrument, Level};
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
+
     let db = Db::new();
 
     let app = Router::new()
@@ -29,6 +32,7 @@ async fn handler(ws: WebSocketUpgrade, Extension(db): Extension<Db>) -> Response
     ws.on_upgrade(|socket| handle_socket(socket, db))
 }
 
+#[instrument(skip(socket))]
 async fn handle_socket(mut socket: WebSocket, db: Db) {
     let db = db.client();
     while let Some(msg) = socket.recv().await {

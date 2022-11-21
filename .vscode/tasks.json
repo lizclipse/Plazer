@@ -4,7 +4,7 @@
     {
       "type": "process",
       "command": "cargo",
-      "args": ["run", "--bin", "commonwealthity", "--", "${input:args}"],
+      "args": ["run", "--bin", "c11ity", "--", "${input:args}"],
       "label": "cargo: run",
       "problemMatcher": "$rustc",
       "isBackground": true
@@ -59,7 +59,7 @@
       "type": "process",
       "command": "trunk",
       "args": ["serve"],
-      "label": "trunk: build",
+      "label": "trunk: serve",
       "problemMatcher": "$rustc",
       "isBackground": true
     },
