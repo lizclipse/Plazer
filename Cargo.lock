@@ -592,6 +592,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "bincode",
  "c11ity_client",
  "c11ity_common",
  "surrealdb",

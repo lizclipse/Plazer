@@ -77,8 +77,7 @@ struct WsAccount<'a> {
 
 #[async_trait]
 impl<'a> Account for WsAccount<'a> {
-    type LoginRes = api::account::LoginRes;
-    async fn login<'b>(&self, req: api::account::LoginReq<'b>) -> Result<Self::LoginRes> {
+    async fn login<'b>(&self, req: api::account::LoginReq<'b>) -> Result<api::account::LoginRes> {
         self.inner
             .unary(api::Method::Account(api::account::Method::Login(req)))
             .await

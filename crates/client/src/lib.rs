@@ -30,8 +30,7 @@ pub trait Client {
 
 #[async_trait]
 pub trait Account {
-    type LoginRes: Deref<Target = api::account::LoginRes>;
-    async fn login<'a>(&self, req: api::account::LoginReq<'a>) -> Result<Self::LoginRes>;
+    async fn login<'a>(&self, req: api::account::LoginReq<'a>) -> Result<api::account::LoginRes>;
 }
 
 pub type Result<T> = core::result::Result<T, ClientError>;

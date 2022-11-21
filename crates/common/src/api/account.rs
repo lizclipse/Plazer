@@ -15,22 +15,10 @@ pub struct LoginReq<'a> {
     pub pword: &'a str,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum LoginRes {
-    Success(Account),
-    Failed,
-}
+pub type LoginRes = Result<Account, ()>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Account {
     pub id: String,
     pub name: Option<String>,
-}
-
-impl Deref for LoginRes {
-    type Target = Self;
-
-    fn deref(&self) -> &Self::Target {
-        &self
-    }
 }

@@ -5,11 +5,15 @@ use c11ity_common::api::account::{LoginReq, LoginRes};
 #[derive(Debug)]
 pub struct DbAccount;
 
+impl DbAccount {
+    pub fn new() -> Self {
+        DbAccount
+    }
+}
+
 #[async_trait]
 impl Account for DbAccount {
-    type LoginRes = LoginRes;
-
-    async fn login<'a>(&self, req: LoginReq<'a>) -> Result<Self::LoginRes> {
+    async fn login<'a>(&self, req: LoginReq<'a>) -> Result<LoginRes> {
         todo!()
     }
 }
