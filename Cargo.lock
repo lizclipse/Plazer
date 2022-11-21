@@ -595,8 +595,10 @@ dependencies = [
  "bincode",
  "c11ity_client",
  "c11ity_common",
+ "serde",
  "surrealdb",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

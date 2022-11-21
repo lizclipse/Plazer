@@ -5,22 +5,27 @@ use c11ity_common::api;
 
 use self::account::DbAccount;
 
-#[derive(Debug)]
-pub struct DbClient;
+#[derive(Clone)]
+pub struct Db;
 
-impl Client for DbClient {
-    fn connected(&self) -> bool {
-        todo!()
+impl Db {
+    pub fn new() -> Self {
+        Self
     }
 
-    type Account<'a> = DbAccount;
-
-    fn account<'a>(&'a self) -> Self::Account<'a> {
-        DbAccount::new()
+    pub fn client(&self) -> DbClient {
+        DbClient::new()
     }
 }
 
+#[derive(Debug)]
+pub struct DbClient;
+
 impl DbClient {
+    fn new() -> Self {
+        Self
+    }
+
     pub async fn dispatch(&self, nonce: u64, req: api::Method<'_>) -> bincode::Result<Vec<u8>> {
         // Method calls are safe to unwrap here because the ClientError result is purely for
         // client-side networking issues, which can't happen here.
@@ -35,5 +40,17 @@ impl DbClient {
                 }
             }
         }
+    }
+}
+
+impl Client for DbClient {
+    fn connected(&self) -> bool {
+        true
+    }
+
+    type Account<'a> = DbAccount;
+
+    fn account<'a>(&'a self) -> Self::Account<'a> {
+        DbAccount::new()
     }
 }
