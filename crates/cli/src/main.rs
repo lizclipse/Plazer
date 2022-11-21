@@ -1,3 +1,5 @@
+mod api;
+
 use std::net::SocketAddr;
 
 use axum::{
