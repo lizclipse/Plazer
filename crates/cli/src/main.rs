@@ -2,7 +2,6 @@ mod db;
 
 use std::net::SocketAddr;
 
-use db::Db;
 use axum::{
     extract::ws::{self, WebSocket, WebSocketUpgrade},
     response::Response,
@@ -10,11 +9,14 @@ use axum::{
     Extension, Router,
 };
 use c11ity_common::api::{Message, Method};
+use db::Db;
 use tracing::{instrument, Level};
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .init();
 
     let db = Db::new();
 
@@ -32,6 +34,11 @@ async fn handler(ws: WebSocketUpgrade, Extension(db): Extension<Db>) -> Response
     ws.on_upgrade(|socket| handle_socket(socket, db))
 }
 
+enum Transport {
+    Binary,
+    Text,
+}
+
 #[instrument(skip(socket))]
 async fn handle_socket(mut socket: WebSocket, db: Db) {
     let db = db.client();
@@ -43,31 +50,47 @@ async fn handle_socket(mut socket: WebSocket, db: Db) {
             return;
         };
 
-        let msg = match msg {
-            ws::Message::Binary(msg) => msg,
+        let (Message { nonce, payload }, transport): (Message<Method>, Transport) = match &msg {
+            ws::Message::Binary(data) => match bincode::deserialize(data) {
+                Ok(msg) => (msg, Transport::Binary),
+                Err(err) => {
+                    tracing::warn!("Failed to decode message {:?}", err);
+                    continue;
+                }
+            },
+            ws::Message::Text(data) => match serde_json::from_str(data) {
+                Ok(msg) => (msg, Transport::Text),
+                Err(err) => {
+                    tracing::warn!("Failed to parse message {:?}", err);
+                    continue;
+                }
+            },
             msg => {
                 tracing::warn!("Unhandled message type {:?}", msg);
                 continue;
             }
         };
 
-        let Message { nonce, payload }: Message<Method> = match bincode::deserialize(&msg) {
-            Ok(msg) => msg,
-            Err(err) => {
-                tracing::warn!("Failed to parse message {:?}", err);
-                continue;
-            }
+        let res = db.dispatch(nonce, payload).await;
+
+        let res = match transport {
+            Transport::Binary => match bincode::serialize(&res) {
+                Ok(res) => socket.send(ws::Message::Binary(res)).await,
+                Err(err) => {
+                    tracing::warn!("Failed to encode message {:?}", err);
+                    continue;
+                }
+            },
+            Transport::Text => match serde_json::to_string(&res) {
+                Ok(res) => socket.send(ws::Message::Text(res)).await,
+                Err(err) => {
+                    tracing::warn!("Failed to encode message {:?}", err);
+                    continue;
+                }
+            },
         };
 
-        let res = match bincode::serialize(&db.dispatch(nonce, payload).await) {
-            Ok(res) => res,
-            Err(err) => {
-                tracing::warn!("Failed to encode message {:?}", err);
-                continue;
-            }
-        };
-
-        if socket.send(ws::Message::Binary(res)).await.is_err() {
+        if res.is_err() {
             // Client disconnected
             return;
         }

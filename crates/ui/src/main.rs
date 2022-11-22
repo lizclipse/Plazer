@@ -33,13 +33,13 @@ fn App<G: Html>(cx: Scope) -> View<G> {
             "Hello World!"
         }
         (match id.get().as_ref().as_ref().map(|id| id.to_owned()) {
-            Some(id) => view! { cx, 
+            Some(id) => view! { cx,
                 p { "ID: " (id) }
             },
             None => view! { cx, }
         })
         (match name.get().as_ref().as_ref().map(|name| name.to_owned()) {
-            Some(name) => view! { cx, 
+            Some(name) => view! { cx,
                 p { "Name: " (name) }
             },
             None => view! { cx, }

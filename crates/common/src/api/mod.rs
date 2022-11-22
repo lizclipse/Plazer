@@ -17,7 +17,7 @@ pub enum Method<'a> {
 
 #[derive(Debug, From, Serialize, Deserialize)]
 pub enum Response {
-    Account(account::Response)
+    Account(account::Response),
 }
 
 #[cfg(test)]
