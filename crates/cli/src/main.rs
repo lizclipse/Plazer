@@ -1,8 +1,8 @@
-mod api;
+mod db;
 
 use std::net::SocketAddr;
 
-use api::Db;
+use db::Db;
 use axum::{
     extract::ws::{self, WebSocket, WebSocketUpgrade},
     response::Response,
@@ -59,14 +59,13 @@ async fn handle_socket(mut socket: WebSocket, db: Db) {
             }
         };
 
-        let res = match db.dispatch(nonce, payload).await {
+        let res = match bincode::serialize(&db.dispatch(nonce, payload).await) {
             Ok(res) => res,
             Err(err) => {
                 tracing::warn!("Failed to encode message {:?}", err);
                 continue;
             }
         };
-        tracing::debug!("payload len {}", res.len());
 
         if socket.send(ws::Message::Binary(res)).await.is_err() {
             // Client disconnected

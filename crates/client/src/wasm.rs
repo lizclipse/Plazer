@@ -15,8 +15,6 @@ use futures::{
     Sink, SinkExt, Stream, StreamExt,
 };
 use gloo_net::websocket::{self, futures::WebSocket};
-use ouroboros::self_referencing;
-use serde::de::DeserializeOwned;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::{rand_u64, Account, Client, ClientError, Result};
@@ -119,15 +117,6 @@ enum Request {
     Unary(u64, Vec<u8>, oneshot::Sender<ChannelResponse>),
 }
 
-// #[self_referencing]
-// #[derive(Debug)]
-// struct ChannelData {
-//     data: Vec<u8>,
-//     #[borrows(data)]
-//     #[covariant]
-//     message: api::Message<&'this [u8]>,
-// }
-
 type ChannelData = api::Message<api::Response>;
 
 type ChannelResponse = Result<api::Response>;
@@ -226,7 +215,6 @@ where
                 return;
             }
         };
-        log::debug!("payload len: {}", data.len());
 
         // let msg = match ChannelData::try_new(data, |data| bincode::deserialize(data)) {
         let msg: ChannelData = match bincode::deserialize(&data) {
