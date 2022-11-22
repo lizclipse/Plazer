@@ -31,17 +31,17 @@ impl DbClient {
     pub async fn dispatch(&self, nonce: u64, req: api::Method<'_>) -> bincode::Result<Vec<u8>> {
         // Method calls are safe to unwrap here because the ClientError result is purely for
         // client-side networking issues, which can't happen here.
-        match req {
-            api::Method::Account(req) => {
+        let res: api::Response = match req {
+            api::Method::Account(req) => api::Response::Account({
                 let account = self.account();
                 match req {
-                    api::account::Method::Login(req) => bincode::serialize(&api::Message {
-                        nonce,
-                        payload: account.login(req).await.unwrap(),
-                    }),
-                }
-            }
+                    api::account::Method::Login(req) => account.login(req).await.unwrap(),
+                }.into()
+            }),
         }
+        .into();
+
+        bincode::serialize(&res)
     }
 }
 

@@ -81,6 +81,10 @@ impl<'a> Account for WsAccount<'a> {
         self.inner
             .unary(api::Method::Account(api::account::Method::Login(req)))
             .await
+            .and_then(|res| match res {
+                api::Response::Account(api::account::Response::Login(res)) => Ok(res),
+                _ => Err(ClientError::ResponseMismatch),
+            })
     }
 }
 
@@ -90,10 +94,7 @@ struct ClientInner {
 }
 
 impl ClientInner {
-    async fn unary<'a, Res>(&self, req: api::Method<'a>) -> Result<Res>
-    where
-        Res: DeserializeOwned,
-    {
+    async fn unary<'a>(&self, req: api::Method<'a>) -> Result<api::Response> {
         let mut chl = self.chl.clone();
 
         // Prepare the request
@@ -109,9 +110,7 @@ impl ClientInner {
         chl.send(Request::Unary(nonce, req, tx)).await?;
 
         // Wait and handle response
-        let data = rx.await??;
-        Ok(bincode::deserialize(&data.payload)
-            .map_err(ClientError::InvalidResponse)?)
+        rx.await?
     }
 }
 
@@ -129,9 +128,9 @@ enum Request {
 //     message: api::Message<&'this [u8]>,
 // }
 
-type ChannelData = api::Message<Vec<u8>>;
+type ChannelData = api::Message<api::Response>;
 
-type ChannelResponse = Result<ChannelData>;
+type ChannelResponse = Result<api::Response>;
 type WsMessage = core::result::Result<websocket::Message, websocket::WebSocketError>;
 
 #[derive(Debug)]
@@ -230,7 +229,7 @@ where
         log::debug!("payload len: {}", data.len());
 
         // let msg = match ChannelData::try_new(data, |data| bincode::deserialize(data)) {
-        let msg: api::Message<Vec<u8>> = match bincode::deserialize(&data) {
+        let msg: ChannelData = match bincode::deserialize(&data) {
             Ok(msg) => msg,
             Err(err) => {
                 log::error!("Unable to deserialise message {:?}", err);
@@ -250,7 +249,7 @@ where
         match req {
             Req::Unary(tx) => {
                 // Nothing we can do about a failed send
-                let _ = tx.send(Ok(msg));
+                let _ = tx.send(Ok(msg.payload));
             }
         };
     }

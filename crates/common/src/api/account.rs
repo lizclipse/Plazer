@@ -7,6 +7,11 @@ pub enum Method<'a> {
     Login(LoginReq<'a>),
 }
 
+#[derive(Debug, From, Serialize, Deserialize)]
+pub enum Response {
+    Login(LoginRes),
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginReq<'a> {
     pub uname: &'a str,

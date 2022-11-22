@@ -15,6 +15,11 @@ pub enum Method<'a> {
     Account(account::Method<'a>),
 }
 
+#[derive(Debug, From, Serialize, Deserialize)]
+pub enum Response {
+    Account(account::Response)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

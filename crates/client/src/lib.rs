@@ -40,6 +40,7 @@ pub enum ClientError {
     SendError,
     InvalidRequest(bincode::Error),
     InvalidResponse(bincode::Error),
+    ResponseMismatch,
 }
 
 impl Display for ClientError {
@@ -49,6 +50,7 @@ impl Display for ClientError {
             ClientError::SendError => write!(f, "failed to send message"),
             ClientError::InvalidRequest(_) => write!(f, "given an invalid request"),
             ClientError::InvalidResponse(_) => write!(f, "received an invalid response"),
+            ClientError::ResponseMismatch => write!(f, "received an unknown response"),
         }
     }
 }
