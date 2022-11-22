@@ -66,6 +66,7 @@ async fn handle_socket(mut socket: WebSocket, db: Db) {
                 continue;
             }
         };
+        tracing::debug!("payload len {}", res.len());
 
         if socket.send(ws::Message::Binary(res)).await.is_err() {
             // Client disconnected

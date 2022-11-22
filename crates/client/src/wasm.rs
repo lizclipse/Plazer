@@ -110,7 +110,7 @@ impl ClientInner {
 
         // Wait and handle response
         let data = rx.await??;
-        Ok(bincode::deserialize(data.borrow_message().payload)
+        Ok(bincode::deserialize(&data.payload)
             .map_err(ClientError::InvalidResponse)?)
     }
 }
@@ -120,14 +120,16 @@ enum Request {
     Unary(u64, Vec<u8>, oneshot::Sender<ChannelResponse>),
 }
 
-#[self_referencing]
-#[derive(Debug)]
-struct ChannelData {
-    data: Vec<u8>,
-    #[borrows(data)]
-    #[covariant]
-    message: api::Message<&'this [u8]>,
-}
+// #[self_referencing]
+// #[derive(Debug)]
+// struct ChannelData {
+//     data: Vec<u8>,
+//     #[borrows(data)]
+//     #[covariant]
+//     message: api::Message<&'this [u8]>,
+// }
+
+type ChannelData = api::Message<Vec<u8>>;
 
 type ChannelResponse = Result<ChannelData>;
 type WsMessage = core::result::Result<websocket::Message, websocket::WebSocketError>;
@@ -225,8 +227,10 @@ where
                 return;
             }
         };
+        log::debug!("payload len: {}", data.len());
 
-        let msg = match ChannelData::try_new(data, |data| bincode::deserialize(data)) {
+        // let msg = match ChannelData::try_new(data, |data| bincode::deserialize(data)) {
+        let msg: api::Message<Vec<u8>> = match bincode::deserialize(&data) {
             Ok(msg) => msg,
             Err(err) => {
                 log::error!("Unable to deserialise message {:?}", err);
@@ -234,7 +238,7 @@ where
             }
         };
 
-        let nonce = msg.borrow_message().nonce;
+        let nonce = msg.nonce;
         let req = match self.pending.remove(&nonce) {
             Some(req) => req,
             None => {

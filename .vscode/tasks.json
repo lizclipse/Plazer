@@ -58,11 +58,19 @@
     {
       "type": "process",
       "command": "trunk",
-      "args": ["serve"],
+      "args": [
+        "serve",
+        "--watch",
+        "${workspaceFolder}/crates/ui",
+        "--watch",
+        "${workspaceFolder}/crates/client",
+        "--watch",
+        "${workspaceFolder}/crates/common"
+      ],
       "label": "trunk: serve",
       "problemMatcher": "$rustc",
       "isBackground": true
-    },
+    }
   ],
   "inputs": [
     {
