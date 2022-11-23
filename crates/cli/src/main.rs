@@ -8,7 +8,7 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use c11ity_common::api::{Message, Method};
+use c11ity_common::api::Message;
 use db::Db;
 use tracing::{instrument, Level};
 
@@ -50,7 +50,7 @@ async fn handle_socket(mut socket: WebSocket, db: Db) {
             return;
         };
 
-        let (Message { nonce, payload }, transport): (Message<Method>, Transport) = match &msg {
+        let (Message { nonce, payload }, transport) = match &msg {
             ws::Message::Binary(data) => match bincode::deserialize(data) {
                 Ok(msg) => (msg, Transport::Binary),
                 Err(err) => {
