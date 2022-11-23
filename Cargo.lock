@@ -598,11 +598,13 @@ dependencies = [
  "async-trait",
  "bincode",
  "c11ity_common",
+ "cfg-if",
  "futures 0.3.25",
  "getrandom 0.2.8",
  "gloo-net",
  "log",
  "serde",
+ "serde_json",
  "thiserror",
  "wasm-bindgen-futures",
 ]

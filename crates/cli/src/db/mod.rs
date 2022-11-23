@@ -28,7 +28,7 @@ impl DbClient {
     }
 
     #[instrument]
-    pub async fn dispatch(&self, nonce: u64, req: api::Method<'_>) -> api::Response {
+    pub async fn dispatch(&self, req: api::Method<'_>) -> api::Response {
         // Method calls are safe to unwrap here because the ClientError result is purely for
         // client-side networking issues, which can't happen here.
         match req {

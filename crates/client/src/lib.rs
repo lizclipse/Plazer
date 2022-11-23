@@ -38,8 +38,8 @@ pub type Result<T> = core::result::Result<T, ClientError>;
 pub enum ClientError {
     Closed,
     SendError,
-    InvalidRequest(bincode::Error),
-    InvalidResponse(bincode::Error),
+    InvalidRequest,
+    InvalidResponse,
     ResponseMismatch,
 }
 
@@ -48,8 +48,8 @@ impl Display for ClientError {
         match self {
             ClientError::Closed => write!(f, "channel closed"),
             ClientError::SendError => write!(f, "failed to send message"),
-            ClientError::InvalidRequest(_) => write!(f, "given an invalid request"),
-            ClientError::InvalidResponse(_) => write!(f, "received an invalid response"),
+            ClientError::InvalidRequest => write!(f, "given an invalid request"),
+            ClientError::InvalidResponse => write!(f, "received an invalid response"),
             ClientError::ResponseMismatch => write!(f, "received an unknown response"),
         }
     }

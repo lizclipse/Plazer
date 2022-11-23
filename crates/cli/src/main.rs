@@ -71,7 +71,10 @@ async fn handle_socket(mut socket: WebSocket, db: Db) {
             }
         };
 
-        let res = db.dispatch(nonce, payload).await;
+        let res = Message {
+            nonce,
+            payload: db.dispatch(payload).await,
+        };
 
         let res = match transport {
             Transport::Binary => match bincode::serialize(&res) {
