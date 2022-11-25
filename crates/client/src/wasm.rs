@@ -7,8 +7,8 @@ use std::{
 };
 
 use async_trait::async_trait;
-use c11ity_common::api;
-use cfg_if::cfg_if;
+use c11ity_common::{api, DEBUG_PREFIX};
+use const_format::concatcp;
 use futures::{
     channel::{mpsc, oneshot},
     select,
@@ -16,6 +16,7 @@ use futures::{
     Sink, SinkExt, Stream, StreamExt,
 };
 use gloo_net::websocket::{self, futures::WebSocket};
+use gloo_storage::{LocalStorage, Storage};
 use wasm_bindgen_futures::spawn_local;
 
 use crate::{rand_u64, Account, Client, ClientError, Result};
@@ -92,8 +93,10 @@ struct ClientInner {
     chl: mpsc::Sender<Request>,
 }
 
+const JSON_TRANSPORT: &str = concatcp!(DEBUG_PREFIX, "json-transport");
+
 impl ClientInner {
-    async fn unary<'a>(&self, req: api::Method<'a>) -> Result<api::Response> {
+    async fn unary(&self, req: api::Method<'_>) -> Result<api::Response> {
         let mut chl = self.chl.clone();
 
         // Prepare the request
@@ -103,13 +106,15 @@ impl ClientInner {
             payload: req,
         };
 
-        cfg_if! {
-            if #[cfg(feature = "wasm-debug")] {
-                let req = serde_json::to_string(&req).map_err(|_| ClientError::InvalidRequest)?;
-            } else {
-                let req = bincode::serialize(&req).map_err(|_| ClientError::InvalidRequest)?;
-            }
-        }
+        let req = if LocalStorage::get(JSON_TRANSPORT).unwrap_or(false) {
+            websocket::Message::Text(
+                serde_json::to_string(&req).map_err(|_| ClientError::InvalidRequest)?,
+            )
+        } else {
+            websocket::Message::Bytes(
+                bincode::serialize(&req).map_err(|_| ClientError::InvalidRequest)?,
+            )
+        };
 
         // Send it down the channel
         let (tx, rx) = oneshot::channel();
@@ -120,17 +125,9 @@ impl ClientInner {
     }
 }
 
-cfg_if! {
-    if #[cfg(feature = "wasm-debug")] {
-        type Data = String;
-    } else {
-        type Data = Vec<u8>;
-    }
-}
-
 #[derive(Debug)]
 enum Request {
-    Unary(u64, Data, oneshot::Sender<ChannelResponse>),
+    Unary(u64, websocket::Message, oneshot::Sender<ChannelResponse>),
 }
 
 type ChannelData = api::Message<api::Response>;
@@ -199,19 +196,7 @@ where
     async fn process_req(&mut self, req: Request) {
         match req {
             Request::Unary(nonce, data, tx) => {
-                match self
-                    .ws
-                    .send({
-                        cfg_if! {
-                            if #[cfg(feature = "wasm-debug")] {
-                                websocket::Message::Text(data)
-                            } else {
-                                websocket::Message::Bytes(data)
-                            }
-                        }
-                    })
-                    .await
-                {
+                match self.ws.send(data).await {
                     Ok(_) => {
                         self.pending.insert(nonce, Req::Unary(tx));
                     }
@@ -236,40 +221,21 @@ where
             }
         };
 
-        cfg_if! {
-            if #[cfg(feature = "wasm-debug")] {
-                let data = match msg {
-                    websocket::Message::Text(msg) => msg,
-                    websocket::Message::Bytes(_) => {
-                        log::warn!("Dropped binary message");
-                        return;
-                    }
-                };
-
-                let msg: ChannelData = match serde_json::from_str(&data) {
-                    Ok(msg) => msg,
-                    Err(err) => {
-                        log::error!("Unable to parse message {:?}", err);
-                        return;
-                    }
-                };
-            } else {
-                let data = match msg {
-                    websocket::Message::Bytes(msg) => msg,
-                    websocket::Message::Text(msg) => {
-                        log::warn!("Dropped text message {:?}", msg);
-                        return;
-                    }
-                };
-
-                let msg: ChannelData = match bincode::deserialize(&data) {
-                    Ok(msg) => msg,
-                    Err(err) => {
-                        log::error!("Unable to deserialise message {:?}", err);
-                        return;
-                    }
-                };
-            }
+        let msg: ChannelData = match msg {
+            websocket::Message::Text(data) => match serde_json::from_str(&data) {
+                Ok(msg) => msg,
+                Err(err) => {
+                    log::error!("Unable to parse message {:?}", err);
+                    return;
+                }
+            },
+            websocket::Message::Bytes(data) => match bincode::deserialize(&data) {
+                Ok(msg) => msg,
+                Err(err) => {
+                    log::error!("Unable to deserialise message {:?}", err);
+                    return;
+                }
+            },
         };
 
         let nonce = msg.nonce;

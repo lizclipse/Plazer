@@ -19,4 +19,3 @@ sycamore-router = "0.8.0"
 
 [features]
 server = ["sycamore/ssr"]
-wasm-debug = ["c11ity_client/wasm-debug", "dep:serde_json"]
