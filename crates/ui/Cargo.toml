@@ -13,7 +13,6 @@ console_log = "0.2.0"
 gloo-net = "0.2.4"
 log = "0.4.17"
 serde = "1.0.147"
-serde_json = { version = "1.0.89", optional = true }
 sycamore = { version = "0.8.2", features = ["hydrate", "serde", "suspense"] }
 sycamore-router = "0.8.0"
 

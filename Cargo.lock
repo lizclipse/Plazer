@@ -633,7 +633,6 @@ dependencies = [
  "gloo-net",
  "log",
  "serde",
- "serde_json",
  "sycamore",
  "sycamore-router",
 ]
