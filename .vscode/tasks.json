@@ -4,7 +4,7 @@
     {
       "type": "process",
       "command": "cargo",
-      "args": ["run", "--bin", "commonwealthity", "--", "${input:args}"],
+      "args": ["run", "--bin", "c11ity", "--", "${input:args}"],
       "label": "cargo: run",
       "problemMatcher": "$rustc",
       "isBackground": true
@@ -35,10 +35,18 @@
     },
     {
       "type": "process",
+      "command": "cargo",
+      "args": ["fmt"],
+      "label": "cargo: fmt",
+      "problemMatcher": "$rustc"
+    },
+    {
+      "type": "process",
       "command": "trunk",
       "args": ["build"],
+      "group": "build",
       "label": "trunk: build",
-      "problemMatcher": []
+      "problemMatcher": "$rustc"
     },
     {
       "type": "process",
@@ -46,6 +54,22 @@
       "args": ["clean"],
       "label": "trunk: clean",
       "problemMatcher": []
+    },
+    {
+      "type": "process",
+      "command": "trunk",
+      "args": [
+        "serve",
+        "--watch",
+        "${workspaceFolder}/crates/ui",
+        "--watch",
+        "${workspaceFolder}/crates/client",
+        "--watch",
+        "${workspaceFolder}/crates/common"
+      ],
+      "label": "trunk: serve",
+      "problemMatcher": "$rustc",
+      "isBackground": true
     }
   ],
   "inputs": [
