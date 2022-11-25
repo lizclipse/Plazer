@@ -51,9 +51,6 @@ fn main() {
     console_error_panic_hook::set_once();
     console_log::init_with_level(log::Level::Debug).unwrap();
 
-    #[cfg(feature = "wasm-debug")]
-    log::info!("debug enabled");
-
     sycamore::render(|cx| {
         view! { cx, App {} }
     });
