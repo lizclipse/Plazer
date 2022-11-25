@@ -3,10 +3,13 @@ mod db;
 use std::net::SocketAddr;
 
 use axum::{
-    extract::ws::{self, WebSocket, WebSocketUpgrade},
+    extract::{
+        ws::{self, WebSocket, WebSocketUpgrade},
+        State,
+    },
     response::Response,
     routing::get,
-    Extension, Router,
+    Router,
 };
 use c11ity_common::api::Message;
 use db::Db;
@@ -22,7 +25,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/v1/rpc", get(handler))
-        .layer(Extension(db));
+        .with_state(db);
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
@@ -30,7 +33,7 @@ async fn main() {
         .unwrap();
 }
 
-async fn handler(ws: WebSocketUpgrade, Extension(db): Extension<Db>) -> Response {
+async fn handler(ws: WebSocketUpgrade, State(db): State<Db>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, db))
 }
 
