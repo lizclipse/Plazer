@@ -1,3 +1,7 @@
 [build]
 target = "./crates/ui/index.html"
 dist = "./dist"
+
+[[proxy]]
+backend = "ws://localhost:3000/api/v1/rpc"
+ws = true

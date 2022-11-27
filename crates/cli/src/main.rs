@@ -5,13 +5,15 @@ use std::net::SocketAddr;
 use axum::{
     extract::{
         ws::{self, WebSocket, WebSocketUpgrade},
-        State,
+        RawQuery, State,
     },
-    response::Response,
+    http::{StatusCode, Uri},
+    response::{Html, IntoResponse, Response},
     routing::get,
-    Router,
+    Router, debug_handler,
 };
 use c11ity_common::api::Message;
+use c11ity_ui::render;
 use db::Db;
 use tracing::{instrument, Level};
 
@@ -24,17 +26,26 @@ async fn main() {
     let db = Db::new();
 
     let app = Router::new()
-        .route("/api/v1/rpc", get(handler))
+        .route("/api/v1/rpc", get(rpc_handle))
+        .fallback(ui_render)
         .with_state(db);
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    tracing::info!("Listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
 }
 
-async fn handler(ws: WebSocketUpgrade, State(db): State<Db>) -> Response {
-    ws.on_upgrade(|socket| handle_socket(socket, db))
+async fn rpc_handle(ws: WebSocketUpgrade, State(db): State<Db>) -> Response {
+    ws.on_upgrade(|socket| rpc(socket, db))
+}
+
+#[debug_handler]
+async fn ui_render() -> impl IntoResponse {
+    // Html(render(path.unwrap_or_default()).await)
+    // let ui = render("".to_owned()).await;
+    Html("")
 }
 
 enum Transport {
@@ -43,7 +54,7 @@ enum Transport {
 }
 
 #[instrument(skip(socket))]
-async fn handle_socket(mut socket: WebSocket, db: Db) {
+async fn rpc(mut socket: WebSocket, db: Db) {
     let db = db.client();
     while let Some(msg) = socket.recv().await {
         let msg = if let Ok(msg) = msg {

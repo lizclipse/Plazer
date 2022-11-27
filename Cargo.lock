@@ -302,6 +302,7 @@ checksum = "744864363a200a5e724a7e61bc8c11b6628cf2e3ec519c8a1a48e609a8156b40"
 dependencies = [
  "async-trait",
  "axum-core",
+ "axum-macros",
  "base64",
  "bitflags",
  "bytes 1.2.1",
@@ -345,6 +346,18 @@ dependencies = [
  "rustversion",
  "tower-layer",
  "tower-service",
+]
+
+[[package]]
+name = "axum-macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4df0fc33ada14a338b799002f7e8657711422b25d4e16afb032708d6b185621"
+dependencies = [
+ "heck 0.4.0",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -586,6 +599,7 @@ dependencies = [
  "bincode",
  "c11ity_client",
  "c11ity_common",
+ "c11ity_ui",
  "serde",
  "serde_json",
  "surrealdb",
@@ -631,6 +645,7 @@ dependencies = [
  "console_error_panic_hook",
  "console_log",
  "gloo-net",
+ "gloo-utils",
  "log",
  "serde",
  "sycamore",

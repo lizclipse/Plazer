@@ -12,6 +12,24 @@
     {
       "type": "process",
       "command": "cargo",
+      "args": [
+        "watch",
+        "---ignore",
+        ".vscode/**",
+        "--ignore",
+        "dist/**",
+        "--ignore",
+        "target/**",
+        "--exec",
+        "run --bin c11ity -- ${input:args}"
+      ],
+      "label": "cargo: serve",
+      "problemMatcher": "$rustc",
+      "isBackground": true
+    },
+    {
+      "type": "process",
+      "command": "cargo",
       "args": ["build"],
       "group": "build",
       "label": "cargo: build",
