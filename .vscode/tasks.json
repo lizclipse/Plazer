@@ -21,8 +21,11 @@
         "--ignore",
         "target/**",
         "--exec",
-        "run --bin c11ity -- ${input:args}"
+        "run --package c11ity -- ${input:args}"
       ],
+      "options": {
+        "env": { "RUST_BACKTRACE": "1" }
+      },
       "label": "cargo: serve",
       "problemMatcher": "$rustc",
       "isBackground": true

@@ -1,12 +1,16 @@
 mod api;
 
+#[cfg(feature = "client")]
 use c11ity_client::{wasm::client, Account, Client};
+#[cfg(feature = "client")]
 use c11ity_common::api as api_models;
 #[cfg(feature = "client")]
 use gloo_net::websocket::futures::WebSocket;
 #[cfg(feature = "client")]
 use gloo_utils::window;
-use sycamore::{futures::spawn_local_scoped, prelude::*};
+#[cfg(feature = "client")]
+use sycamore::futures::spawn_local_scoped;
+use sycamore::prelude::*;
 
 #[derive(Prop)]
 pub struct Props {
@@ -18,26 +22,38 @@ pub fn App<G: Html>(cx: Scope, Props { path }: Props) -> View<G> {
     let id = create_signal::<Option<String>>(cx, None);
     let name = create_signal::<Option<String>>(cx, None);
 
-    if G::IS_BROWSER {
-        spawn_local_scoped(cx, async move {
-            let host = window().location().host().unwrap();
-            let ws = WebSocket::open(&format!("ws://{}/api/v1/rpc", host)).unwrap();
-            let client = client(ws);
-            let account = client.account();
+    let mut cfgs = 0;
 
-            let acc = account
-                .login(api_models::account::LoginReq {
-                    uname: "test",
-                    pword: "test",
-                })
-                .await
-                .unwrap()
-                .unwrap();
-
-            id.set(Some(acc.id));
-            name.set(acc.name);
-        });
+    #[cfg(feature = "client")]
+    {
+        cfgs += 1;
     }
+    #[cfg(feature = "server")]
+    {
+        cfgs += 1;
+    }
+
+    log::info!("{}", cfgs);
+
+    #[cfg(feature = "client")]
+    spawn_local_scoped(cx, async move {
+        let host = window().location().host().unwrap();
+        let ws = WebSocket::open(&format!("ws://{}/api/v1/rpc", host)).unwrap();
+        let client = client(ws);
+        let account = client.account();
+
+        let acc = account
+            .login(api_models::account::LoginReq {
+                uname: "test",
+                pword: "test",
+            })
+            .await
+            .unwrap()
+            .unwrap();
+
+        id.set(Some(acc.id));
+        name.set(acc.name);
+    });
 
     view! { cx,
         p {
@@ -62,9 +78,11 @@ pub fn App<G: Html>(cx: Scope, Props { path }: Props) -> View<G> {
     }
 }
 
+#[cfg(feature = "server")]
 pub async fn render(path: String) -> String {
     sycamore::web::render_to_string_await_suspense(move |cx| {
         let path = path;
         view! { cx, App(path=Some(path)) }
-    }).await
+    })
+    .await
 }

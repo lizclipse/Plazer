@@ -3,18 +3,19 @@ mod db;
 use std::net::SocketAddr;
 
 use axum::{
+    debug_handler,
     extract::{
         ws::{self, WebSocket, WebSocketUpgrade},
-        RawQuery, State,
+        OriginalUri, State,
     },
-    http::{StatusCode, Uri},
     response::{Html, IntoResponse, Response},
     routing::get,
-    Router, debug_handler,
+    Router,
 };
 use c11ity_common::api::Message;
 use c11ity_ui::render;
 use db::Db;
+use tokio_util::task::LocalPoolHandle;
 use tracing::{instrument, Level};
 
 #[tokio::main]
@@ -26,8 +27,8 @@ async fn main() {
     let db = Db::new();
 
     let app = Router::new()
-        .route("/api/v1/rpc", get(rpc_handle))
         .fallback(ui_render)
+        .route("/api/v1/rpc", get(rpc_handle))
         .with_state(db);
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::info!("Listening on {}", addr);
@@ -42,10 +43,14 @@ async fn rpc_handle(ws: WebSocketUpgrade, State(db): State<Db>) -> Response {
 }
 
 #[debug_handler]
-async fn ui_render() -> impl IntoResponse {
-    // Html(render(path.unwrap_or_default()).await)
-    // let ui = render("".to_owned()).await;
-    Html("")
+async fn ui_render(OriginalUri(uri): OriginalUri) -> impl IntoResponse {
+    tracing::info!("rendering ui");
+    let pool = LocalPoolHandle::new(1);
+    let ui = pool
+        .spawn_pinned(move || render(uri.path().into()))
+        .await
+        .unwrap();
+    Html(ui)
 }
 
 enum Transport {
