@@ -1,0 +1,21 @@
+{
+  "extends": [
+    "@tsconfig/esm/tsconfig.json",
+    "@tsconfig/strictest/tsconfig.json"
+  ],
+  "compilerOptions": {
+    "lib": ["es2022", "dom"],
+
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "isolatedModules": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "useUnknownInCatchVariables": true,
+
+    "composite": true
+  },
+  "exclude": ["node_modules/**", "dist/**", "public/**"]
+}

@@ -1,0 +1,18 @@
+{
+  "extends": "tsconfig/tsconfig.json",
+  "compilerOptions": {
+    "jsxImportSource": "solid-js",
+    "jsx": "preserve",
+
+    "types": ["solid-start/env", "@testing-library/jest-dom"],
+    "baseUrl": "./",
+    "rootDir": "./src",
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+
+    "noEmit": true
+  },
+  "types": ["vitest"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

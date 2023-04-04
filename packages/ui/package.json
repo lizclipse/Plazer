@@ -1,0 +1,40 @@
+{
+  "name": "c11ty-ui",
+  "scripts": {
+    "dev": "solid-start dev",
+    "build": "pnpm run build:server && pnpm run build:client",
+    "build:server": "solid-start build && mkdir -p build && rm -rf build/server && mv dist build/server",
+    "build:client": "START_SSR=false solid-start build && mkdir -p build && rm -rf build/client && mv dist build/client",
+    "lint": "tsc && eslint --ext .ts,.tsx src",
+    "fix": "eslint --ext .ts,.tsx src --fix",
+    "start": "solid-start start",
+    "test": "vitest run",
+    "test-watch": "vitest",
+    "test-ui": "vitest --ui",
+    "coverage": "vitest run --coverage",
+    "clean": "rm -rf dist build",
+    "postinstall": "node add-ts-nocheck.js"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@solidjs/meta": "^0.28.4",
+    "@solidjs/router": "^0.8.2",
+    "@solidjs/testing-library": "^0.7.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@types/testing-library__jest-dom": "^5.14.5",
+    "@vitest/coverage-c8": "^0.29.8",
+    "@vitest/ui": "^0.29.8",
+    "eslint-config-custom": "workspace:*",
+    "jsdom": "^21.1.1",
+    "sass": "^1.60.0",
+    "solid-js": "^1.7.2",
+    "solid-start": "^0.2.24",
+    "solid-start-node": "^0.2.24",
+    "solid-start-static": "^0.2.24",
+    "tsconfig": "workspace:*",
+    "typescript": "^5.0.3",
+    "undici": "^5.21.0",
+    "vite": "^4.2.1",
+    "vitest": "^0.29.8"
+  }
+}
