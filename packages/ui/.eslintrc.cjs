@@ -5,5 +5,5 @@ module.exports = {
     project: "tsconfig.json",
     tsconfigRootDir: __dirname,
   },
-  ignorePatterns: ['.eslintrc.cjs']
+  ignorePatterns: [".eslintrc.cjs", "vite.config.ts", 'vitest.config.ts'],
 };

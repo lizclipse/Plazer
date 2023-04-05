@@ -1,104 +1,144 @@
-mod db;
+use std::{env, pin::Pin, sync::Arc};
 
-use std::net::SocketAddr;
+use futures::{FutureExt as _, Stream};
+use juniper::{graphql_object, graphql_subscription, RootNode};
+use juniper_graphql_ws::ConnectionConfig;
+use juniper_warp::{playground_filter, subscriptions::serve_graphql_ws};
+use tokio::sync::{watch, RwLock};
+use tracing::Level;
+use warp::{http::Response, Filter};
 
-use axum::{
-    extract::{
-        ws::{self, WebSocket, WebSocketUpgrade},
-        State,
-    },
-    response::Response,
-    routing::get,
-    Router,
-};
-use c11ity_common::api::Message;
-use db::Db;
-use tracing::{instrument, Level};
+struct ContextInner {
+    counter: i32,
+    counter_rx: watch::Receiver<i32>,
+    counter_tx: watch::Sender<i32>,
+}
+
+struct Context(RwLock<ContextInner>);
+
+impl Context {
+    fn new() -> Self {
+        let (counter_tx, counter_rx) = watch::channel(0);
+        Self(RwLock::new(ContextInner {
+            counter: 0,
+            counter_rx,
+            counter_tx,
+        }))
+    }
+
+    pub async fn increment(&self) -> i32 {
+        let mut inner = self.0.write().await;
+        inner.counter += 1;
+        let _ = inner.counter_tx.send(inner.counter);
+        inner.counter
+    }
+
+    pub async fn counter(&self) -> i32 {
+        self.0.read().await.counter
+    }
+
+    pub async fn counter_rx(&self) -> impl Stream<Item = i32> + Send + Sync + 'static {
+        let mut rx = self.0.read().await.counter_rx.clone();
+        async_stream::stream! {
+            while rx.changed().await.is_ok() {
+                let counter = {
+                    let value = rx.borrow();
+                    value.clone()
+                };
+                yield counter;
+            }
+        }
+    }
+}
+
+impl juniper::Context for Context {}
+
+struct Query;
+
+#[graphql_object(context = Context)]
+impl Query {
+    async fn count<'db>(context: &'db Context) -> i32 {
+        context.counter().await
+    }
+}
+
+struct Mutation;
+
+#[graphql_object(context = Context)]
+impl Mutation {
+    async fn increment<'db>(context: &'db Context) -> i32 {
+        context.increment().await
+    }
+}
+
+type ChangesStream = Pin<Box<dyn Stream<Item = i32> + Send>>;
+
+struct Subscription;
+
+#[graphql_subscription(context = Context)]
+impl Subscription {
+    async fn changes<'db>(context: &'db Context) -> ChangesStream {
+        let changes = context.counter_rx().await;
+
+        Box::pin(changes)
+    }
+}
+
+type Schema = RootNode<'static, Query, Mutation, Subscription>;
+
+fn schema() -> Schema {
+    Schema::new(Query, Mutation, Subscription)
+}
 
 #[tokio::main]
 async fn main() {
+    env::set_var("RUST_LOG", "warp_subscriptions");
     tracing_subscriber::fmt()
         .with_max_level(Level::DEBUG)
         .init();
 
-    let db = Db::new();
+    let log = warp::log("warp_subscriptions");
 
-    let app = Router::new()
-        .route("/api/v1/rpc", get(handler))
-        .with_state(db);
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-}
+    let homepage = warp::path::end().map(|| {
+        Response::builder()
+            .header("content-type", "text/html")
+            .body("<html><h1>juniper_subscriptions demo</h1><div>visit <a href=\"/playground\">graphql playground</a></html>")
+    });
 
-async fn handler(ws: WebSocketUpgrade, State(db): State<Db>) -> Response {
-    ws.on_upgrade(|socket| handle_socket(socket, db))
-}
+    let qm_schema = schema();
+    let qm_state = warp::any().map(|| Context::new());
+    let qm_graphql_filter = juniper_warp::make_graphql_filter(qm_schema, qm_state.boxed());
 
-enum Transport {
-    Binary,
-    Text,
-}
+    let root_node = Arc::new(schema());
 
-#[instrument(skip(socket))]
-async fn handle_socket(mut socket: WebSocket, db: Db) {
-    let db = db.client();
-    while let Some(msg) = socket.recv().await {
-        let msg = if let Ok(msg) = msg {
-            msg
-        } else {
-            // Client disconnected
-            return;
-        };
+    log::info!("Listening on 127.0.0.1:8080");
 
-        let (Message { nonce, payload }, transport) = match &msg {
-            ws::Message::Binary(data) => match bincode::deserialize(data) {
-                Ok(msg) => (msg, Transport::Binary),
-                Err(err) => {
-                    tracing::warn!("Failed to decode message {:?}", err);
-                    continue;
-                }
-            },
-            ws::Message::Text(data) => match serde_json::from_str(data) {
-                Ok(msg) => (msg, Transport::Text),
-                Err(err) => {
-                    tracing::warn!("Failed to parse message {:?}", err);
-                    continue;
-                }
-            },
-            msg => {
-                tracing::warn!("Unhandled message type {:?}", msg);
-                continue;
-            }
-        };
+    let routes = (warp::path!("api" / "subscriptions")
+        .and(warp::ws())
+        .map(move |ws: warp::ws::Ws| {
+            let root_node = root_node.clone();
+            ws.on_upgrade(move |websocket| async move {
+                serve_graphql_ws(websocket, root_node, ConnectionConfig::new(Context::new()))
+                    .map(|r| {
+                        if let Err(e) = r {
+                            println!("Websocket error: {e}");
+                        }
+                    })
+                    .await
+            })
+        }))
+    .map(|reply| {
+        // TODO#584: remove this workaround
+        warp::reply::with_header(reply, "Sec-WebSocket-Protocol", "graphql-ws")
+    })
+    .or(warp::post()
+        .and(warp::path!("api" / "graphql"))
+        .and(qm_graphql_filter))
+    .or(warp::get()
+        .and(warp::path("playground"))
+        .and(playground_filter("/api/graphql", Some("/api/subscriptions"))))
+    .or(homepage)
+    .with(log);
 
-        let res = Message {
-            nonce,
-            payload: db.dispatch(payload).await,
-        };
-
-        let res = match transport {
-            Transport::Binary => match bincode::serialize(&res) {
-                Ok(res) => socket.send(ws::Message::Binary(res)).await,
-                Err(err) => {
-                    tracing::warn!("Failed to encode message {:?}", err);
-                    continue;
-                }
-            },
-            Transport::Text => match serde_json::to_string(&res) {
-                Ok(res) => socket.send(ws::Message::Text(res)).await,
-                Err(err) => {
-                    tracing::warn!("Failed to encode message {:?}", err);
-                    continue;
-                }
-            },
-        };
-
-        if res.is_err() {
-            // Client disconnected
-            return;
-        }
-    }
+    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
 }

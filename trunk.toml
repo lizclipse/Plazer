@@ -1,3 +1,0 @@
-[build]
-target = "./crates/ui/index.html"
-dist = "./dist"
