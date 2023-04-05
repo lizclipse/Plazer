@@ -1,4 +1,4 @@
-import { createResource } from "solid-js";
+import { createResource, Suspense } from "solid-js";
 import "./Counter.scss";
 import { isServer } from "solid-js/web";
 
@@ -17,9 +17,15 @@ export default function Counter() {
       headers: {
         "Content-Type": "application/json",
       },
+    })
+      .then((res) => res.json())
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    }).then((res) => res.json().then((res) => res.data.count as number))
+      .then((res) => res.data.count as number)
   );
 
-  return <button class="increment">Clicks: {count()}</button>;
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <button class="increment">Clicks: {count()}</button>
+    </Suspense>
+  );
 }

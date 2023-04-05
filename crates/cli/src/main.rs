@@ -26,9 +26,9 @@ impl Context {
         }))
     }
 
-    pub async fn increment(&self) -> i32 {
+    pub async fn increment(&self, by: Option<i32>) -> i32 {
         let mut inner = self.0.write().await;
-        inner.counter += 1;
+        inner.counter += by.unwrap_or(1);
         let _ = inner.counter_tx.send(inner.counter);
         inner.counter
     }
@@ -66,8 +66,8 @@ struct Mutation;
 
 #[graphql_object(context = Context)]
 impl Mutation {
-    async fn increment<'db>(context: &'db Context) -> i32 {
-        context.increment().await
+    async fn increment<'db>(by: Option<i32>, context: &'db Context) -> i32 {
+        context.increment(by).await
     }
 }
 
