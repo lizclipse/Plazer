@@ -51,6 +51,21 @@
       "command": "cargo",
       "args": ["run", "-p", "c11ity", "--", "schema", "--output", "schema.gql"],
       "problemMatcher": "$rustc"
+    },
+    {
+      "label": "codegen",
+      "type": "process",
+      "command": "turbo",
+      "args": ["codegen"],
+      "problemMatcher": []
+    },
+    {
+      "label": "codegen - watch",
+      "type": "process",
+      "command": "turbo",
+      "args": ["codegen:watch"],
+      "problemMatcher": [],
+      "isBackground": true
     }
   ]
 }

@@ -12,6 +12,13 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "codegen": {
+      "outputs": ["src/__generated__/**", "src/**/.gql.ts"]
+    },
+    "codegen:watch": {
+      "cache": false,
+      "persistent": true
     }
   }
 }

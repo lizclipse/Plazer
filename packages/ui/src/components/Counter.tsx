@@ -1,11 +1,17 @@
+import { gql } from "@merged/solid-apollo";
 import { createResource, Suspense } from "solid-js";
 import "./Counter.scss";
 import { isServer } from "solid-js/web";
 
 const base = isServer ? "http://localhost:8080" : "";
 
+const QUERY_COUNT = gql`
+  query GetCount {
+    count
+  }
+`;
+
 export default function Counter() {
-  // const [count, setCount] = createSignal(0);
   const [count] = createResource(() =>
     fetch(`${base}/api/graphql`, {
       method: "POST",

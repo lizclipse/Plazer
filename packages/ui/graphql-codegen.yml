@@ -1,0 +1,22 @@
+schema: "../../schema.gql"
+documents:
+  - src/**/*.ts
+  - src/**/*.tsx
+config:
+  preResolveTypes: true
+  namingConvention: keep
+  avoidOptionals:
+    field: true
+  nonOptionalTypename: true
+  skipTypeNameForRoot: true
+generates:
+  ./src/__generated__/globalTypes.ts:
+    plugins:
+      - typescript
+  ./src/__generated__:
+    preset: near-operation-file
+    presetConfig:
+      extension: ".gql.ts"
+      baseTypesPath: "./globalTypes.ts"
+    plugins:
+      - typescript-operations

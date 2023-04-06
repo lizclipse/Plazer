@@ -28,3 +28,5 @@ gitignore
 .DS_Store
 Thumbs.db
 
+*.gql.ts
+__generated__

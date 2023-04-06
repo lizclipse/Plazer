@@ -2,7 +2,7 @@
   "name": "c11ty-ui",
   "scripts": {
     "dev": "solid-start dev",
-    "build": "pnpm run build:server && pnpm run build:client",
+    "build": "pnpm run codegen && pnpm run build:server && pnpm run build:client",
     "build:server": "solid-start build && mkdir -p build && rm -rf build/server && mv dist build/server",
     "build:client": "START_SSR=false solid-start build && mkdir -p build && rm -rf build/client && mv dist build/client",
     "lint": "tsc && eslint --ext .ts,.tsx src && prettier --check .",
@@ -13,10 +13,16 @@
     "test-ui": "vitest --ui",
     "coverage": "vitest run --coverage",
     "clean": "rm -rf dist build",
-    "postinstall": "node add-ts-nocheck.js"
+    "postinstall": "node add-ts-nocheck.js",
+    "codegen": "graphql-codegen --config graphql-codegen.yml",
+    "codegen:watch": "pnpm run codegen --watch"
   },
   "type": "module",
   "devDependencies": {
+    "@graphql-codegen/cli": "3.3.0",
+    "@graphql-codegen/near-operation-file-preset": "^2.5.0",
+    "@graphql-codegen/typescript": "3.0.3",
+    "@graphql-codegen/typescript-operations": "^3.0.3",
     "@solidjs/meta": "^0.28.4",
     "@solidjs/router": "^0.8.2",
     "@solidjs/testing-library": "^0.7.0",
@@ -24,6 +30,7 @@
     "@types/testing-library__jest-dom": "^5.14.5",
     "@vitest/coverage-c8": "^0.29.8",
     "@vitest/ui": "^0.29.8",
+    "apollo": "^2.34.0",
     "eslint-config-custom": "workspace:*",
     "jsdom": "^21.1.1",
     "sass": "^1.60.0",
@@ -36,5 +43,9 @@
     "undici": "^5.21.0",
     "vite": "^4.2.1",
     "vitest": "^0.29.8"
+  },
+  "dependencies": {
+    "@merged/solid-apollo": "^1.7.1",
+    "graphql": "^16.6.0"
   }
 }
