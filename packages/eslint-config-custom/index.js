@@ -1,11 +1,10 @@
 module.exports = {
   extends: [
     "eslint:recommended",
-    // "plugin:import/recommended",
-    // "plugin:import/typescript",
+    "plugin:import/recommended",
+    "plugin:import/typescript",
     "plugin:@typescript-eslint/recommended",
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
-    "plugin:@typescript-eslint/strict",
     "plugin:prettier/recommended",
   ],
   parser: "@typescript-eslint/parser",
@@ -15,17 +14,11 @@ module.exports = {
   },
   ignorePatterns: ["node_modules/**/*", "build/**/*", "dist/**/*"],
   rules: {
-    // "import/order": [
-    //   "error",
-    //   {
-    //     alphabetize: {
-    //       caseInsensitive: true,
-    //       order: "asc",
-    //     },
-    //     groups: [["builtin", "external"], "parent", "sibling", "index"],
-    //   },
-    // ],
-    "no-alert": "error",
+    "import/order": [
+      "error",
+      { alphabetize: { caseInsensitive: true, order: "asc" } },
+    ],
+    "import/no-unresolved": "off",
     "sort-imports": [
       "error",
       {
@@ -34,5 +27,6 @@ module.exports = {
         allowSeparatedGroups: true,
       },
     ],
+    "prettier/prettier": "warn",
   },
 };

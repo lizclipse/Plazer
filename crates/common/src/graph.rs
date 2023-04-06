@@ -89,7 +89,7 @@ impl Node {
         let edges = edges.get_or_insert_with(Default::default);
         edges
             .entry(edge.into())
-            .and_modify(|c| *c = *c + 1)
+            .and_modify(|c| *c += 1)
             .or_insert(1);
     }
 
@@ -106,7 +106,7 @@ impl Node {
 
         // !UNDERFLOW: We always start at 1, and remove any entries that hit 0,
         // so no entry will ever be 0 before this point.
-        *entry = *entry - 1;
+        *entry -= 1;
 
         if *entry == 0 {
             edges.remove(edge);

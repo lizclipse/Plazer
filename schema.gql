@@ -1,0 +1,17 @@
+type Subscription {
+  changes: Int!
+}
+
+type Query {
+  count: Int!
+}
+
+type Mutation {
+  increment(by: Int): Int!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}

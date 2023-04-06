@@ -2,87 +2,55 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "build - cli",
       "type": "process",
       "command": "cargo",
-      "args": ["run", "--bin", "c11ity", "--", "${input:args}"],
-      "label": "cargo: run",
+      "args": ["build"],
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "build - ui",
+      "type": "process",
+      "command": "turbo",
+      "args": ["build"],
+      "problemMatcher": "$rustc"
+    },
+    {
+      "label": "fix - cli",
+      "type": "process",
+      "command": "cargo",
+      "args": ["clippy", "--fix", "--allow-staged"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "fix - ui",
+      "type": "process",
+      "command": "turbo",
+      "args": ["fix"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "serve - cli",
+      "type": "process",
+      "command": "cargo",
+      "args": ["run", "-p", "c11ity"],
       "problemMatcher": "$rustc",
       "isBackground": true
     },
     {
+      "label": "serve - ui",
       "type": "process",
-      "command": "cargo",
-      "args": ["build"],
-      "group": "build",
-      "label": "cargo: build",
-      "problemMatcher": "$rustc",
-      "dependsOn": ["trunk: build"]
-    },
-    {
-      "type": "process",
-      "command": "cargo",
-      "args": ["test"],
-      "group": "test",
-      "label": "cargo: test",
-      "problemMatcher": "$rustc"
-    },
-    {
-      "type": "process",
-      "command": "cargo",
-      "args": ["clean"],
-      "label": "cargo: clean",
-      "problemMatcher": "$rustc"
-    },
-    {
-      "type": "process",
-      "command": "cargo",
-      "args": ["fmt"],
-      "label": "cargo: fmt",
-      "problemMatcher": "$rustc"
-    },
-    {
-      "type": "process",
-      "command": "trunk",
-      "args": ["build"],
-      "group": "build",
-      "label": "trunk: build",
-      "problemMatcher": "$rustc"
-    },
-    {
-      "type": "process",
-      "command": "trunk",
-      "args": ["clean"],
-      "label": "trunk: clean",
-      "problemMatcher": []
-    },
-    {
-      "type": "process",
-      "command": "trunk",
-      "args": [
-        "serve",
-        "--watch",
-        "${workspaceFolder}/crates/ui",
-        "--watch",
-        "${workspaceFolder}/crates/client",
-        "--watch",
-        "${workspaceFolder}/crates/common"
-      ],
-      "label": "trunk: serve",
-      "problemMatcher": "$rustc",
+      "command": "turbo",
+      "args": ["dev"],
+      "problemMatcher": "$tsc",
       "isBackground": true
-    }
-  ],
-  "inputs": [
-    {
-      "id": "crate",
-      "type": "pickString",
-      "description": "Select project run",
-      "options": ["cli", "ui"]
     },
     {
-      "id": "args",
-      "type": "promptString",
-      "description": "Give args to include"
+      "label": "generate schema",
+      "type": "process",
+      "command": "cargo",
+      "args": ["run", "-p", "c11ity", "--", "schema", "--output", "schema.gql"],
+      "problemMatcher": "$rustc"
     }
   ]
 }

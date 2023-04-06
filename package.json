@@ -4,5 +4,10 @@
   "description": "",
   "keywords": [],
   "author": "lizclipse",
-  "license": "MIT"
+  "license": "MIT",
+  "pnpm": {
+    "overrides": {
+      "tsconfig-paths": "^4"
+    }
+  }
 }
