@@ -30,10 +30,10 @@
       "problemMatcher": "$tsc"
     },
     {
-      "label": "serve - cli",
+      "label": "serve - service",
       "type": "process",
       "command": "cargo",
-      "args": ["run", "-p", "c11ity"],
+      "args": ["run", "-p", "c11ity_service"],
       "problemMatcher": "$rustc",
       "isBackground": true
     },

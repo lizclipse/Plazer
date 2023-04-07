@@ -4,13 +4,7 @@ import {
   gql,
   useApollo,
 } from "@merged/solid-apollo";
-import {
-  createComputed,
-  createMemo,
-  createSignal,
-  onCleanup,
-  Suspense,
-} from "solid-js";
+import { createMemo, createSignal, onCleanup, Suspense } from "solid-js";
 import "./Counter.scss";
 import { isServer } from "solid-js/web";
 import type {
@@ -46,8 +40,7 @@ export default function Counter() {
   );
   const count = createMemo(() => countQuery()?.count);
 
-  const [countStore, setCount] = createSignal<number | undefined>(undefined);
-  createComputed(() => setCount(count()));
+  const [countStore, setCount] = createSignal(count());
 
   const client = useApollo();
   if (!isServer) {

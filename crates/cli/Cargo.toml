@@ -7,8 +7,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.70"
-c11ity_service = { version = "0.1.0", path = "../service", features = [
-    "schema-gen",
-] }
+c11ity_service = { version = "0.1.0", path = "../service" }
 clap = { version = "4.2.1", features = ["cargo", "derive"] }
 tokio = { version = "1.22.0", features = ["macros", "rt-multi-thread"] }

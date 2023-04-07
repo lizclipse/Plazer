@@ -15,9 +15,13 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      "/api/subscriptions": {
+      "/api/graphql/ws": {
         target: "ws://localhost:8080",
         ws: true,
+        changeOrigin: true,
+      },
+      "/api/graphql": {
+        target: "htpp://localhost:8080",
         changeOrigin: true,
       },
     },

@@ -1,25 +1,32 @@
-use std::{convert::Infallible, env, pin::Pin, sync::Arc};
+use std::future;
 
-use futures::{FutureExt as _, Stream};
-use juniper::{graphql_object, graphql_subscription, RootNode};
-use juniper_graphql_ws::ConnectionConfig;
-use juniper_warp::{playground_filter, subscriptions::serve_graphql_ws};
+use async_graphql::{
+    http::{GraphiQLSource, ALL_WEBSOCKET_PROTOCOLS},
+    *,
+};
+use async_graphql_axum::{GraphQLProtocol, GraphQLRequest, GraphQLResponse, GraphQLWebSocket};
+use axum::{
+    extract::{State, WebSocketUpgrade},
+    response::{self, IntoResponse},
+    routing::{get, post},
+    Router, Server,
+};
+use futures::Stream;
 use tokio::sync::{watch, RwLock};
 use tracing::Level;
-use warp::{http::Response, Filter};
 
-struct ContextInner {
+struct DbInner {
     counter: i32,
     counter_rx: watch::Receiver<i32>,
     counter_tx: watch::Sender<i32>,
 }
 
-pub struct Context(RwLock<ContextInner>);
+pub struct Db(RwLock<DbInner>);
 
-impl Context {
+impl Db {
     fn new() -> Self {
         let (counter_tx, counter_rx) = watch::channel(0);
-        Self(RwLock::new(ContextInner {
+        Self(RwLock::new(DbInner {
             counter: 0,
             counter_rx,
             counter_tx,
@@ -37,7 +44,7 @@ impl Context {
         self.0.read().await.counter
     }
 
-    pub async fn counter_rx(&self) -> impl Stream<Item = i32> + Send + Sync + 'static {
+    pub async fn counter_rx(&self) -> impl Stream<Item = i32> {
         let mut rx = self.0.read().await.counter_rx.clone();
         async_stream::stream! {
             while rx.changed().await.is_ok() {
@@ -51,95 +58,97 @@ impl Context {
     }
 }
 
-impl juniper::Context for Context {}
-
 pub struct Query;
 
-#[graphql_object(context = Context)]
+#[Object]
 impl Query {
-    async fn count<'db>(context: &'db Context) -> i32 {
-        context.counter().await
+    async fn count<'ctx>(&self, ctx: &Context<'ctx>) -> i32 {
+        let db = ctx.data::<Db>().unwrap();
+        db.counter().await
     }
 }
 
 pub struct Mutation;
 
-#[graphql_object(context = Context)]
+#[Object]
 impl Mutation {
-    async fn increment<'db>(by: Option<i32>, context: &'db Context) -> i32 {
-        context.increment(by).await
+    async fn increment<'ctx>(&self, ctx: &Context<'ctx>, by: Option<i32>) -> i32 {
+        let db = ctx.data::<Db>().unwrap();
+        db.increment(by).await
     }
 }
-
-type ChangesStream = Pin<Box<dyn Stream<Item = i32> + Send>>;
 
 pub struct Subscription;
 
-#[graphql_subscription(context = Context)]
+#[Subscription]
 impl Subscription {
-    async fn changes<'db>(context: &'db Context) -> ChangesStream {
-        let changes = context.counter_rx().await;
-
-        Box::pin(changes)
+    async fn changes<'ctx>(&self, ctx: &Context<'ctx>) -> impl Stream<Item = i32> {
+        let db = ctx.data::<Db>().unwrap();
+        db.counter_rx().await
     }
 }
 
-type Schema = RootNode<'static, Query, Mutation, Subscription>;
+pub fn schema() -> Schema<Query, Mutation, Subscription> {
+    Schema::build(Query, Mutation, Subscription).finish()
+}
 
-pub fn schema() -> Schema {
-    Schema::new(Query, Mutation, Subscription)
+async fn graphql_handler(
+    schema: State<Schema<Query, Mutation, Subscription>>,
+    req: GraphQLRequest,
+) -> GraphQLResponse {
+    schema
+        .execute(req.into_inner().data(Db::new()))
+        .await
+        .into()
+}
+
+async fn graphql_ws_handler(
+    schema: State<Schema<Query, Mutation, Subscription>>,
+    protocol: GraphQLProtocol,
+    upgrade: WebSocketUpgrade,
+) -> impl IntoResponse {
+    let schema = (*schema).clone();
+    upgrade
+        .protocols(ALL_WEBSOCKET_PROTOCOLS)
+        .on_upgrade(move |stream| {
+            GraphQLWebSocket::new(stream, schema, protocol)
+                .on_connection_init(|_| {
+                    future::ready(Ok({
+                        let mut data = Data::default();
+                        data.insert(Db::new());
+                        data
+                    }))
+                })
+                .serve()
+        })
+}
+
+async fn graphiql() -> impl IntoResponse {
+    response::Html(
+        GraphiQLSource::build()
+            .endpoint("/api/graphql")
+            .subscription_endpoint("/api/graphql/ws")
+            .finish(),
+    )
 }
 
 pub async fn serve() {
-    env::set_var("RUST_LOG", "warp_subscriptions");
     tracing_subscriber::fmt()
         .with_max_level(Level::DEBUG)
         .init();
 
-    let log = warp::log("warp_subscriptions");
+    let schema = schema();
 
-    let homepage = warp::path::end().map(|| {
-        Response::builder()
-            .header("content-type", "text/html")
-            .body("<html><h1>juniper_subscriptions demo</h1><div>visit <a href=\"/playground\">graphql playground</a></html>")
-    });
+    let app = Router::new()
+        .route("/", get(graphiql))
+        .route("/api/graphql", post(graphql_handler))
+        .route("/api/graphql/ws", get(graphql_ws_handler))
+        .with_state(schema);
 
-    let qm_schema = schema();
-    let qm_state = warp::any().map(Context::new);
-    let qm_graphql_filter = juniper_warp::make_graphql_filter(qm_schema, qm_state.boxed());
+    println!("GraphiQL IDE: http://localhost:8080");
 
-    let root_node = Arc::new(schema());
-
-    log::info!("Listening on 127.0.0.1:8080");
-
-    let routes =
-        (warp::path!("api" / "subscriptions")
-            .and(warp::ws())
-            .map(move |ws: warp::ws::Ws| {
-                let root_node = root_node.clone();
-                ws.on_upgrade(move |websocket| {
-                    serve_graphql_ws(websocket, root_node, |init| async move {
-                        log::debug!("init {:#?}", init);
-                        Result::<_, Infallible>::Ok(ConnectionConfig::new(Context::new()))
-                    })
-                    .map(|r| {
-                        if let Err(e) = r {
-                            println!("Websocket error: {e}");
-                        }
-                    })
-                })
-            }))
-        .or(warp::post()
-            .and(warp::path!("api" / "graphql"))
-            .and(qm_graphql_filter))
-        .or(warp::get()
-            .and(warp::path("playground"))
-            .and(playground_filter(
-                "/api/graphql",
-                Some("/api/subscriptions"),
-            )))
-        .or(homepage)
-        .with(log);
-
-    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
+    Server::bind(&"0.0.0.0:8080".parse().unwrap())
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }

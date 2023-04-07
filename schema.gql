@@ -1,13 +1,13 @@
-type Subscription {
-  changes: Int!
+type Mutation {
+  increment(by: Int): Int!
 }
 
 type Query {
   count: Int!
 }
 
-type Mutation {
-  increment(by: Int): Int!
+type Subscription {
+  changes: Int!
 }
 
 schema {

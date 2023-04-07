@@ -35,7 +35,7 @@ async fn main() -> Result<(), anyhow::Error> {
 }
 
 async fn output_schema(output: Option<String>) -> Result<(), anyhow::Error> {
-    let schema = schema().as_schema_language();
+    let schema = schema().sdl();
 
     match output {
         Some(output) => {
