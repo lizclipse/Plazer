@@ -6,6 +6,7 @@ module.exports = {
     tsconfigRootDir: __dirname,
   },
   ignorePatterns: [
+    "scripts/**",
     ".eslintrc.cjs",
     "vite.config.ts",
     "vitest.config.ts",

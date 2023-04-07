@@ -1,2 +1,2 @@
 schema: "schema.gql"
-documents: "packages/ui/src/**/*.{graphql,js,ts,jsx,tsx}"
+documents: "packages/ui/src/**/*.{graphql,js,ts,jsx,tsx,gql}"

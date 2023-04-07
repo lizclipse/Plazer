@@ -13,7 +13,7 @@
     "test-ui": "vitest --ui",
     "coverage": "vitest run --coverage",
     "clean": "rm -rf dist build",
-    "postinstall": "node add-ts-nocheck.js",
+    "postinstall": "node scripts/dependency-fix.js",
     "codegen": "graphql-codegen --config graphql-codegen.yml",
     "codegen:watch": "pnpm run codegen --watch"
   },
@@ -30,14 +30,13 @@
     "@types/testing-library__jest-dom": "^5.14.5",
     "@vitest/coverage-c8": "^0.29.8",
     "@vitest/ui": "^0.29.8",
-    "apollo": "^2.34.0",
     "eslint-config-custom": "workspace:*",
     "jsdom": "^21.1.1",
     "sass": "^1.60.0",
     "solid-js": "^1.7.2",
-    "solid-start": "^0.2.24",
-    "solid-start-node": "^0.2.24",
-    "solid-start-static": "^0.2.24",
+    "solid-start": "^0.2.26",
+    "solid-start-node": "^0.2.26",
+    "solid-start-static": "^0.2.26",
     "tsconfig": "workspace:*",
     "typescript": "^5.0.3",
     "undici": "^5.21.0",
@@ -45,6 +44,7 @@
     "vitest": "^0.29.8"
   },
   "dependencies": {
+    "@apollo/client": "^3.7.11",
     "@merged/solid-apollo": "^1.7.1",
     "graphql": "^16.6.0"
   }

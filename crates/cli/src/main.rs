@@ -16,7 +16,7 @@ enum Commands {
 }
 
 #[derive(Args)]
-#[command(about = "Generate code")]
+#[command(about = "Generate schema")]
 struct SchemaCommand {
     #[arg(short, long, help = "The output directory")]
     output: Option<String>,
