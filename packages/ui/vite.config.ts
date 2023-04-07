@@ -9,12 +9,17 @@ export default defineConfig({
       babelrc: false,
       configFile: false,
       plugins: ["babel-plugin-graphql-tag"],
+      babelHelpers: "bundled",
     }),
     solid(),
   ],
   server: {
     proxy: {
-      "/api": "http://localhost:8080",
+      "/api/subscriptions": {
+        target: "ws://localhost:8080",
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -1,5 +1,6 @@
 // @refresh reload
 import { ApolloClient, InMemoryCache } from "@apollo/client/core";
+import { WebSocketLink } from "@apollo/client/link/ws";
 import { ApolloProvider } from "@merged/solid-apollo";
 import { Routes } from "@solidjs/router";
 import { Suspense } from "solid-js";
@@ -14,11 +15,22 @@ import {
   Title,
 } from "solid-start";
 import { ErrorBoundary } from "solid-start/error-boundary";
+import { SubscriptionClient } from "subscriptions-transport-ws";
 
-const client = new ApolloClient({
-  uri: `${isServer ? "http://localhost:8080" : ""}/api/graphql`,
-  cache: new InMemoryCache(),
-});
+const client = new ApolloClient(
+  isServer
+    ? {
+        uri: "http://localhost:8080/api/graphql",
+
+        cache: new InMemoryCache(),
+      }
+    : {
+        link: new WebSocketLink(
+          new SubscriptionClient("ws://localhost:3000/api/subscriptions")
+        ),
+        cache: new InMemoryCache(),
+      }
+);
 
 export default function Root() {
   return (

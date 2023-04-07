@@ -117,7 +117,7 @@ pub async fn serve() {
             .and(warp::ws())
             .map(move |ws: warp::ws::Ws| {
                 let root_node = root_node.clone();
-                ws.on_upgrade(move |websocket| async move {
+                ws.on_upgrade(move |websocket| {
                     serve_graphql_ws(websocket, root_node, |init| async move {
                         log::debug!("init {:#?}", init);
                         Result::<_, Infallible>::Ok(ConnectionConfig::new(Context::new()))
@@ -127,13 +127,8 @@ pub async fn serve() {
                             println!("Websocket error: {e}");
                         }
                     })
-                    .await
                 })
             }))
-        .map(|reply| {
-            // TODO#584: remove this workaround
-            warp::reply::with_header(reply, "Sec-WebSocket-Protocol", "graphql-ws")
-        })
         .or(warp::post()
             .and(warp::path!("api" / "graphql"))
             .and(qm_graphql_filter))
