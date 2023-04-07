@@ -67,6 +67,9 @@ importers:
       '@graphql-codegen/typescript-operations':
         specifier: ^3.0.3
         version: 3.0.3(graphql@16.6.0)
+      '@rollup/plugin-babel':
+        specifier: ^6.0.3
+        version: 6.0.3(@babel/core@7.21.4)(rollup@3.20.2)
       '@solidjs/meta':
         specifier: ^0.28.4
         version: 0.28.4(solid-js@1.7.2)
@@ -88,6 +91,9 @@ importers:
       '@vitest/ui':
         specifier: ^0.29.8
         version: 0.29.8
+      babel-plugin-graphql-tag:
+        specifier: ^3.3.0
+        version: 3.3.0(@babel/core@7.21.4)(graphql-tag@2.12.6)
       eslint-config-custom:
         specifier: workspace:*
         version: link:../eslint-config-custom
@@ -2464,6 +2470,25 @@ packages:
     resolution: {integrity: sha512-AW8PKd6iX3vAZ0vA43nOUOnbq/X5ihgU+mSXXqunMkeQADGiqw/PY0JNeYtD5sr0PAy51YPgAPbDoeapv9r8WA==}
     dev: true
 
+  /@rollup/plugin-babel@6.0.3(@babel/core@7.21.4)(rollup@3.20.2):
+    resolution: {integrity: sha512-fKImZKppa1A/gX73eg4JGo+8kQr/q1HBQaCGKECZ0v4YBBv3lFqi14+7xyApECzvkLTHCifx+7ntcrvtBIRcpg==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@babel/core': ^7.0.0
+      '@types/babel__core': ^7.1.9
+      rollup: ^1.20.0||^2.0.0||^3.0.0
+    peerDependenciesMeta:
+      '@types/babel__core':
+        optional: true
+      rollup:
+        optional: true
+    dependencies:
+      '@babel/core': 7.21.4
+      '@babel/helper-module-imports': 7.21.4
+      '@rollup/pluginutils': 5.0.2(rollup@3.20.2)
+      rollup: 3.20.2
+    dev: true
+
   /@rollup/plugin-commonjs@24.0.1(rollup@3.20.2):
     resolution: {integrity: sha512-15LsiWRZk4eOGqvrJyu3z3DaBu5BhXIMeWnijSRvd8irrrg9SHpQ1pH+BUK4H6Z9wL9yOxZJMTLU+Au86XHxow==}
     engines: {node: '>=14.0.0'}
@@ -3184,6 +3209,35 @@ packages:
       follow-redirects: 1.15.2(debug@4.3.4)
     transitivePeerDependencies:
       - debug
+    dev: true
+
+  /babel-literal-to-ast@2.1.0(@babel/core@7.21.4):
+    resolution: {integrity: sha512-CxfpQ0ysQ0bZOhlaPgcWjl79Em16Rhqc6++UAFn0A3duiXmuyhhj8yyl9PYbj0I0CyjrHovdDbp2QEKT7uIMxw==}
+    peerDependencies:
+      '@babel/core': ^7.1.2
+    dependencies:
+      '@babel/core': 7.21.4
+      '@babel/parser': 7.21.4
+      '@babel/traverse': 7.21.4
+      '@babel/types': 7.21.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  /babel-plugin-graphql-tag@3.3.0(@babel/core@7.21.4)(graphql-tag@2.12.6):
+    resolution: {integrity: sha512-27qfJhFJ2jQg+ktcC3cdppE2RrXZ5uiDz+39YC5lhkmftWPuJW8ET9Ehskwv7ujScZ1jSKhs5/JZKlESCkwIBg==}
+    peerDependencies:
+      '@babel/core': ^7.0.0
+      graphql-tag: ^2.10.1
+    dependencies:
+      '@babel/core': 7.21.4
+      '@babel/helper-plugin-utils': 7.20.2
+      '@babel/parser': 7.21.4
+      babel-literal-to-ast: 2.1.0(@babel/core@7.21.4)
+      debug: 4.3.4
+      graphql-tag: 2.12.6(graphql@16.6.0)
+    transitivePeerDependencies:
+      - supports-color
     dev: true
 
   /babel-plugin-jsx-dom-expressions@0.36.7(@babel/core@7.21.4):

@@ -1,10 +1,7 @@
 import { createQuery, gql } from "@merged/solid-apollo";
 import { Suspense } from "solid-js";
 import "./Counter.scss";
-import { isServer } from "solid-js/web";
 import type { GetCountQuery, GetCountQueryVariables } from "./Counter.gql";
-
-const base = isServer ? "http://localhost:8080" : "";
 
 const QUERY_COUNT = gql`
   query GetCount {
