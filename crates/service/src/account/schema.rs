@@ -1,13 +1,12 @@
-use async_graphql::{Context, InputObject, Object, Result, SimpleObject, Subscription, ID};
+use async_graphql::{Context, InputObject, Object, Result, SimpleObject, ID};
 use chrono::{DateTime, Utc};
-use futures::Stream;
 use secrecy::SecretString;
 
 #[derive(Default)]
-pub struct AuthQuery;
+pub struct AccountQuery;
 
 #[Object]
-impl AuthQuery {
+impl AccountQuery {
     /// Get the account associated with the current session.
     async fn me<'ctx>(&self, _ctx: &Context<'ctx>) -> Account {
         todo!()
@@ -15,10 +14,10 @@ impl AuthQuery {
 }
 
 #[derive(Default)]
-pub struct AuthMutation;
+pub struct AccountMutation;
 
 #[Object]
-impl AuthMutation {
+impl AccountMutation {
     /// Log in to an account.
     async fn login<'ctx>(
         &self,
@@ -37,29 +36,6 @@ impl AuthMutation {
     /// Revoke all tokens issued for the current account.
     async fn revoke_tokens<'ctx>(&self, _ctx: &Context<'ctx>) -> Result<DateTime<Utc>> {
         todo!()
-    }
-}
-
-#[derive(Default)]
-pub struct AuthSubscription;
-
-#[Subscription]
-impl AuthSubscription {
-    /// Subscribe to changes to the current account.
-    async fn me<'ctx>(&self, _ctx: &Context<'ctx>) -> impl Stream<Item = Account> {
-        async_stream::stream! {
-            yield todo!();
-        }
-    }
-
-    /// Subscribe to token revocations.
-    async fn token_revocations<'ctx>(
-        &self,
-        _ctx: &Context<'ctx>,
-    ) -> impl Stream<Item = DateTime<Utc>> {
-        async_stream::stream! {
-            yield todo!();
-        }
     }
 }
 

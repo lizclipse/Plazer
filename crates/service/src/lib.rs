@@ -1,3 +1,4 @@
+mod account;
 mod schema;
 
 pub use schema::schema;

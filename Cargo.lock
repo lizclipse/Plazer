@@ -118,12 +118,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ascii_utils"
-version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71938f30533e4d95a6d17aa530939da3842c2ab6f4f84b9dae68447e4129f74a"
-
-[[package]]
 name = "async-channel"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -162,7 +156,6 @@ dependencies = [
  "base64 0.13.1",
  "bytes",
  "chrono",
- "fast_chemail",
  "fnv",
  "futures-util",
  "handlebars",
@@ -179,7 +172,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "static_assertions",
- "tempfile",
  "thiserror",
 ]
 
@@ -1014,15 +1006,6 @@ dependencies = [
  "lazy_static",
  "log",
  "rand 0.7.3",
-]
-
-[[package]]
-name = "fast_chemail"
-version = "0.9.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "495a39d30d624c2caabe6312bfead73e7717692b44e0b32df168c275a2e8e9e4"
-dependencies = [
- "ascii_utils",
 ]
 
 [[package]]
