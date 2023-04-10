@@ -1,13 +1,85 @@
+"""
+A registered account.
+"""
+type Account {
+  """
+  The account's unique ID.
+  """
+  id: ID!
+  """
+  The account's unique handle. This is used to create default names for
+  resources and for logging in.
+
+  It can be changed, but this will not change the name of any resources
+  that were created with the old handle.
+  """
+  handle: String!
+  """
+  A timestamp indicating the last time the user revoked all of their
+  tokens.
+
+  This is used to invalidate all tokens that were issued before the
+  revocation.
+  """
+  revokedAt: DateTime
+}
+
+input CreateAccount {
+  """
+  The account's unique handle. This is used to create default names for
+  resources and for logging in.
+  """
+  handle: String!
+  """
+  The account's password.
+  """
+  pword: String!
+  """
+  An optional invite code.
+
+  Whether this is required will depend on the server's configuration.
+  """
+  invite: String
+}
+
+"""
+Implement the DateTime<Utc> scalar
+
+The input/output is a string in RFC3339 format.
+"""
+scalar DateTime
+
 type Mutation {
-  increment(by: Int): Int!
+  """
+  Log in to an account.
+  """
+  login(handle: String!, pword: String!): Account!
+  """
+  Register a new account.
+  """
+  createAccount(create: CreateAccount!): Account!
+  """
+  Revoke all tokens issued for the current account.
+  """
+  revokeTokens: DateTime!
 }
 
 type Query {
-  count: Int!
+  """
+  Get the account associated with the current session.
+  """
+  me: Account!
 }
 
 type Subscription {
-  changes: Int!
+  """
+  Subscribe to changes to the current account.
+  """
+  me: Account!
+  """
+  Subscribe to token revocations.
+  """
+  tokenRevocations: DateTime!
 }
 
 schema {

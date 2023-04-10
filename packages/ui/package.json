@@ -6,7 +6,7 @@
     "build:server": "solid-start build && mkdir -p build && rm -rf build/server && mv dist build/server",
     "build:client": "START_SSR=false solid-start build && mkdir -p build && rm -rf build/client && mv dist build/client",
     "lint": "tsc && eslint --ext .ts,.tsx src && prettier --check .",
-    "fix": "eslint --ext .ts,.tsx src --fix",
+    "lint:fix": "eslint --ext .ts,.tsx src --fix",
     "start": "solid-start start",
     "test": "vitest run",
     "test-watch": "vitest",

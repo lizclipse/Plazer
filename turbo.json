@@ -8,7 +8,7 @@
       "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
     },
     "lint": {},
-    "fix": {},
+    "lint:fix": {},
     "dev": {
       "cache": false,
       "persistent": true

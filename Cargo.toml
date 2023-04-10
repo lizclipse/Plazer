@@ -1,7 +1,3 @@
 [workspace]
 
-members = [
-    "crates/cli",
-    "crates/common",
-    "crates/service"
-]
+members = ["crates/cli", "crates/service"]

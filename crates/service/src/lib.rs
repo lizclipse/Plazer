@@ -1,9 +1,14 @@
-use std::future;
+mod schema;
 
-use async_graphql::{
-    http::{GraphiQLSource, ALL_WEBSOCKET_PROTOCOLS},
-    *,
-};
+pub use schema::schema;
+use schema::ServiceSchema;
+
+use std::{net::SocketAddr, path::Path};
+
+use anyhow::Context as _;
+#[cfg(feature = "graphiql")]
+use async_graphql::http::GraphiQLSource;
+use async_graphql::{http::ALL_WEBSOCKET_PROTOCOLS, *};
 use async_graphql_axum::{GraphQLProtocol, GraphQLRequest, GraphQLResponse, GraphQLWebSocket};
 use axum::{
     extract::{State, WebSocketUpgrade},
@@ -11,118 +16,124 @@ use axum::{
     routing::{get, post},
     Router, Server,
 };
-use futures::Stream;
-use tokio::sync::{watch, RwLock};
+use ring::signature::{self, KeyPair as _};
+use thiserror::Error;
 use tracing::Level;
 
-struct DbInner {
-    counter: i32,
-    counter_rx: watch::Receiver<i32>,
-    counter_tx: watch::Sender<i32>,
+pub struct ServeConfig {
+    data: String,
+    jwt_enc_key: jsonwebtoken::EncodingKey,
+    jwt_dec_key: jsonwebtoken::DecodingKey,
+    host: Option<String>,
+    port: Option<u16>,
 }
 
-pub struct Db(RwLock<DbInner>);
-
-impl Db {
-    fn new() -> Self {
-        let (counter_tx, counter_rx) = watch::channel(0);
-        Self(RwLock::new(DbInner {
-            counter: 0,
-            counter_rx,
-            counter_tx,
-        }))
-    }
-
-    pub async fn increment(&self, by: Option<i32>) -> i32 {
-        let mut inner = self.0.write().await;
-        inner.counter += by.unwrap_or(1);
-        let _ = inner.counter_tx.send(inner.counter);
-        inner.counter
-    }
-
-    pub async fn counter(&self) -> i32 {
-        self.0.read().await.counter
-    }
-
-    pub async fn counter_rx(&self) -> impl Stream<Item = i32> {
-        let mut rx = self.0.read().await.counter_rx.clone();
-        async_stream::stream! {
-            while rx.changed().await.is_ok() {
-                let counter = {
-                    let value = rx.borrow();
-                    *value
-                };
-                yield counter;
-            }
+impl ServeConfig {
+    pub fn new(
+        data: String,
+        jwt_enc_key: jsonwebtoken::EncodingKey,
+        jwt_dec_key: jsonwebtoken::DecodingKey,
+    ) -> Self {
+        Self {
+            data,
+            jwt_enc_key,
+            jwt_dec_key,
+            host: None,
+            port: None,
         }
     }
-}
 
-pub struct Query;
+    pub fn host(self, host: String) -> Self {
+        self.set_host(Some(host))
+    }
 
-#[Object]
-impl Query {
-    async fn count<'ctx>(&self, ctx: &Context<'ctx>) -> i32 {
-        let db = ctx.data::<Db>().unwrap();
-        db.counter().await
+    pub fn set_host(mut self, host: Option<String>) -> Self {
+        self.host = host;
+        self
+    }
+
+    pub fn port(self, port: u16) -> Self {
+        self.set_port(Some(port))
+    }
+
+    pub fn set_port(mut self, port: Option<u16>) -> Self {
+        self.port = port;
+        self
     }
 }
 
-pub struct Mutation;
+pub async fn serve(config: ServeConfig) -> Result<(), ServeError> {
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .init();
 
-#[Object]
-impl Mutation {
-    async fn increment<'ctx>(&self, ctx: &Context<'ctx>, by: Option<i32>) -> i32 {
-        let db = ctx.data::<Db>().unwrap();
-        db.increment(by).await
-    }
+    let schema = schema();
+
+    let router = Router::new();
+    #[cfg(feature = "graphiql")]
+    let router = router.route("/", get(graphiql));
+    let app = router
+        .route("/api/graphql", post(graphql_handler))
+        .route("/api/graphql/ws", get(graphql_ws_handler))
+        .with_state(schema);
+
+    let addr = SocketAddr::new(
+        config
+            .host
+            .unwrap_or_else(|| "0.0.0.0".to_owned())
+            .parse()?,
+        config.port.unwrap_or(8080),
+    );
+    log::info!("Listening on {}", addr);
+    #[cfg(feature = "graphiql")]
+    log::info!("GraphQL Playground: http://localhost:{}/", addr.port());
+    Server::try_bind(&addr)?
+        .serve(app.into_make_service())
+        .await?;
+
+    Ok(())
 }
 
-pub struct Subscription;
-
-#[Subscription]
-impl Subscription {
-    async fn changes<'ctx>(&self, ctx: &Context<'ctx>) -> impl Stream<Item = i32> {
-        let db = ctx.data::<Db>().unwrap();
-        db.counter_rx().await
-    }
+#[derive(Error, Debug)]
+pub enum ServeError {
+    #[error("Invalid host: {0}")]
+    InvalidHost(#[from] std::net::AddrParseError),
+    #[error("Failed to start server: {0}")]
+    ServeError(#[from] hyper::Error),
 }
 
-pub fn schema() -> Schema<Query, Mutation, Subscription> {
-    Schema::build(Query, Mutation, Subscription).finish()
-}
-
-async fn graphql_handler(
-    schema: State<Schema<Query, Mutation, Subscription>>,
-    req: GraphQLRequest,
-) -> GraphQLResponse {
-    schema
-        .execute(req.into_inner().data(Db::new()))
+pub async fn read_key(
+    path: impl AsRef<Path>,
+) -> anyhow::Result<(jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey)> {
+    let pem = tokio::fs::read_to_string(path)
         .await
-        .into()
+        .context("Unable to locate private key")?;
+    let (_, doc) = pkcs8::Document::from_pem(&pem)
+        .map_err(|err| anyhow::anyhow!("Failed to parse private key: {:?}", err))?;
+    let key_pair = signature::Ed25519KeyPair::from_pkcs8(doc.as_ref())?;
+    let enc_key =
+        jsonwebtoken::EncodingKey::from_ed_pem(pem.as_bytes()).context("Private key is invalid")?;
+    let dec_key = jsonwebtoken::DecodingKey::from_ed_der(key_pair.public_key().as_ref());
+
+    Ok((enc_key, dec_key))
+}
+
+async fn graphql_handler(schema: State<ServiceSchema>, req: GraphQLRequest) -> GraphQLResponse {
+    schema.execute(req.into_inner()).await.into()
 }
 
 async fn graphql_ws_handler(
-    schema: State<Schema<Query, Mutation, Subscription>>,
+    schema: State<ServiceSchema>,
     protocol: GraphQLProtocol,
     upgrade: WebSocketUpgrade,
 ) -> impl IntoResponse {
     let schema = (*schema).clone();
     upgrade
         .protocols(ALL_WEBSOCKET_PROTOCOLS)
-        .on_upgrade(move |stream| {
-            GraphQLWebSocket::new(stream, schema, protocol)
-                .on_connection_init(|_| {
-                    future::ready(Ok({
-                        let mut data = Data::default();
-                        data.insert(Db::new());
-                        data
-                    }))
-                })
-                .serve()
-        })
+        .on_upgrade(move |stream| GraphQLWebSocket::new(stream, schema, protocol).serve())
 }
 
+#[cfg(feature = "graphiql")]
 async fn graphiql() -> impl IntoResponse {
     response::Html(
         GraphiQLSource::build()
@@ -130,25 +141,4 @@ async fn graphiql() -> impl IntoResponse {
             .subscription_endpoint("/api/graphql/ws")
             .finish(),
     )
-}
-
-pub async fn serve() {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .init();
-
-    let schema = schema();
-
-    let app = Router::new()
-        .route("/", get(graphiql))
-        .route("/api/graphql", post(graphql_handler))
-        .route("/api/graphql/ws", get(graphql_ws_handler))
-        .with_state(schema);
-
-    println!("GraphiQL IDE: http://localhost:8080");
-
-    Server::bind(&"0.0.0.0:8080".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
 }

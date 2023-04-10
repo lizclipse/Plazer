@@ -16,17 +16,24 @@
       "problemMatcher": "$rustc"
     },
     {
-      "label": "fix - cli",
+      "label": "lint:fix - cli",
       "type": "process",
       "command": "cargo",
       "args": ["clippy", "--fix", "--allow-staged"],
       "problemMatcher": "$tsc"
     },
     {
-      "label": "fix - ui",
+      "label": "lint:fix - ui",
       "type": "process",
       "command": "turbo",
-      "args": ["fix"],
+      "args": ["lint:fix"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "lint:fix - prettier",
+      "type": "process",
+      "command": "pnpm",
+      "args": ["run", "lint:fix"],
       "problemMatcher": "$tsc"
     },
     {
@@ -34,6 +41,14 @@
       "type": "process",
       "command": "cargo",
       "args": ["run", "-p", "c11ity_service"],
+      "problemMatcher": "$rustc",
+      "isBackground": true
+    },
+    {
+      "label": "serve - cli",
+      "type": "process",
+      "command": "cargo",
+      "args": ["run", "-p", "c11ity"],
       "problemMatcher": "$rustc",
       "isBackground": true
     },
