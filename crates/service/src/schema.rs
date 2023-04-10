@@ -1,6 +1,6 @@
-use crate::account::{AccountMutation, AccountQuery};
+use async_graphql::{EmptySubscription, MergedObject, Schema, SchemaBuilder};
 
-use async_graphql::{EmptySubscription, MergedObject, Schema};
+use crate::account::{AccountMutation, AccountQuery};
 
 #[derive(MergedObject, Default)]
 pub struct Query(AccountQuery);
@@ -10,6 +10,15 @@ pub struct Mutation(AccountMutation);
 
 pub type ServiceSchema = Schema<Query, Mutation, EmptySubscription>;
 
-pub fn schema() -> ServiceSchema {
-    Schema::build(Query::default(), Mutation::default(), EmptySubscription).finish()
+type ServiceSchemaBuilder = SchemaBuilder<Query, Mutation, EmptySubscription>;
+pub fn schema<F>(adjust: F) -> ServiceSchema
+where
+    F: FnOnce(ServiceSchemaBuilder) -> ServiceSchemaBuilder,
+{
+    adjust(Schema::build(
+        Query::default(),
+        Mutation::default(),
+        EmptySubscription,
+    ))
+    .finish()
 }

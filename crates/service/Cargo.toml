@@ -14,7 +14,7 @@ async-graphql = { version = "5.0.7", features = [
 async-graphql-axum = "5.0.7"
 async-stream = "0.3.5"
 async-trait = "0.1.58"
-axum = { version = "0.6.12", features = ["ws"] }
+axum = { version = "0.6.12", features = ["headers", "ws"] }
 chrono = "0.4.24"
 futures = "0.3.28"
 hyper = "0.14.25"

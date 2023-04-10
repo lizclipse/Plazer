@@ -1,28 +1,33 @@
 mod account;
+mod error;
+mod persist;
 mod schema;
 
-pub use schema::schema;
-use schema::ServiceSchema;
-
-use std::{net::SocketAddr, path::Path};
+use std::{net::SocketAddr, path::Path, sync::Arc};
 
 use anyhow::Context as _;
 #[cfg(feature = "graphiql")]
 use async_graphql::http::GraphiQLSource;
-use async_graphql::{http::ALL_WEBSOCKET_PROTOCOLS, *};
+use async_graphql::{http::ALL_WEBSOCKET_PROTOCOLS, Data, ResultExt as _};
 use async_graphql_axum::{GraphQLProtocol, GraphQLRequest, GraphQLResponse, GraphQLWebSocket};
 use axum::{
-    extract::{State, WebSocketUpgrade},
+    extract::{FromRef, State, WebSocketUpgrade},
+    headers::{authorization::Bearer, Authorization},
     response::{self, IntoResponse},
     routing::{get, post},
-    Router, Server,
+    Router, Server, TypedHeader,
 };
 use ring::signature::{self, KeyPair as _};
 use thiserror::Error;
 use tracing::Level;
 
+use account::authenticate;
+use error::ErrorResponse;
+pub use schema::schema;
+use schema::ServiceSchema;
+
 pub struct ServeConfig {
-    data: String,
+    data_dir: String,
     jwt_enc_key: jsonwebtoken::EncodingKey,
     jwt_dec_key: jsonwebtoken::DecodingKey,
     host: Option<String>,
@@ -31,12 +36,12 @@ pub struct ServeConfig {
 
 impl ServeConfig {
     pub fn new(
-        data: String,
+        data_dir: String,
         jwt_enc_key: jsonwebtoken::EncodingKey,
         jwt_dec_key: jsonwebtoken::DecodingKey,
     ) -> Self {
         Self {
-            data,
+            data_dir,
             jwt_enc_key,
             jwt_dec_key,
             host: None,
@@ -68,7 +73,10 @@ pub async fn serve(config: ServeConfig) -> Result<(), ServeError> {
         .with_max_level(Level::DEBUG)
         .init();
 
-    let schema = schema();
+    let persist = persist::Persist::new();
+    let schema = schema(move |s| s.data(persist));
+
+    let state = ServiceState::new(schema, config.jwt_enc_key, config.jwt_dec_key);
 
     let router = Router::new();
     #[cfg(feature = "graphiql")]
@@ -76,7 +84,7 @@ pub async fn serve(config: ServeConfig) -> Result<(), ServeError> {
     let app = router
         .route("/api/graphql", post(graphql_handler))
         .route("/api/graphql/ws", get(graphql_ws_handler))
-        .with_state(schema);
+        .with_state(state);
 
     let addr = SocketAddr::new(
         config
@@ -119,19 +127,34 @@ pub async fn read_key(
     Ok((enc_key, dec_key))
 }
 
-async fn graphql_handler(schema: State<ServiceSchema>, req: GraphQLRequest) -> GraphQLResponse {
-    schema.execute(req.into_inner()).await.into()
+async fn graphql_handler(
+    State(schema): State<ServiceSchema>,
+    State(dec_key): State<DecodingKey>,
+    auth_header: Option<TypedHeader<Authorization<Bearer>>>,
+    req: GraphQLRequest,
+) -> Result<GraphQLResponse, ErrorResponse> {
+    let current = authenticate(auth_header, &dec_key).await?;
+    Ok(schema.execute(req.into_inner().data(current)).await.into())
 }
 
 async fn graphql_ws_handler(
-    schema: State<ServiceSchema>,
+    State(schema): State<ServiceSchema>,
+    State(dec_key): State<DecodingKey>,
     protocol: GraphQLProtocol,
     upgrade: WebSocketUpgrade,
 ) -> impl IntoResponse {
-    let schema = (*schema).clone();
     upgrade
         .protocols(ALL_WEBSOCKET_PROTOCOLS)
-        .on_upgrade(move |stream| GraphQLWebSocket::new(stream, schema, protocol).serve())
+        .on_upgrade(move |stream| {
+            GraphQLWebSocket::new(stream, schema, protocol)
+                .on_connection_init(|init| async move {
+                    let mut data = Data::default();
+                    let current = authenticate(init, &dec_key).await.extend()?;
+                    data.insert(current);
+                    Ok(data)
+                })
+                .serve()
+        })
 }
 
 #[cfg(feature = "graphiql")]
@@ -142,4 +165,46 @@ async fn graphiql() -> impl IntoResponse {
             .subscription_endpoint("/api/graphql/ws")
             .finish(),
     )
+}
+
+type EncodingKey = Arc<jsonwebtoken::EncodingKey>;
+type DecodingKey = Arc<jsonwebtoken::DecodingKey>;
+
+#[derive(Clone)]
+struct ServiceState {
+    schema: ServiceSchema,
+    jwt_enc_key: EncodingKey,
+    jwt_dec_key: DecodingKey,
+}
+
+impl ServiceState {
+    fn new(
+        schema: ServiceSchema,
+        jwt_enc_key: jsonwebtoken::EncodingKey,
+        jwt_dec_key: jsonwebtoken::DecodingKey,
+    ) -> Self {
+        Self {
+            schema,
+            jwt_enc_key: Arc::new(jwt_enc_key),
+            jwt_dec_key: Arc::new(jwt_dec_key),
+        }
+    }
+}
+
+impl FromRef<ServiceState> for ServiceSchema {
+    fn from_ref(state: &ServiceState) -> Self {
+        state.schema.clone()
+    }
+}
+
+impl FromRef<ServiceState> for EncodingKey {
+    fn from_ref(state: &ServiceState) -> Self {
+        state.jwt_enc_key.clone()
+    }
+}
+
+impl FromRef<ServiceState> for DecodingKey {
+    fn from_ref(state: &ServiceState) -> Self {
+        state.jwt_dec_key.clone()
+    }
 }

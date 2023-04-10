@@ -107,7 +107,7 @@ async fn run(cmd: RunCommand) -> anyhow::Result<()> {
 }
 
 async fn output_schema(cmd: SchemaCommand) -> anyhow::Result<()> {
-    let schema = schema().sdl();
+    let schema = schema(|s| s).sdl();
 
     match cmd.output {
         Some(output) => {
