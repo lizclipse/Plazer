@@ -3,9 +3,10 @@ use surrealdb::{engine::any::Any, Surreal};
 
 use crate::account::{AccountPersist, CurrentAccount};
 
-pub type PersistLayer = Surreal<Any>;
+// TODO: use features to select specific engines when building as a service
+pub type DbLayer = Surreal<Any>;
 
-static DB: PersistLayer = Surreal::init();
+static DB: DbLayer = Surreal::init();
 
 pub trait PersistExt {
     fn account_persist(&self) -> AccountPersist;
@@ -14,11 +15,12 @@ pub trait PersistExt {
 pub struct Persist;
 
 impl Persist {
-    pub fn new() -> Self {
-        Self
+    pub async fn new(address: String) -> surrealdb::Result<Self> {
+        DB.connect(address).await?;
+        Ok(Self)
     }
 
-    pub fn db(&self) -> &PersistLayer {
+    pub fn db(&self) -> &DbLayer {
         &DB
     }
 }

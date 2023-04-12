@@ -15,7 +15,7 @@ use surrealdb::sql::Thing;
 use crate::error::{Error, Result};
 
 /// A registered account.
-#[derive(SimpleObject, Debug)]
+#[derive(SimpleObject, Debug, Deserialize)]
 #[graphql(complex)]
 pub struct Account {
     #[graphql(skip)]
@@ -47,6 +47,7 @@ impl Account {
     }
 }
 
+/// The information needed to create a new account.
 #[derive(InputObject, Debug)]
 pub struct CreateAccount {
     /// The account's unique handle. This is used to create default names for
@@ -58,6 +59,15 @@ pub struct CreateAccount {
     ///
     /// Whether this is required will depend on the server's configuration.
     invite: Option<String>,
+}
+
+/// The information needed to authenticate an account.
+#[derive(InputObject, Debug)]
+pub struct AuthCreds {
+    /// The handle of the account to authenticate.
+    handle: String,
+    /// The account's password.
+    pword: SecretString,
 }
 
 /// Account information stored in the JWT.

@@ -1,11 +1,12 @@
 use std::path::Path;
 
 use anyhow::Context as _;
-use c11ity_service::{read_key, schema, serve, ServeConfig};
-use clap::{Args, Parser, Subcommand};
+use c11ity_service::{init_logging, read_key, schema, serve, ServeConfig};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use pkcs8::der::Decode;
 use ring::{rand, signature};
 use tokio::{fs::File, io::AsyncWriteExt};
+use tracing::Level;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -30,7 +31,7 @@ enum Commands {
 }
 
 #[derive(Args)]
-#[command(about = "Run server")]
+#[command(about = "Starts the server")]
 struct RunCommand {
     #[arg(short, long, help = "The port to listen on [default: 8080]")]
     port: Option<u16>,
@@ -41,17 +42,61 @@ struct RunCommand {
     #[arg(
         short,
         long,
-        help = "The directory for storing data",
-        default_value = "data"
+        help = "The directory to store logs in",
+        default_value = "./data/logs"
     )]
-    data: String,
+    log_dir: String,
+
+    #[arg(
+        short,
+        long,
+        help = "The address of the remote database or the path to a local file",
+        default_value = "file://./data/db"
+    )]
+    db_address: String,
 
     #[arg(
         long,
         help = "The private key for authenticating",
-        default_value = "data/private_key.pem"
+        default_value = "./data/private_key.pem"
     )]
     private_key: String,
+
+    #[arg(long, help = "The level of logs to show on stdout", value_enum)]
+    #[cfg_attr(debug_assertions, arg(default_value = "debug"))]
+    #[cfg_attr(not(debug_assertions), arg(default_value = "info"))]
+    log_level_stdout: LogLevel,
+
+    #[arg(long, help = "The level of logs to show in log files", value_enum)]
+    #[cfg_attr(debug_assertions, arg(default_value = "trace"))]
+    #[cfg_attr(not(debug_assertions), arg(default_value = "info"))]
+    log_level_file: LogLevel,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum LogLevel {
+    /// Only show errors
+    Error,
+    /// Show errors and warnings
+    Warn,
+    /// Show info and above
+    Info,
+    /// Show debug and above
+    Debug,
+    /// Show all logs
+    Trace,
+}
+
+impl From<LogLevel> for tracing::Level {
+    fn from(level: LogLevel) -> Self {
+        match level {
+            LogLevel::Error => Level::ERROR,
+            LogLevel::Warn => Level::WARN,
+            LogLevel::Info => Level::INFO,
+            LogLevel::Debug => Level::DEBUG,
+            LogLevel::Trace => Level::TRACE,
+        }
+    }
 }
 
 #[derive(Args)]
@@ -86,30 +131,38 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run(cmd: RunCommand) -> anyhow::Result<()> {
-    tokio::fs::create_dir_all(Path::new(&cmd.data))
-        .await
-        .context("Failed to create data directory")?;
+async fn run(
+    RunCommand {
+        port,
+        host,
+        log_dir,
+        db_address,
+        private_key,
+        log_level_stdout,
+        log_level_file,
+    }: RunCommand,
+) -> anyhow::Result<()> {
+    let _guard = init_logging(log_dir, log_level_stdout.into(), log_level_file.into());
 
-    if !tokio::fs::try_exists(&cmd.private_key).await? {
-        generate_key(&cmd.private_key).await?;
+    if !tokio::fs::try_exists(&private_key).await? {
+        generate_key(&private_key).await?;
     }
 
-    let (enc_key, dec_key) = read_key(cmd.private_key).await?;
+    let (enc_key, dec_key) = read_key(private_key).await?;
 
-    let config = ServeConfig::new(cmd.data, enc_key, dec_key)
-        .set_host(cmd.host)
-        .set_port(cmd.port);
+    let config = ServeConfig::new(db_address, enc_key, dec_key)
+        .set_host(host)
+        .set_port(port);
 
     serve(config).await?;
 
     Ok(())
 }
 
-async fn output_schema(cmd: SchemaCommand) -> anyhow::Result<()> {
+async fn output_schema(SchemaCommand { output }: SchemaCommand) -> anyhow::Result<()> {
     let schema = schema(|s| s).sdl();
 
-    match cmd.output {
+    match output {
         Some(output) => {
             let mut file = File::create(output).await?;
             file.write_all(schema.as_bytes()).await?;

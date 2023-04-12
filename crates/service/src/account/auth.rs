@@ -2,26 +2,23 @@ use axum::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
+use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 
 use super::{CurrentAccount, PartialAccount};
 use crate::error::{Error, Result};
 
-pub enum AuthenticateInput {
-    Header(Option<TypedHeader<Authorization<Bearer>>>),
-    Init(serde_json::Value),
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
+    #[serde(flatten)]
     acc: PartialAccount,
 
     // aud: String, // Optional. Audience
     exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
     iat: usize, // Optional. Issued at (as UTC timestamp)
-                // iss: String, // Optional. Issuer
-                // nbf: usize, // Optional. Not Before (as UTC timestamp)
+    // iss: String, // Optional. Issuer
+    nbf: usize, // Optional. Not Before (as UTC timestamp)
                 // sub: String, // Optional. Subject (whom token refers to)
 }
 
@@ -67,6 +64,31 @@ pub async fn authenticate(
     let token_data = jsonwebtoken::decode::<Claims>(token, dec_key, &validation)?;
 
     Ok(token_data.claims.into())
+}
+
+pub async fn create_token(
+    acc: PartialAccount,
+    enc_key: &jsonwebtoken::EncodingKey,
+) -> Result<String> {
+    let claims = Claims {
+        acc,
+        exp: (Utc::now() + Duration::hours(24)).timestamp() as usize,
+        iat: Utc::now().timestamp() as usize,
+        nbf: Utc::now().timestamp() as usize,
+    };
+
+    let token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::new(Algorithm::EdDSA),
+        &claims,
+        enc_key,
+    )?;
+
+    Ok(token)
+}
+
+pub enum AuthenticateInput {
+    Header(Option<TypedHeader<Authorization<Bearer>>>),
+    Init(serde_json::Value),
 }
 
 impl From<Option<TypedHeader<Authorization<Bearer>>>> for AuthenticateInput {

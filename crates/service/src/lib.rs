@@ -3,7 +3,7 @@ mod error;
 mod persist;
 mod schema;
 
-use std::{net::SocketAddr, path::Path, sync::Arc};
+use std::{io, net::SocketAddr, path::Path, sync::Arc};
 
 use anyhow::Context as _;
 #[cfg(feature = "graphiql")]
@@ -19,7 +19,9 @@ use axum::{
 };
 use ring::signature::{self, KeyPair as _};
 use thiserror::Error;
-use tracing::Level;
+use tracing::{info, instrument, metadata::LevelFilter, Level};
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::{fmt, layer::SubscriberExt as _, Layer as _};
 
 use account::authenticate;
 use error::ErrorResponse;
@@ -27,7 +29,7 @@ pub use schema::schema;
 use schema::ServiceSchema;
 
 pub struct ServeConfig {
-    data_dir: String,
+    db_address: String,
     jwt_enc_key: jsonwebtoken::EncodingKey,
     jwt_dec_key: jsonwebtoken::DecodingKey,
     host: Option<String>,
@@ -36,12 +38,12 @@ pub struct ServeConfig {
 
 impl ServeConfig {
     pub fn new(
-        data_dir: String,
+        db_address: String,
         jwt_enc_key: jsonwebtoken::EncodingKey,
         jwt_dec_key: jsonwebtoken::DecodingKey,
     ) -> Self {
         Self {
-            data_dir,
+            db_address,
             jwt_enc_key,
             jwt_dec_key,
             host: None,
@@ -68,15 +70,47 @@ impl ServeConfig {
     }
 }
 
-pub async fn serve(config: ServeConfig) -> Result<(), ServeError> {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .init();
+pub fn init_logging(
+    log_dir: impl AsRef<Path>,
+    stdout_level: Level,
+    file_level: Level,
+) -> WorkerGuard {
+    let file_appender = tracing_appender::rolling::hourly(log_dir, "service.log");
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-    let persist = persist::Persist::new();
-    let schema = schema(move |s| s.data(persist));
+    let collector = tracing_subscriber::registry()
+        .with(
+            fmt::Layer::new()
+                .with_writer(io::stdout)
+                .compact()
+                .with_filter(LevelFilter::from_level(stdout_level)),
+        )
+        .with(
+            fmt::Layer::new()
+                .with_writer(non_blocking)
+                .json()
+                .with_filter(LevelFilter::from_level(file_level)),
+        );
+    tracing::subscriber::set_global_default(collector).expect("Unable to set a global subscriber");
 
-    let state = ServiceState::new(schema, config.jwt_enc_key, config.jwt_dec_key);
+    guard
+}
+
+#[instrument(skip(jwt_enc_key, jwt_dec_key))]
+pub async fn serve(
+    ServeConfig {
+        db_address: persist_address,
+        jwt_enc_key,
+        jwt_dec_key,
+        host,
+        port,
+    }: ServeConfig,
+) -> Result<(), ServeError> {
+    let jwt_enc_key = Arc::new(jwt_enc_key);
+    let persist = persist::Persist::new(persist_address).await?;
+    let schema = schema(|s| s.data(persist).data(jwt_enc_key.clone()));
+
+    let state = ServiceState::new(schema, jwt_enc_key, jwt_dec_key);
 
     let router = Router::new();
     #[cfg(feature = "graphiql")]
@@ -87,15 +121,12 @@ pub async fn serve(config: ServeConfig) -> Result<(), ServeError> {
         .with_state(state);
 
     let addr = SocketAddr::new(
-        config
-            .host
-            .unwrap_or_else(|| "0.0.0.0".to_owned())
-            .parse()?,
-        config.port.unwrap_or(8080),
+        host.unwrap_or_else(|| "0.0.0.0".to_owned()).parse()?,
+        port.unwrap_or(8080),
     );
-    log::info!("Listening on {}", addr);
+    info!("Listening on {}", addr);
     #[cfg(feature = "graphiql")]
-    log::info!("GraphQL Playground: http://localhost:{}/", addr.port());
+    info!("GraphQL Playground: http://localhost:{}/", addr.port());
     Server::try_bind(&addr)?
         .serve(app.into_make_service())
         .await?;
@@ -109,6 +140,8 @@ pub enum ServeError {
     InvalidHost(#[from] std::net::AddrParseError),
     #[error("Failed to start server: {0}")]
     ServeError(#[from] hyper::Error),
+    #[error("Failed to initialize database: {0}")]
+    PersistError(#[from] surrealdb::Error),
 }
 
 pub async fn read_key(
@@ -127,6 +160,7 @@ pub async fn read_key(
     Ok((enc_key, dec_key))
 }
 
+#[instrument(skip_all)]
 async fn graphql_handler(
     State(schema): State<ServiceSchema>,
     State(dec_key): State<DecodingKey>,
@@ -137,6 +171,7 @@ async fn graphql_handler(
     Ok(schema.execute(req.into_inner().data(current)).await.into())
 }
 
+#[instrument(skip_all)]
 async fn graphql_ws_handler(
     State(schema): State<ServiceSchema>,
     State(dec_key): State<DecodingKey>,
@@ -158,6 +193,7 @@ async fn graphql_ws_handler(
 }
 
 #[cfg(feature = "graphiql")]
+#[instrument(skip_all)]
 async fn graphiql() -> impl IntoResponse {
     response::Html(
         GraphiQLSource::build()
@@ -180,13 +216,13 @@ struct ServiceState {
 impl ServiceState {
     fn new(
         schema: ServiceSchema,
-        jwt_enc_key: jsonwebtoken::EncodingKey,
-        jwt_dec_key: jsonwebtoken::DecodingKey,
+        jwt_enc_key: impl Into<EncodingKey>,
+        jwt_dec_key: impl Into<DecodingKey>,
     ) -> Self {
         Self {
             schema,
-            jwt_enc_key: Arc::new(jwt_enc_key),
-            jwt_dec_key: Arc::new(jwt_dec_key),
+            jwt_enc_key: jwt_enc_key.into(),
+            jwt_dec_key: jwt_dec_key.into(),
         }
     }
 }

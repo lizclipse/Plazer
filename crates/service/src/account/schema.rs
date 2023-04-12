@@ -1,8 +1,8 @@
 use async_graphql::{Context, Object, Result, ResultExt as _};
 use chrono::{DateTime, Utc};
-use secrecy::SecretString;
+use tracing::instrument;
 
-use super::{Account, CreateAccount};
+use super::{Account, AuthCreds, CreateAccount};
 use crate::persist::PersistExt as _;
 
 #[derive(Default)]
@@ -11,7 +11,11 @@ pub struct AccountQuery;
 #[Object]
 impl AccountQuery {
     /// Get the account associated with the current session.
-    async fn me(&self, ctx: &Context<'_>) -> Result<Account> {
+    ///
+    /// If this returns `null`, then it means that the account associated with
+    /// the current session has been deleted.
+    #[instrument(skip_all)]
+    async fn me(&self, ctx: &Context<'_>) -> Result<Option<Account>> {
         ctx.account_persist().current().await.extend()
     }
 }
@@ -21,18 +25,24 @@ pub struct AccountMutation;
 
 #[Object]
 impl AccountMutation {
-    /// Log in to an account.
-    async fn login(&self, _ctx: &Context<'_>, _handle: String, _pword: SecretString) -> Account {
-        todo!()
+    /// Request an authentication token.
+    ///
+    /// This can be used to refresh an existing token when requested without
+    /// credentials.
+    #[instrument(skip_all)]
+    async fn auth_token(&self, ctx: &Context<'_>, creds: Option<AuthCreds>) -> Result<String> {
+        ctx.account_persist().auth_token(creds).await.extend()
     }
 
     /// Register a new account.
-    async fn create_account(&self, _ctx: &Context<'_>, _create: CreateAccount) -> Account {
-        todo!()
+    #[instrument(skip_all)]
+    async fn create_account(&self, ctx: &Context<'_>, create: CreateAccount) -> Result<Account> {
+        ctx.account_persist().create(create).await.extend()
     }
 
     /// Revoke all tokens issued for the current account.
-    async fn revoke_tokens(&self, _ctx: &Context<'_>) -> Result<DateTime<Utc>> {
-        todo!()
+    #[instrument(skip_all)]
+    async fn revoke_tokens(&self, ctx: &Context<'_>) -> Result<DateTime<Utc>> {
+        ctx.account_persist().revoke_tokens().await.extend()
     }
 }
