@@ -2,6 +2,8 @@ mod auth;
 mod persist;
 mod schema;
 
+use std::borrow::Cow;
+
 pub use auth::*;
 pub use persist::*;
 pub use schema::*;
@@ -71,10 +73,22 @@ pub struct AuthCreds {
 }
 
 /// Account information stored in the JWT.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PartialAccount {
     id: ID,
     hdl: String,
+}
+
+impl From<PartialAccount> for Cow<'_, PartialAccount> {
+    fn from(acc: PartialAccount) -> Self {
+        Cow::Owned(acc)
+    }
+}
+
+impl<'a> From<&'a PartialAccount> for Cow<'a, PartialAccount> {
+    fn from(acc: &'a PartialAccount) -> Self {
+        Cow::Borrowed(acc)
+    }
 }
 
 pub struct CurrentAccount(Option<PartialAccount>);

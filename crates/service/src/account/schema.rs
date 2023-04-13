@@ -31,7 +31,7 @@ impl AccountMutation {
     /// credentials.
     #[instrument(skip_all)]
     async fn auth_token(&self, ctx: &Context<'_>, creds: Option<AuthCreds>) -> Result<String> {
-        ctx.account_persist().auth_token(creds).await.extend()
+        ctx.account_persist().access_token(creds).await.extend()
     }
 
     /// Register a new account.

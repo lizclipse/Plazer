@@ -15,6 +15,8 @@ pub enum Error {
     Unauthenticated,
     #[error("Unauthorized")]
     Unauthorized,
+    #[error("Credentials are invalid")]
+    CredentialsInvalid,
 
     #[error("JWT is malformed")]
     JwtMalformed,
@@ -119,6 +121,12 @@ impl From<SrlError> for Error {
     }
 }
 
+impl From<ring::error::Unspecified> for Error {
+    fn from(_: ring::error::Unspecified) -> Self {
+        Self::CredentialsInvalid
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorData {
     code: String,
@@ -130,9 +138,10 @@ pub type ErrorResponse = (StatusCode, Json<ErrorData>);
 impl From<Error> for ErrorResponse {
     fn from(err: Error) -> Self {
         let code = match err {
-            Error::Unauthenticated | Error::JwtExpired | Error::JwtInvalid => {
-                StatusCode::UNAUTHORIZED
-            }
+            Error::Unauthenticated
+            | Error::CredentialsInvalid
+            | Error::JwtExpired
+            | Error::JwtInvalid => StatusCode::UNAUTHORIZED,
             Error::Unauthorized => StatusCode::FORBIDDEN,
             Error::JwtMalformed | Error::WsInitNotObject | Error::WsInitTokenNotString => {
                 StatusCode::BAD_REQUEST

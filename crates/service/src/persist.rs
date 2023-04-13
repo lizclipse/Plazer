@@ -1,7 +1,10 @@
 use async_graphql::Context;
 use surrealdb::{engine::any::Any, Surreal};
 
-use crate::account::{AccountPersist, CurrentAccount};
+use crate::{
+    account::{AccountPersist, CurrentAccount},
+    EncodingKey,
+};
 
 // TODO: use features to select specific engines when building as a service
 pub type DbLayer = Surreal<Any>;
@@ -30,6 +33,7 @@ impl PersistExt for Context<'_> {
         AccountPersist::new(
             self.data_unchecked::<Persist>(),
             self.data_unchecked::<CurrentAccount>(),
+            self.data_unchecked::<EncodingKey>(),
         )
     }
 }

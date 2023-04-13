@@ -1,19 +1,20 @@
+use std::borrow::Cow;
+
 use axum::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
+use ring::pbkdf2;
+use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
 
-use super::{CurrentAccount, PartialAccount};
+use super::{Account, AuthCreds, CurrentAccount, PartialAccount};
 use crate::error::{Error, Result};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    #[serde(flatten)]
-    acc: PartialAccount,
-
+pub struct JwtClaims {
     // aud: String, // Optional. Audience
     exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
     iat: usize, // Optional. Issued at (as UTC timestamp)
@@ -22,9 +23,37 @@ pub struct Claims {
                 // sub: String, // Optional. Subject (whom token refers to)
 }
 
-impl From<Claims> for CurrentAccount {
-    fn from(claims: Claims) -> Self {
-        Self(Some(claims.acc))
+impl JwtClaims {
+    pub fn new(duration: Duration) -> Self {
+        let now = Utc::now();
+        Self {
+            exp: (now + duration).timestamp() as usize,
+            iat: now.timestamp() as usize,
+            nbf: now.timestamp() as usize,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AccessClaims<'a> {
+    #[serde(flatten)]
+    acc: Cow<'a, PartialAccount>,
+    #[serde(flatten)]
+    jwt: JwtClaims,
+}
+
+impl<'a> AccessClaims<'a> {
+    pub fn new(acc: impl Into<Cow<'a, PartialAccount>>) -> Self {
+        Self {
+            acc: acc.into(),
+            jwt: JwtClaims::new(Duration::minutes(30)),
+        }
+    }
+}
+
+impl From<AccessClaims<'_>> for CurrentAccount {
+    fn from(claims: AccessClaims) -> Self {
+        Self(Some(claims.acc.into_owned()))
     }
 }
 
@@ -61,29 +90,41 @@ pub async fn authenticate(
     };
 
     let validation = Validation::new(Algorithm::EdDSA);
-    let token_data = jsonwebtoken::decode::<Claims>(token, dec_key, &validation)?;
+    let token_data = jsonwebtoken::decode::<AccessClaims>(token, dec_key, &validation)?;
 
     Ok(token_data.claims.into())
 }
 
-pub async fn create_token(
-    acc: PartialAccount,
+pub async fn create_access_token(
+    acc: &PartialAccount,
     enc_key: &jsonwebtoken::EncodingKey,
 ) -> Result<String> {
-    let claims = Claims {
-        acc,
-        exp: (Utc::now() + Duration::hours(24)).timestamp() as usize,
-        iat: Utc::now().timestamp() as usize,
-        nbf: Utc::now().timestamp() as usize,
-    };
-
     let token = jsonwebtoken::encode(
         &jsonwebtoken::Header::new(Algorithm::EdDSA),
-        &claims,
+        &AccessClaims::new(acc),
         enc_key,
     )?;
 
     Ok(token)
+}
+
+pub async fn verify_creds(
+    AuthCreds { pword, .. }: &AuthCreds,
+    Account {
+        pword_salt,
+        pword_hash,
+        ..
+    }: &Account,
+) -> Result<()> {
+    pbkdf2::verify(
+        pbkdf2::PBKDF2_HMAC_SHA512,
+        100_000.try_into().unwrap(),
+        pword_salt.expose_secret().as_bytes(),
+        pword.expose_secret().as_bytes(),
+        pword_hash.expose_secret().as_bytes(),
+    )?;
+
+    Ok(())
 }
 
 pub enum AuthenticateInput {
