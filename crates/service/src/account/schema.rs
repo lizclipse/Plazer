@@ -18,6 +18,15 @@ impl AccountQuery {
     async fn me(&self, ctx: &Context<'_>) -> Result<Option<Account>> {
         ctx.account_persist().current().await.extend()
     }
+
+    /// Request an access token for authenticating requests.
+    #[instrument(skip_all)]
+    async fn access_token(&self, ctx: &Context<'_>, refresh_token: String) -> Result<String> {
+        ctx.account_persist()
+            .access_token(refresh_token)
+            .await
+            .extend()
+    }
 }
 
 #[derive(Default)]
@@ -25,13 +34,10 @@ pub struct AccountMutation;
 
 #[Object]
 impl AccountMutation {
-    /// Request an authentication token.
-    ///
-    /// This can be used to refresh an existing token when requested without
-    /// credentials.
+    /// Request a new refresh token.
     #[instrument(skip_all)]
-    async fn auth_token(&self, ctx: &Context<'_>, creds: Option<AuthCreds>) -> Result<String> {
-        ctx.account_persist().access_token(creds).await.extend()
+    async fn refresh_token(&self, ctx: &Context<'_>, creds: AuthCreds) -> Result<String> {
+        ctx.account_persist().refresh_token(creds).await.extend()
     }
 
     /// Register a new account.

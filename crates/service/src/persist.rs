@@ -3,7 +3,7 @@ use surrealdb::{engine::any::Any, Surreal};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
-    EncodingKey,
+    DecodingKey, EncodingKey,
 };
 
 // TODO: use features to select specific engines when building as a service
@@ -34,6 +34,7 @@ impl PersistExt for Context<'_> {
             self.data_unchecked::<Persist>(),
             self.data_unchecked::<CurrentAccount>(),
             self.data_unchecked::<EncodingKey>(),
+            self.data_unchecked::<DecodingKey>(),
         )
     }
 }

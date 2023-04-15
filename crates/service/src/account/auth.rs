@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 
+use async_graphql::ID;
 use axum::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, LocalResult, TimeZone, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use ring::pbkdf2;
 use secrecy::ExposeSecret as _;
@@ -14,22 +15,57 @@ use super::{Account, AuthCreds, CurrentAccount, PartialAccount};
 use crate::error::{Error, Result};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct JwtClaims {
+struct JwtClaims {
     // aud: String, // Optional. Audience
     exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
     iat: usize, // Optional. Issued at (as UTC timestamp)
     // iss: String, // Optional. Issuer
     nbf: usize, // Optional. Not Before (as UTC timestamp)
-                // sub: String, // Optional. Subject (whom token refers to)
+    // sub: String, // Optional. Subject (whom token refers to)
+    kind: JwtKind,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum JwtKind {
+    Access,
+    Refresh,
 }
 
 impl JwtClaims {
-    pub fn new(duration: Duration) -> Self {
+    fn new(duration: Duration, kind: JwtKind) -> Self {
         let now = Utc::now();
         Self {
             exp: (now + duration).timestamp() as usize,
             iat: now.timestamp() as usize,
             nbf: now.timestamp() as usize,
+            kind,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RefreshClaims {
+    id: ID,
+    #[serde(flatten)]
+    jwt: JwtClaims,
+}
+
+impl RefreshClaims {
+    pub fn new(id: ID) -> Self {
+        Self {
+            id,
+            jwt: JwtClaims::new(Duration::days(30), JwtKind::Refresh),
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn issued_at(&self) -> Result<DateTime<Utc>> {
+        match Utc.timestamp_opt(self.jwt.iat as i64, 0) {
+            LocalResult::Single(dt) => Ok(dt),
+            LocalResult::None | LocalResult::Ambiguous(..) => Err(Error::JwtInvalid),
         }
     }
 }
@@ -46,7 +82,7 @@ impl<'a> AccessClaims<'a> {
     pub fn new(acc: impl Into<Cow<'a, PartialAccount>>) -> Self {
         Self {
             acc: acc.into(),
-            jwt: JwtClaims::new(Duration::minutes(30)),
+            jwt: JwtClaims::new(Duration::minutes(30), JwtKind::Access),
         }
     }
 }
@@ -92,7 +128,30 @@ pub async fn authenticate(
     let validation = Validation::new(Algorithm::EdDSA);
     let token_data = jsonwebtoken::decode::<AccessClaims>(token, dec_key, &validation)?;
 
-    Ok(token_data.claims.into())
+    match token_data.claims.jwt.kind {
+        JwtKind::Access => Ok(token_data.claims.into()),
+        _ => Err(Error::JwtInvalid),
+    }
+}
+
+pub async fn verify_refresh_token(token: &str, dec_key: &DecodingKey) -> Result<RefreshClaims> {
+    let validation = Validation::new(Algorithm::EdDSA);
+    let token_data = jsonwebtoken::decode::<RefreshClaims>(token, dec_key, &validation)?;
+
+    match token_data.claims.jwt.kind {
+        JwtKind::Refresh => Ok(token_data.claims),
+        _ => Err(Error::JwtInvalid),
+    }
+}
+
+pub async fn create_refresh_token(id: ID, enc_key: &jsonwebtoken::EncodingKey) -> Result<String> {
+    let token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::new(Algorithm::EdDSA),
+        &RefreshClaims::new(id),
+        enc_key,
+    )?;
+
+    Ok(token)
 }
 
 pub async fn create_access_token(

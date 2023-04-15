@@ -3,10 +3,6 @@ A registered account.
 """
 type Account {
   """
-  The account's unique ID.
-  """
-  id: ID!
-  """
   The account's unique handle. This is used to create default names for
   resources and for logging in.
 
@@ -22,8 +18,29 @@ type Account {
   revocation.
   """
   revokedAt: DateTime
+  """
+  The account's unique ID.
+  """
+  id: ID!
 }
 
+"""
+The information needed to authenticate an account.
+"""
+input AuthCreds {
+  """
+  The handle of the account to authenticate.
+  """
+  handle: String!
+  """
+  The account's password.
+  """
+  pword: String!
+}
+
+"""
+The information needed to create a new account.
+"""
 input CreateAccount {
   """
   The account's unique handle. This is used to create default names for
@@ -51,9 +68,9 @@ scalar DateTime
 
 type Mutation {
   """
-  Log in to an account.
+  Request a new refresh token.
   """
-  login(handle: String!, pword: String!): Account!
+  refreshToken(creds: AuthCreds!): String!
   """
   Register a new account.
   """
@@ -67,23 +84,18 @@ type Mutation {
 type Query {
   """
   Get the account associated with the current session.
-  """
-  me: Account!
-}
 
-type Subscription {
+  If this returns `null`, then it means that the account associated with
+  the current session has been deleted.
   """
-  Subscribe to changes to the current account.
+  me: Account
   """
-  me: Account!
+  Request an access token for authentication requests.
   """
-  Subscribe to token revocations.
-  """
-  tokenRevocations: DateTime!
+  accessToken(refreshToken: String!): String!
 }
 
 schema {
   query: Query
   mutation: Mutation
-  subscription: Subscription
 }
