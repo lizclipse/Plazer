@@ -623,6 +623,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "axum",
+ "base64 0.21.0",
  "cfg-if",
  "chrono",
  "futures 0.3.28",

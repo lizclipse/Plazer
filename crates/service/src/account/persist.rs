@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
+use secrecy::ExposeSecret as _;
 use tracing::instrument;
 
 use super::{
-    create_access_token, create_refresh_token, verify_creds, verify_refresh_token, Account,
-    AuthCreds, CreateAccount, CurrentAccount, PartialAccount,
+    create_access_token, create_creds, create_refresh_token, verify_creds, verify_refresh_token,
+    Account, AuthCreds, CreateAccount, CurrentAccount, PartialAccount,
 };
 use crate::{
     error::{Error, Result},
@@ -87,23 +88,68 @@ impl<'a> AccountPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn get_by_handle(&self, handle: &str) -> Result<Option<Account>> {
-        Ok(self
+        let acc = self
             .persist
             .db()
             .query("SELECT * FROM type::table($tbl) WHERE handle = $handle")
             .bind(("tbl", TABLE_NAME))
             .bind(("handle", handle))
-            .await
-            .and_then(|mut res| res.take(0))?)
+            .await?
+            .take(0)?;
+        Ok(acc)
     }
 
     #[instrument(skip_all)]
-    pub async fn create(&self, _acc: CreateAccount) -> Result<Account> {
-        Err(Error::NotImplemented)
+    pub async fn create(&self, acc: CreateAccount) -> Result<Account> {
+        let (pword_salt, pword_hash) = create_creds(acc.pword.expose_secret()).await?;
+
+        // TODO: Use unique constraint on handle instead of this when SurrealDB supports it
+        // TODO: support invites and reject if required/invalid
+        let acc = self
+            .persist
+            .db()
+            .query(
+                "
+BEGIN TRANSACTION;
+LET $id = (IF (SELECT _ FROM type::table($tbl) WHERE handle = $handle) THEN
+    NONE
+ELSE
+    (CREATE type::table($tbl) SET handle = $handle, pword_salt = $pword_salt, pword_hash = $pword_hash)
+END);
+IF $id THEN
+    (SELECT * FROM type::table($tbl) WHERE id = $id)
+ELSE
+    []
+END;
+COMMIT TRANSACTION;
+            ",
+            )
+            .bind(("tbl", TABLE_NAME))
+            .bind(("handle", acc.handle))
+            .bind(("pword_salt", pword_salt))
+            .bind(("pword_hash", pword_hash))
+            .await?
+            .take(1)?;
+
+        match acc {
+            Some(acc) => Ok(acc),
+            None => Err(Error::HandleAlreadyExists),
+        }
     }
 
     #[instrument(skip_all)]
     pub async fn revoke_tokens(&self) -> Result<DateTime<Utc>> {
-        Err(Error::NotImplemented)
+        let acc = self.current.id()?;
+        let now = Utc::now();
+
+        self.persist
+            .db()
+            .query("UPDATE type::table($tbl) SET revoked_at = $revoked_at WHERE id = $id")
+            .bind(("tbl", TABLE_NAME))
+            .bind(("revoked_at", now))
+            .bind(("id", acc))
+            .await?;
+
+        Ok(now)
     }
 }

@@ -101,8 +101,4 @@ impl CurrentAccount {
     pub fn id(&self) -> Result<&ID> {
         self.account().map(|acc| &acc.id)
     }
-
-    pub fn handle(&self) -> Result<&str> {
-        self.account().map(|acc| acc.hdl.as_str())
-    }
 }

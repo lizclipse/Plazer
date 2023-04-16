@@ -1,5 +1,6 @@
 use async_graphql::ErrorExtensions;
 use axum::Json;
+use base64::DecodeError as Base64DecodeError;
 use hyper::StatusCode;
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
 use serde::{Deserialize, Serialize};
@@ -17,6 +18,9 @@ pub enum Error {
     Unauthorized,
     #[error("Credentials are invalid")]
     CredentialsInvalid,
+
+    #[error("Handle already exists")]
+    HandleAlreadyExists,
 
     #[error("JWT is malformed")]
     JwtMalformed,
@@ -127,6 +131,12 @@ impl From<ring::error::Unspecified> for Error {
     }
 }
 
+impl From<Base64DecodeError> for Error {
+    fn from(err: Base64DecodeError) -> Self {
+        Self::from_err(err)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorData {
     code: String,
@@ -143,6 +153,7 @@ impl From<Error> for ErrorResponse {
             | Error::JwtExpired
             | Error::JwtInvalid => StatusCode::UNAUTHORIZED,
             Error::Unauthorized => StatusCode::FORBIDDEN,
+            Error::HandleAlreadyExists => StatusCode::CONFLICT,
             Error::JwtMalformed | Error::WsInitNotObject | Error::WsInitTokenNotString => {
                 StatusCode::BAD_REQUEST
             }
