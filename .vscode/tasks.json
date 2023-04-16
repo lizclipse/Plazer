@@ -3,38 +3,106 @@
   "tasks": [
     {
       "label": "build - cli",
-      "type": "process",
-      "command": "cargo",
-      "args": ["build"],
-      "problemMatcher": "$rustc"
+      "type": "cargo",
+      "command": "build",
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "build - ui",
       "type": "process",
       "command": "turbo",
       "args": ["build"],
-      "problemMatcher": "$rustc"
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "test - cli",
+      "type": "process",
+      "command": "cargo",
+      "args": ["test"],
+      "problemMatcher": "$rustc",
+      "isTestCommand": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "lint:fix - cli",
       "type": "process",
       "command": "cargo",
       "args": ["clippy", "--fix", "--allow-staged"],
-      "problemMatcher": "$tsc"
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "lint:fix - ui",
       "type": "process",
       "command": "turbo",
       "args": ["lint:fix"],
-      "problemMatcher": "$tsc"
+      "problemMatcher": "$tsc",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "lint:fix - prettier",
       "type": "process",
       "command": "pnpm",
       "args": ["run", "lint:fix"],
-      "problemMatcher": "$tsc"
+      "problemMatcher": "$tsc",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "lint:fix - all",
+      "dependsOn": ["lint:fix - cli", "lint:fix - ui", "lint:fix - prettier"],
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "problemMatcher": []
     },
     {
       "label": "serve - service",
@@ -42,7 +110,15 @@
       "command": "cargo",
       "args": ["run", "-p", "c11ity_service"],
       "problemMatcher": "$rustc",
-      "isBackground": true
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "serve - cli",
@@ -50,7 +126,15 @@
       "command": "cargo",
       "args": ["run", "-p", "c11ity"],
       "problemMatcher": "$rustc",
-      "isBackground": true
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "serve - ui",
@@ -58,21 +142,45 @@
       "command": "turbo",
       "args": ["dev"],
       "problemMatcher": "$tsc",
-      "isBackground": true
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "generate schema",
       "type": "process",
       "command": "cargo",
       "args": ["run", "-p", "c11ity", "--", "schema", "--output", "schema.gql"],
-      "problemMatcher": "$rustc"
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "codegen",
       "type": "process",
       "command": "turbo",
       "args": ["codegen"],
-      "problemMatcher": []
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     },
     {
       "label": "codegen - watch",
@@ -80,7 +188,15 @@
       "command": "turbo",
       "args": ["codegen:watch"],
       "problemMatcher": [],
-      "isBackground": true
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     }
   ]
 }
