@@ -17,7 +17,10 @@ use axum::{
     routing::{get, post},
     Router, Server, TypedHeader,
 };
-use ring::signature::{self, KeyPair as _};
+use ring::{
+    rand::{self, SecureRandom as _},
+    signature::{self, KeyPair as _},
+};
 use thiserror::Error;
 use tracing::{info, instrument, metadata::LevelFilter, Level};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -106,6 +109,11 @@ pub async fn serve(
         port,
     }: ServeConfig,
 ) -> Result<(), ServeError> {
+    // Call fill once before starting to initialize the RNG.
+    let rng = rand::SystemRandom::new();
+    let mut rng_buf = [0u8; 1];
+    rng.fill(&mut rng_buf)?;
+
     let jwt_enc_key = Arc::new(jwt_enc_key);
     let persist = persist::Persist::new(persist_address).await?;
     let schema = schema(|s| s.data(persist).data(jwt_enc_key.clone()));
@@ -140,8 +148,10 @@ pub enum ServeError {
     InvalidHost(#[from] std::net::AddrParseError),
     #[error("Failed to start server: {0}")]
     ServeError(#[from] hyper::Error),
-    #[error("Failed to initialize database: {0}")]
+    #[error("Failed to initialise database: {0}")]
     PersistError(#[from] surrealdb::Error),
+    #[error("Failed to initialise cryptography: {0}")]
+    CryptoError(#[from] ring::error::Unspecified),
 }
 
 pub async fn read_key(
@@ -167,7 +177,7 @@ async fn graphql_handler(
     auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     req: GraphQLRequest,
 ) -> Result<GraphQLResponse, ErrorResponse> {
-    let current = authenticate(auth_header, &dec_key).await?;
+    let current = authenticate(auth_header, &dec_key)?;
     Ok(schema.execute(req.into_inner().data(current)).await.into())
 }
 
@@ -184,7 +194,7 @@ async fn graphql_ws_handler(
             GraphQLWebSocket::new(stream, schema, protocol)
                 .on_connection_init(|init| async move {
                     let mut data = Data::default();
-                    let current = authenticate(init, &dec_key).await.extend()?;
+                    let current = authenticate(init, &dec_key).extend()?;
                     data.insert(current);
                     Ok(data)
                 })

@@ -12,10 +12,10 @@ use ring::{
     digest, pbkdf2,
     rand::{self, SecureRandom as _},
 };
-use secrecy::ExposeSecret as _;
+use secrecy::{ExposeSecret as _, SecretString};
 use serde::{Deserialize, Serialize};
 
-use super::{Account, AuthCreds, CurrentAccount, PartialAccount};
+use super::{CurrentAccount, PartialAccount};
 use crate::error::{Error, Result};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -97,7 +97,20 @@ impl From<AccessClaims<'_>> for CurrentAccount {
     }
 }
 
-pub async fn authenticate(
+pub fn create_access_token(
+    acc: &PartialAccount,
+    enc_key: &jsonwebtoken::EncodingKey,
+) -> Result<String> {
+    let token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::new(Algorithm::EdDSA),
+        &AccessClaims::new(acc),
+        enc_key,
+    )?;
+
+    Ok(token)
+}
+
+pub fn authenticate(
     input: impl Into<AuthenticateInput>,
     dec_key: &DecodingKey,
 ) -> Result<CurrentAccount> {
@@ -129,7 +142,8 @@ pub async fn authenticate(
         None => return Ok(CurrentAccount(None)),
     };
 
-    let validation = Validation::new(Algorithm::EdDSA);
+    let mut validation = Validation::new(Algorithm::EdDSA);
+    validation.validate_nbf = true;
     let token_data = jsonwebtoken::decode::<AccessClaims>(token, dec_key, &validation)?;
 
     match token_data.claims.jwt.kind {
@@ -138,17 +152,7 @@ pub async fn authenticate(
     }
 }
 
-pub async fn verify_refresh_token(token: &str, dec_key: &DecodingKey) -> Result<RefreshClaims> {
-    let validation = Validation::new(Algorithm::EdDSA);
-    let token_data = jsonwebtoken::decode::<RefreshClaims>(token, dec_key, &validation)?;
-
-    match token_data.claims.jwt.kind {
-        JwtKind::Refresh => Ok(token_data.claims),
-        _ => Err(Error::JwtInvalid),
-    }
-}
-
-pub async fn create_refresh_token(id: ID, enc_key: &jsonwebtoken::EncodingKey) -> Result<String> {
+pub fn create_refresh_token(id: ID, enc_key: &jsonwebtoken::EncodingKey) -> Result<String> {
     let token = jsonwebtoken::encode(
         &jsonwebtoken::Header::new(Algorithm::EdDSA),
         &RefreshClaims::new(id),
@@ -158,22 +162,24 @@ pub async fn create_refresh_token(id: ID, enc_key: &jsonwebtoken::EncodingKey) -
     Ok(token)
 }
 
-pub async fn create_access_token(
-    acc: &PartialAccount,
-    enc_key: &jsonwebtoken::EncodingKey,
-) -> Result<String> {
-    let token = jsonwebtoken::encode(
-        &jsonwebtoken::Header::new(Algorithm::EdDSA),
-        &AccessClaims::new(acc),
-        enc_key,
-    )?;
+pub fn verify_refresh_token(token: &str, dec_key: &DecodingKey) -> Result<RefreshClaims> {
+    let validation = Validation::new(Algorithm::EdDSA);
+    let token_data = jsonwebtoken::decode::<RefreshClaims>(token, dec_key, &validation)?;
 
-    Ok(token)
+    match token_data.claims.jwt.kind {
+        JwtKind::Refresh => Ok(token_data.claims),
+        _ => Err(Error::JwtInvalid),
+    }
 }
 
 static PBKDF2_ITERS: u32 = 100_000;
 
-pub async fn create_creds(pword: &str) -> Result<(String, String)> {
+pub struct StoredPword {
+    pub salt: SecretString,
+    pub hash: SecretString,
+}
+
+pub fn create_creds(pword: &str) -> Result<StoredPword> {
     const CREDENTIAL_LEN: usize = digest::SHA512_OUTPUT_LEN;
     let rng = rand::SystemRandom::new();
 
@@ -189,19 +195,19 @@ pub async fn create_creds(pword: &str) -> Result<(String, String)> {
         &mut pword_hash,
     );
 
-    let pword_salt = BASE64_STANDARD_NO_PAD.encode(&pword_salt);
-    let pword_hash = BASE64_STANDARD_NO_PAD.encode(&pword_hash);
+    let pword_salt = BASE64_STANDARD_NO_PAD.encode(pword_salt);
+    let pword_hash = BASE64_STANDARD_NO_PAD.encode(pword_hash);
 
-    Ok((pword_salt, pword_hash))
+    Ok(StoredPword {
+        salt: pword_salt.into(),
+        hash: pword_hash.into(),
+    })
 }
 
-pub async fn verify_creds(
-    AuthCreds { pword, .. }: &AuthCreds,
-    Account {
-        pword_salt,
-        pword_hash,
-        ..
-    }: &Account,
+pub fn verify_creds(
+    pword: &SecretString,
+    pword_salt: &SecretString,
+    pword_hash: &SecretString,
 ) -> Result<()> {
     pbkdf2::verify(
         pbkdf2::PBKDF2_HMAC_SHA512,
@@ -228,5 +234,167 @@ impl From<Option<TypedHeader<Authorization<Bearer>>>> for AuthenticateInput {
 impl From<serde_json::Value> for AuthenticateInput {
     fn from(init: serde_json::Value) -> AuthenticateInput {
         AuthenticateInput::Init(init)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ring::signature::{self, KeyPair as _};
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn test_creds_valid() {
+        let creds = create_creds("password").unwrap();
+
+        let res = verify_creds(&"password".to_owned().into(), &creds.salt, &creds.hash);
+
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_creds_invalid() {
+        let creds = create_creds("password").unwrap();
+
+        let res = verify_creds(&"password1".to_owned().into(), &creds.salt, &creds.hash);
+
+        assert!(res.is_err());
+    }
+
+    fn generate_keys() -> (jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey) {
+        let rng = rand::SystemRandom::new();
+        let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref()).unwrap();
+        let enc_key = jsonwebtoken::EncodingKey::from_ed_der(pkcs8_bytes.as_ref());
+        let dec_key = jsonwebtoken::DecodingKey::from_ed_der(key_pair.public_key().as_ref());
+
+        (enc_key, dec_key)
+    }
+
+    #[test]
+    fn test_access_token_valid() {
+        let (enc_key, dec_key) = generate_keys();
+
+        let acc = PartialAccount {
+            id: "id".into(),
+            hdl: "handle".into(),
+        };
+        let token = create_access_token(&acc, &enc_key).unwrap();
+
+        for inp in [
+            Into::<AuthenticateInput>::into(json!({ "token": token })),
+            Some(TypedHeader(Authorization::bearer(&token).unwrap())).into(),
+        ] {
+            let auth = authenticate(inp, &dec_key);
+            assert!(auth.is_ok());
+
+            let auth = auth.unwrap();
+            assert!(auth.0.is_some());
+
+            let auth = auth.0.unwrap();
+            assert_eq!(auth.id, acc.id);
+            assert_eq!(auth.hdl, acc.hdl);
+        }
+    }
+
+    #[test]
+    fn test_access_token_invalid() {
+        let (enc_key_a, dec_key_a) = generate_keys();
+        let (enc_key_b, dec_key_b) = generate_keys();
+
+        // Invalid token
+        let auth = authenticate(json!({ "token": "not a token" }), &dec_key_a);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtMalformed);
+
+        // Invalid signature
+        let acc = PartialAccount {
+            id: "id".into(),
+            hdl: "handle".into(),
+        };
+
+        let token = create_access_token(&acc, &enc_key_a).unwrap();
+        let auth = authenticate(json!({ "token": token }), &dec_key_b);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
+
+        // Expired token
+        let mut access_claims = AccessClaims::new(acc);
+        println!("{:?}", access_claims);
+        access_claims.jwt.iat -= 300;
+        access_claims.jwt.nbf -= 300;
+        access_claims.jwt.exp = (Utc::now().timestamp() as usize) - 100;
+        println!("{:?}", access_claims);
+        let token = jsonwebtoken::encode(
+            &jsonwebtoken::Header::new(Algorithm::EdDSA),
+            &access_claims,
+            &enc_key_b,
+        )
+        .unwrap();
+        let auth = authenticate(json!({ "token": token }), &dec_key_b);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtExpired);
+
+        // Refresh token
+        let token = create_refresh_token("id".into(), &enc_key_b).unwrap();
+        let auth = authenticate(json!({ "token": token }), &dec_key_b);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
+    }
+
+    #[test]
+    fn test_refresh_token_valid() {
+        let (enc_key, dec_key) = generate_keys();
+
+        let token = create_refresh_token("id".into(), &enc_key).unwrap();
+
+        let auth = verify_refresh_token(&token, &dec_key);
+        assert!(auth.is_ok());
+
+        let auth = auth.unwrap();
+        assert_eq!(auth.id, "id");
+    }
+
+    #[test]
+    fn test_refresh_token_invalid() {
+        let (enc_key_a, dec_key_a) = generate_keys();
+        let (enc_key_b, dec_key_b) = generate_keys();
+
+        // Invalid token
+        let auth = verify_refresh_token(&"not a token", &dec_key_a);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtMalformed);
+
+        // Invalid signature
+        let token = create_refresh_token("id".into(), &enc_key_a).unwrap();
+        let auth = verify_refresh_token(&token, &dec_key_b);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
+
+        // Expired token
+        let mut refresh_claims = RefreshClaims::new("id".into());
+        refresh_claims.jwt.iat -= 300;
+        refresh_claims.jwt.nbf -= 300;
+        refresh_claims.jwt.exp = (Utc::now().timestamp() as usize) - 100;
+        let token = jsonwebtoken::encode(
+            &jsonwebtoken::Header::new(Algorithm::EdDSA),
+            &refresh_claims,
+            &enc_key_b,
+        )
+        .unwrap();
+        let auth = verify_refresh_token(&token, &dec_key_b);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtExpired);
+
+        // Access token
+        let acc = PartialAccount {
+            id: "id".into(),
+            hdl: "handle".into(),
+        };
+        let token = create_access_token(&acc, &enc_key_b).unwrap();
+        let auth = verify_refresh_token(&token, &dec_key_b);
+        assert!(auth.is_err());
+        assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
     }
 }

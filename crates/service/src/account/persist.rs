@@ -48,14 +48,14 @@ impl<'a> AccountPersist<'a> {
             None => return Err(Error::CredentialsInvalid),
         };
 
-        verify_creds(&creds, &acc).await?;
+        verify_creds(&creds.pword, &acc.pword_salt, &acc.pword_hash)?;
 
-        create_refresh_token(acc.id.id.into(), self.jwt_enc_key).await
+        create_refresh_token(acc.id.id.into(), self.jwt_enc_key)
     }
 
     #[instrument(skip_all)]
     pub async fn access_token(&self, refresh_token: String) -> Result<String> {
-        let claims = match verify_refresh_token(&refresh_token, self.jwt_dec_key).await {
+        let claims = match verify_refresh_token(&refresh_token, self.jwt_dec_key) {
             Ok(claims) => claims,
             Err(_) => return Err(Error::CredentialsInvalid),
         };
@@ -78,7 +78,6 @@ impl<'a> AccountPersist<'a> {
             },
             self.jwt_enc_key,
         )
-        .await
     }
 
     #[instrument(skip_all)]
@@ -101,7 +100,7 @@ impl<'a> AccountPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn create(&self, acc: CreateAccount) -> Result<Account> {
-        let (pword_salt, pword_hash) = create_creds(acc.pword.expose_secret()).await?;
+        let creds = create_creds(acc.pword.expose_secret())?;
 
         // TODO: Use unique constraint on handle instead of this when SurrealDB supports it
         // TODO: support invites and reject if required/invalid
@@ -114,7 +113,10 @@ BEGIN TRANSACTION;
 LET $id = (IF (SELECT _ FROM type::table($tbl) WHERE handle = $handle) THEN
     NONE
 ELSE
-    (CREATE type::table($tbl) SET handle = $handle, pword_salt = $pword_salt, pword_hash = $pword_hash)
+    (CREATE type::table($tbl) SET
+        handle = $handle,
+        pword_salt = $pword_salt,
+        pword_hash = $pword_hash)
 END);
 IF $id THEN
     (SELECT * FROM type::table($tbl) WHERE id = $id)
@@ -126,8 +128,8 @@ COMMIT TRANSACTION;
             )
             .bind(("tbl", TABLE_NAME))
             .bind(("handle", acc.handle))
-            .bind(("pword_salt", pword_salt))
-            .bind(("pword_hash", pword_hash))
+            .bind(("pword_salt", creds.salt.expose_secret()))
+            .bind(("pword_hash", creds.hash.expose_secret()))
             .await?
             .take(1)?;
 

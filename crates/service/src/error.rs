@@ -10,7 +10,7 @@ use tracing::error;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
     #[error("Unauthenticated")]
     Unauthenticated,
