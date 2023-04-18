@@ -174,25 +174,29 @@ async fn output_schema(SchemaCommand { output }: SchemaCommand) -> anyhow::Resul
 }
 
 async fn generate_key(path: impl AsRef<Path>) -> anyhow::Result<()> {
-    let rng = rand::SystemRandom::new();
-    let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)?;
+    async fn inner(path: &Path) -> anyhow::Result<()> {
+        let rng = rand::SystemRandom::new();
+        let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)?;
 
-    if let Some(path) = path.as_ref().parent() {
-        tokio::fs::create_dir_all(path)
-            .await
-            .context("Unable to create containing directories for private key")?;
+        if let Some(path) = path.parent() {
+            tokio::fs::create_dir_all(path)
+                .await
+                .context("Unable to create containing directories for private key")?;
+        }
+
+        tokio::fs::write(
+            path,
+            pkcs8::Document::from_der(pkcs8_bytes.as_ref())
+                .unwrap()
+                .to_pem("PRIVATE KEY", pkcs8::LineEnding::LF)
+                .unwrap(),
+        )
+        .await
+        .context("Unable to write private key")?;
+
+        println!("Private key written to {}", path.display());
+        Ok(())
     }
 
-    tokio::fs::write(
-        &path,
-        pkcs8::Document::from_der(pkcs8_bytes.as_ref())
-            .unwrap()
-            .to_pem("PRIVATE KEY", pkcs8::LineEnding::LF)
-            .unwrap(),
-    )
-    .await
-    .context("Unable to write private key")?;
-
-    println!("Private key written to {}", path.as_ref().display());
-    Ok(())
+    inner(path.as_ref()).await
 }

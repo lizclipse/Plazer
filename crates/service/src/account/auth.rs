@@ -114,42 +114,45 @@ pub fn authenticate(
     input: impl Into<AuthenticateInput>,
     dec_key: &DecodingKey,
 ) -> Result<CurrentAccount> {
-    let input = input.into();
-    let token = match &input {
-        AuthenticateInput::Header(header) => header.as_ref().map(|h| h.0.token()),
-        AuthenticateInput::Init(init) => {
-            let token = match init.as_object() {
-                Some(obj) => obj.get("token"),
-                None => {
-                    if !init.is_null() {
-                        return Err(Error::WsInitNotObject);
-                    } else {
-                        None
+    fn inner(input: AuthenticateInput, dec_key: &DecodingKey) -> Result<CurrentAccount> {
+        let token = match &input {
+            AuthenticateInput::Header(header) => header.as_ref().map(|h| h.0.token()),
+            AuthenticateInput::Init(init) => {
+                let token = match init.as_object() {
+                    Some(obj) => obj.get("token"),
+                    None => {
+                        if !init.is_null() {
+                            return Err(Error::WsInitNotObject);
+                        } else {
+                            None
+                        }
                     }
+                };
+
+                match token.map(|t| t.as_str()) {
+                    Some(Some(token)) => Some(token),
+                    Some(None) => return Err(Error::WsInitTokenNotString),
+                    None => None,
                 }
-            };
-
-            match token.map(|t| t.as_str()) {
-                Some(Some(token)) => Some(token),
-                Some(None) => return Err(Error::WsInitTokenNotString),
-                None => None,
             }
+        };
+
+        let token = match token {
+            Some(token) => token,
+            None => return Ok(CurrentAccount(None)),
+        };
+
+        let mut validation = Validation::new(Algorithm::EdDSA);
+        validation.validate_nbf = true;
+        let token_data = jsonwebtoken::decode::<AccessClaims>(token, dec_key, &validation)?;
+
+        match token_data.claims.jwt.kind {
+            JwtKind::Access => Ok(token_data.claims.into()),
+            _ => Err(Error::JwtInvalid),
         }
-    };
-
-    let token = match token {
-        Some(token) => token,
-        None => return Ok(CurrentAccount(None)),
-    };
-
-    let mut validation = Validation::new(Algorithm::EdDSA);
-    validation.validate_nbf = true;
-    let token_data = jsonwebtoken::decode::<AccessClaims>(token, dec_key, &validation)?;
-
-    match token_data.claims.jwt.kind {
-        JwtKind::Access => Ok(token_data.claims.into()),
-        _ => Err(Error::JwtInvalid),
     }
+
+    inner(input.into(), dec_key)
 }
 
 pub fn create_refresh_token(id: ID, enc_key: &jsonwebtoken::EncodingKey) -> Result<String> {

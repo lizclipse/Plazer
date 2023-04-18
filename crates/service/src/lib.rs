@@ -78,25 +78,30 @@ pub fn init_logging(
     stdout_level: Level,
     file_level: Level,
 ) -> WorkerGuard {
-    let file_appender = tracing_appender::rolling::hourly(log_dir, "service.log");
-    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+    fn inner(log_dir: &Path, stdout_level: Level, file_level: Level) -> WorkerGuard {
+        let file_appender = tracing_appender::rolling::hourly(log_dir, "service.log");
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-    let collector = tracing_subscriber::registry()
-        .with(
-            fmt::Layer::new()
-                .with_writer(io::stdout)
-                .compact()
-                .with_filter(LevelFilter::from_level(stdout_level)),
-        )
-        .with(
-            fmt::Layer::new()
-                .with_writer(non_blocking)
-                .json()
-                .with_filter(LevelFilter::from_level(file_level)),
-        );
-    tracing::subscriber::set_global_default(collector).expect("Unable to set a global subscriber");
+        let collector = tracing_subscriber::registry()
+            .with(
+                fmt::Layer::new()
+                    .with_writer(io::stdout)
+                    .compact()
+                    .with_filter(LevelFilter::from_level(stdout_level)),
+            )
+            .with(
+                fmt::Layer::new()
+                    .with_writer(non_blocking)
+                    .json()
+                    .with_filter(LevelFilter::from_level(file_level)),
+            );
+        tracing::subscriber::set_global_default(collector)
+            .expect("Unable to set a global subscriber");
 
-    guard
+        guard
+    }
+
+    inner(log_dir.as_ref(), stdout_level, file_level)
 }
 
 #[instrument(skip(jwt_enc_key, jwt_dec_key))]
@@ -157,17 +162,23 @@ pub enum ServeError {
 pub async fn read_key(
     path: impl AsRef<Path>,
 ) -> anyhow::Result<(jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey)> {
-    let pem = tokio::fs::read_to_string(path)
-        .await
-        .context("Unable to locate private key")?;
-    let (_, doc) = pkcs8::Document::from_pem(&pem)
-        .map_err(|err| anyhow::anyhow!("Failed to parse private key: {:?}", err))?;
-    let key_pair = signature::Ed25519KeyPair::from_pkcs8(doc.as_ref())?;
-    let enc_key =
-        jsonwebtoken::EncodingKey::from_ed_pem(pem.as_bytes()).context("Private key is invalid")?;
-    let dec_key = jsonwebtoken::DecodingKey::from_ed_der(key_pair.public_key().as_ref());
+    async fn inner(
+        path: &Path,
+    ) -> anyhow::Result<(jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey)> {
+        let pem = tokio::fs::read_to_string(path)
+            .await
+            .context("Unable to locate private key")?;
+        let (_, doc) = pkcs8::Document::from_pem(&pem)
+            .map_err(|err| anyhow::anyhow!("Failed to parse private key: {:?}", err))?;
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(doc.as_ref())?;
+        let enc_key = jsonwebtoken::EncodingKey::from_ed_pem(pem.as_bytes())
+            .context("Private key is invalid")?;
+        let dec_key = jsonwebtoken::DecodingKey::from_ed_der(key_pair.public_key().as_ref());
 
-    Ok((enc_key, dec_key))
+        Ok((enc_key, dec_key))
+    }
+
+    inner(path.as_ref()).await
 }
 
 #[instrument(skip_all)]
