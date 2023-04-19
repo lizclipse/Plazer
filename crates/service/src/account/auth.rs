@@ -242,10 +242,9 @@ impl From<serde_json::Value> for AuthenticateInput {
 
 #[cfg(test)]
 mod tests {
-    use ring::signature::{self, KeyPair as _};
     use serde_json::json;
 
-    use super::*;
+    use super::{testing::*, *};
 
     #[test]
     fn test_creds_valid() {
@@ -263,16 +262,6 @@ mod tests {
         let res = verify_creds(&"password1".to_owned().into(), &creds.salt, &creds.hash);
 
         assert!(res.is_err());
-    }
-
-    fn generate_keys() -> (jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey) {
-        let rng = rand::SystemRandom::new();
-        let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
-        let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref()).unwrap();
-        let enc_key = jsonwebtoken::EncodingKey::from_ed_der(pkcs8_bytes.as_ref());
-        let dec_key = jsonwebtoken::DecodingKey::from_ed_der(key_pair.public_key().as_ref());
-
-        (enc_key, dec_key)
     }
 
     #[test]
@@ -399,5 +388,23 @@ mod tests {
         let auth = verify_refresh_token(&token, &dec_key_b);
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
+    }
+}
+
+#[cfg(test)]
+pub mod testing {
+    use ring::{
+        rand,
+        signature::{self, KeyPair as _},
+    };
+
+    pub fn generate_keys() -> (jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey) {
+        let rng = rand::SystemRandom::new();
+        let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref()).unwrap();
+        let enc_key = jsonwebtoken::EncodingKey::from_ed_der(pkcs8_bytes.as_ref());
+        let dec_key = jsonwebtoken::DecodingKey::from_ed_der(key_pair.public_key().as_ref());
+
+        (enc_key, dec_key)
     }
 }

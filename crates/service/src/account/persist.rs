@@ -109,21 +109,14 @@ impl<'a> AccountPersist<'a> {
             .db()
             .query(
                 "
-BEGIN TRANSACTION;
-LET $id = (IF (SELECT _ FROM type::table($tbl) WHERE handle = $handle) THEN
+IF (SELECT _ FROM type::table($tbl) WHERE handle = $handle) THEN
     NONE
 ELSE
     (CREATE type::table($tbl) SET
         handle = $handle,
         pword_salt = $pword_salt,
         pword_hash = $pword_hash)
-END);
-IF $id THEN
-    (SELECT * FROM type::table($tbl) WHERE id = $id)
-ELSE
-    []
-END;
-COMMIT TRANSACTION;
+END
             ",
             )
             .bind(("tbl", TABLE_NAME))
@@ -131,7 +124,7 @@ COMMIT TRANSACTION;
             .bind(("pword_salt", creds.salt.expose_secret()))
             .bind(("pword_hash", creds.hash.expose_secret()))
             .await?
-            .take(1)?;
+            .take(0)?;
 
         match acc {
             Some(acc) => Ok(acc),
@@ -153,5 +146,145 @@ COMMIT TRANSACTION;
             .await?;
 
         Ok(now)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{testing::*, *};
+
+    #[tokio::test]
+    async fn test_create() {
+        let data = TestData::new(Default::default()).await;
+        let account = data.account();
+
+        let acc = CreateAccount {
+            handle: "test".into(),
+            pword: "test".to_owned().into(),
+            invite: None,
+        };
+
+        let res = account.create(acc).await;
+        println!("{:?}", res);
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert_eq!(res.handle, "test");
+    }
+
+    #[tokio::test]
+    async fn test_get() {
+        let data = TestData::new(Default::default()).await;
+        let account = data.account();
+        let (handle, acc) = account.create_test_user().await;
+
+        let res = account.get(&acc.id_str()).await;
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert!(res.is_some());
+
+        let res = res.unwrap();
+        assert_eq!(res.handle, handle);
+    }
+
+    #[tokio::test]
+    async fn test_get_handle() {
+        let data = TestData::new(Default::default()).await;
+        let account = data.account();
+        let (handle, acc) = account.create_test_user().await;
+
+        let res = account.get_by_handle(&handle).await;
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert!(res.is_some());
+
+        let res = res.unwrap();
+        assert_eq!(res.id, acc.id);
+    }
+
+    #[tokio::test]
+    async fn test_duplicate_handle() {
+        let data = TestData::new(Default::default()).await;
+        let account = data.account();
+        let (handle, _) = account.create_test_user().await;
+
+        let acc = CreateAccount {
+            handle,
+            pword: "test2".to_owned().into(),
+            invite: None,
+        };
+
+        let res = account.create(acc).await;
+        assert!(res.is_err());
+
+        let res = res.unwrap_err();
+        assert_eq!(res, Error::HandleAlreadyExists);
+    }
+}
+
+#[cfg(test)]
+mod testing {
+    use base64::prelude::*;
+    use ring::rand::{self, SecureRandom as _};
+    use surrealdb::sql::Id;
+
+    use crate::{account::testing::generate_keys, persist::testing::persist};
+
+    use super::*;
+
+    pub struct TestData {
+        persist: Persist,
+        current: CurrentAccount,
+        jwt_enc_key: jsonwebtoken::EncodingKey,
+        jwt_dec_key: jsonwebtoken::DecodingKey,
+    }
+
+    impl TestData {
+        pub async fn new(current: CurrentAccount) -> Self {
+            let (jwt_enc_key, jwt_dec_key) = generate_keys();
+            Self {
+                persist: persist().await,
+                current,
+                jwt_enc_key,
+                jwt_dec_key,
+            }
+        }
+
+        pub fn account(&self) -> AccountPersist<'_> {
+            AccountPersist::new(
+                &self.persist,
+                &self.current,
+                &self.jwt_enc_key,
+                &self.jwt_dec_key,
+            )
+        }
+    }
+
+    impl AccountPersist<'_> {
+        pub async fn create_test_user(&self) -> (String, Account) {
+            let rng = rand::SystemRandom::new();
+            let mut pword_salt = [0u8; 16];
+            rng.fill(&mut pword_salt).unwrap();
+            let handle = BASE64_STANDARD_NO_PAD.encode(&pword_salt);
+
+            let acc = CreateAccount {
+                handle: handle.clone(),
+                pword: "test".to_owned().into(),
+                invite: None,
+            };
+
+            (handle, self.create(acc).await.unwrap())
+        }
+    }
+
+    impl Account {
+        pub fn id_str(self) -> String {
+            match self.id.id {
+                Id::String(id) => id,
+                _ => panic!("unexpected id type"),
+            }
+        }
     }
 }

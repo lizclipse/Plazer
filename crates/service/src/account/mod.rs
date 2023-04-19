@@ -91,7 +91,7 @@ impl<'a> From<&'a PartialAccount> for Cow<'a, PartialAccount> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CurrentAccount(Option<PartialAccount>);
 
 impl CurrentAccount {

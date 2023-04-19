@@ -1,5 +1,8 @@
 use async_graphql::Context;
-use surrealdb::{engine::any::Any, Surreal};
+use surrealdb::{
+    engine::any::{connect, Any},
+    Surreal,
+};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
@@ -9,22 +12,20 @@ use crate::{
 // TODO: use features to select specific engines when building as a service
 pub type DbLayer = Surreal<Any>;
 
-static DB: DbLayer = Surreal::init();
-
 pub trait PersistExt {
     fn account_persist(&self) -> AccountPersist;
 }
 
-pub struct Persist;
+pub struct Persist(DbLayer);
 
 impl Persist {
     pub async fn new(address: String) -> surrealdb::Result<Self> {
-        DB.connect(address).await?;
-        Ok(Self)
+        let db = connect(address).await?;
+        Ok(Self(db))
     }
 
     pub fn db(&self) -> &DbLayer {
-        &DB
+        &self.0
     }
 }
 
@@ -36,5 +37,16 @@ impl PersistExt for Context<'_> {
             self.data_unchecked::<EncodingKey>(),
             self.data_unchecked::<DecodingKey>(),
         )
+    }
+}
+
+#[cfg(test)]
+pub mod testing {
+    use super::*;
+
+    pub async fn persist() -> Persist {
+        let p = Persist::new("memory".into()).await.unwrap();
+        p.db().use_ns("test").use_db("test").await.unwrap();
+        p
     }
 }
