@@ -354,7 +354,7 @@ mod tests {
         let (enc_key_b, dec_key_b) = generate_keys();
 
         // Invalid token
-        let auth = verify_refresh_token(&"not a token", &dec_key_a);
+        let auth = verify_refresh_token("not a token", &dec_key_a);
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtMalformed);
 

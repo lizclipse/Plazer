@@ -90,7 +90,7 @@ type Query {
   """
   me: Account
   """
-  Request an access token for authentication requests.
+  Request an access token for authenticating requests.
   """
   accessToken(refreshToken: String!): String!
 }

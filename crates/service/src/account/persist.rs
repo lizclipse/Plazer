@@ -139,7 +139,7 @@ END
 
         self.persist
             .db()
-            .query("UPDATE type::table($tbl) SET revoked_at = $revoked_at WHERE id = $id")
+            .query("UPDATE type::thing($tbl, $id) SET revoked_at = $revoked_at")
             .bind(("tbl", TABLE_NAME))
             .bind(("revoked_at", now))
             .bind(("id", acc))
@@ -155,7 +155,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create() {
-        let data = TestData::new(Default::default()).await;
+        let data = TestData::new().await;
         let account = data.account();
 
         let acc = CreateAccount {
@@ -165,7 +165,6 @@ mod tests {
         };
 
         let res = account.create(acc).await;
-        println!("{:?}", res);
         assert!(res.is_ok());
 
         let res = res.unwrap();
@@ -174,9 +173,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get() {
-        let data = TestData::new(Default::default()).await;
+        let data = TestData::new().await;
         let account = data.account();
-        let (handle, acc) = account.create_test_user().await;
+        let AccData { handle, acc, .. } = account.create_test_user().await;
 
         let res = account.get(&acc.id_str()).await;
         assert!(res.is_ok());
@@ -190,9 +189,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_handle() {
-        let data = TestData::new(Default::default()).await;
+        let data = TestData::new().await;
         let account = data.account();
-        let (handle, acc) = account.create_test_user().await;
+        let AccData { handle, acc, .. } = account.create_test_user().await;
 
         let res = account.get_by_handle(&handle).await;
         assert!(res.is_ok());
@@ -206,9 +205,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_duplicate_handle() {
-        let data = TestData::new(Default::default()).await;
+        let data = TestData::new().await;
         let account = data.account();
-        let (handle, _) = account.create_test_user().await;
+        let AccData { handle, .. } = account.create_test_user().await;
 
         let acc = CreateAccount {
             handle,
@@ -222,12 +221,104 @@ mod tests {
         let res = res.unwrap_err();
         assert_eq!(res, Error::HandleAlreadyExists);
     }
+
+    #[tokio::test]
+    async fn test_refresh_token() {
+        let data = TestData::new().await;
+        let account = data.account();
+        let AccData { handle, pword, .. } = account.create_test_user().await;
+
+        let res = account.refresh_token(AuthCreds { handle, pword }).await;
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert!(!res.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_refresh_token_fail() {
+        let data = TestData::new().await;
+        let account = data.account();
+        let AccData { handle, .. } = account.create_test_user().await;
+
+        let res = account
+            .refresh_token(AuthCreds {
+                handle,
+                pword: "bad password".to_owned().into(),
+            })
+            .await;
+        assert!(res.is_err());
+
+        let res = res.unwrap_err();
+        assert_eq!(res, Error::CredentialsInvalid);
+    }
+
+    #[tokio::test]
+    async fn test_access_token() {
+        let data = TestData::new().await;
+        let account = data.account();
+        let AccData { handle, pword, .. } = account.create_test_user().await;
+        let refresh_token = account
+            .refresh_token(AuthCreds { handle, pword })
+            .await
+            .unwrap();
+
+        let res = account.access_token(refresh_token).await;
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert!(!res.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_access_token_fail() {
+        let data = TestData::new().await;
+        let account = data.account();
+
+        let res = account.access_token("invalid.refresh.token".into()).await;
+        assert!(res.is_err());
+
+        let res = res.unwrap_err();
+        assert_eq!(res, Error::CredentialsInvalid);
+    }
+
+    #[tokio::test]
+    async fn test_revoke_tokens() {
+        let (data, AccData { handle, pword, .. }) = TestData::with_user().await;
+        let account = data.account();
+        let refresh_token = account
+            .refresh_token(AuthCreds { handle, pword })
+            .await
+            .unwrap();
+
+        let res = account.revoke_tokens().await;
+        assert!(res.is_ok());
+
+        let res = account.access_token(refresh_token).await;
+        assert!(res.is_err());
+
+        let res = res.unwrap_err();
+        assert_eq!(res, Error::Unauthenticated);
+    }
+
+    #[tokio::test]
+    async fn test_revoke_tokens_fail() {
+        let data = TestData::new().await;
+        let account = data.account();
+
+        let res = account.revoke_tokens().await;
+        assert!(res.is_err());
+
+        let res = res.unwrap_err();
+        assert_eq!(res, Error::Unauthenticated);
+    }
 }
 
 #[cfg(test)]
 mod testing {
     use base64::prelude::*;
     use ring::rand::{self, SecureRandom as _};
+    use secrecy::SecretString;
     use surrealdb::sql::Id;
 
     use crate::{account::testing::generate_keys, persist::testing::persist};
@@ -235,21 +326,38 @@ mod testing {
     use super::*;
 
     pub struct TestData {
-        persist: Persist,
-        current: CurrentAccount,
-        jwt_enc_key: jsonwebtoken::EncodingKey,
-        jwt_dec_key: jsonwebtoken::DecodingKey,
+        pub persist: Persist,
+        pub current: CurrentAccount,
+        pub jwt_enc_key: jsonwebtoken::EncodingKey,
+        pub jwt_dec_key: jsonwebtoken::DecodingKey,
+    }
+
+    pub struct AccData {
+        pub handle: String,
+        pub pword: SecretString,
+        pub acc: Account,
     }
 
     impl TestData {
-        pub async fn new(current: CurrentAccount) -> Self {
+        pub async fn new() -> Self {
             let (jwt_enc_key, jwt_dec_key) = generate_keys();
             Self {
                 persist: persist().await,
-                current,
+                current: Default::default(),
                 jwt_enc_key,
                 jwt_dec_key,
             }
+        }
+
+        pub async fn with_user() -> (Self, AccData) {
+            let mut data = Self::new().await;
+            let account = data.account();
+            let acc = account.create_test_user().await;
+            data.current = CurrentAccount(Some(PartialAccount {
+                id: acc.acc.id_str().into(),
+                hdl: acc.handle.clone(),
+            }));
+            (data, acc)
         }
 
         pub fn account(&self) -> AccountPersist<'_> {
@@ -263,26 +371,33 @@ mod testing {
     }
 
     impl AccountPersist<'_> {
-        pub async fn create_test_user(&self) -> (String, Account) {
+        pub async fn create_test_user(&self) -> AccData {
             let rng = rand::SystemRandom::new();
-            let mut pword_salt = [0u8; 16];
-            rng.fill(&mut pword_salt).unwrap();
-            let handle = BASE64_STANDARD_NO_PAD.encode(&pword_salt);
+            let mut handle = [0u8; 16];
+            rng.fill(&mut handle).unwrap();
+            let handle = BASE64_STANDARD_NO_PAD.encode(handle);
+            let mut pword = [0u8; 16];
+            rng.fill(&mut pword).unwrap();
+            let pword = BASE64_STANDARD_NO_PAD.encode(pword);
 
             let acc = CreateAccount {
                 handle: handle.clone(),
-                pword: "test".to_owned().into(),
+                pword: pword.clone().into(),
                 invite: None,
             };
 
-            (handle, self.create(acc).await.unwrap())
+            AccData {
+                handle,
+                pword: pword.into(),
+                acc: self.create(acc).await.unwrap(),
+            }
         }
     }
 
     impl Account {
-        pub fn id_str(self) -> String {
-            match self.id.id {
-                Id::String(id) => id,
+        pub fn id_str(&self) -> String {
+            match &self.id.id {
+                Id::String(id) => id.clone(),
                 _ => panic!("unexpected id type"),
             }
         }
