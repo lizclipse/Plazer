@@ -21,10 +21,10 @@ use crate::error::{Error, Result};
 #[derive(Debug, Serialize, Deserialize)]
 struct JwtClaims {
     // aud: String, // Optional. Audience
-    exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
-    iat: usize, // Optional. Issued at (as UTC timestamp)
+    exp: i64, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
+    iat: i64, // Optional. Issued at (as UTC timestamp)
     // iss: String, // Optional. Issuer
-    nbf: usize, // Optional. Not Before (as UTC timestamp)
+    nbf: i64, // Optional. Not Before (as UTC timestamp)
     // sub: String, // Optional. Subject (whom token refers to)
     kind: JwtKind,
 }
@@ -39,9 +39,9 @@ impl JwtClaims {
     fn new(duration: Duration, kind: JwtKind) -> Self {
         let now = Utc::now();
         Self {
-            exp: (now + duration).timestamp() as usize,
-            iat: now.timestamp() as usize,
-            nbf: now.timestamp() as usize,
+            exp: (now + duration).timestamp(),
+            iat: now.timestamp(),
+            nbf: now.timestamp(),
             kind,
         }
     }
@@ -67,10 +67,7 @@ impl RefreshClaims {
     }
 
     pub fn issued_at(&self) -> Result<DateTime<Utc>> {
-        match Utc.timestamp_opt(self.jwt.iat as i64, 0) {
-            LocalResult::Single(dt) => Ok(dt),
-            LocalResult::None | LocalResult::Ambiguous(..) => Err(Error::JwtInvalid),
-        }
+        into_utc(self.jwt.iat)
     }
 }
 
@@ -91,9 +88,14 @@ impl<'a> AccessClaims<'a> {
     }
 }
 
-impl From<AccessClaims<'_>> for CurrentAccount {
-    fn from(claims: AccessClaims) -> Self {
-        Self(Some(claims.acc.into_owned()))
+impl TryFrom<AccessClaims<'_>> for CurrentAccount {
+    type Error = Error;
+
+    fn try_from(claims: AccessClaims) -> Result<Self> {
+        Ok(Self::new(
+            claims.acc.into_owned(),
+            into_utc(claims.jwt.exp)?,
+        ))
     }
 }
 
@@ -139,7 +141,7 @@ pub fn authenticate(
 
         let token = match token {
             Some(token) => token,
-            None => return Ok(CurrentAccount(None)),
+            None => return Ok(Default::default()),
         };
 
         let mut validation = Validation::new(Algorithm::EdDSA);
@@ -147,7 +149,7 @@ pub fn authenticate(
         let token_data = jsonwebtoken::decode::<AccessClaims>(token, dec_key, &validation)?;
 
         match token_data.claims.jwt.kind {
-            JwtKind::Access => Ok(token_data.claims.into()),
+            JwtKind::Access => Ok(token_data.claims.try_into()?),
             _ => Err(Error::JwtInvalid),
         }
     }
@@ -240,6 +242,13 @@ impl From<serde_json::Value> for AuthenticateInput {
     }
 }
 
+fn into_utc(timestamp: i64) -> Result<DateTime<Utc>> {
+    match Utc.timestamp_opt(timestamp, 0) {
+        LocalResult::Single(dt) => Ok(dt),
+        LocalResult::None | LocalResult::Ambiguous(..) => Err(Error::JwtInvalid),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -268,10 +277,7 @@ mod tests {
     fn test_access_token_valid() {
         let (enc_key, dec_key) = generate_keys();
 
-        let acc = PartialAccount {
-            id: "id".into(),
-            hdl: "handle".into(),
-        };
+        let acc = PartialAccount::new("id".into(), "handle".into());
         let token = create_access_token(&acc, &enc_key).unwrap();
 
         for inp in [
@@ -282,11 +288,11 @@ mod tests {
             assert!(auth.is_ok());
 
             let auth = auth.unwrap();
-            assert!(auth.0.is_some());
-
-            let auth = auth.0.unwrap();
-            assert_eq!(auth.id, acc.id);
-            assert_eq!(auth.hdl, acc.hdl);
+            assert_eq!(auth.id().expect("current account to have ID"), acc.id());
+            assert_eq!(
+                auth.handle().expect("current account to have handle"),
+                acc.handle()
+            );
         }
     }
 
@@ -301,10 +307,7 @@ mod tests {
         assert_eq!(auth.unwrap_err(), Error::JwtMalformed);
 
         // Invalid signature
-        let acc = PartialAccount {
-            id: "id".into(),
-            hdl: "handle".into(),
-        };
+        let acc = PartialAccount::new("id".into(), "handle".into());
 
         let token = create_access_token(&acc, &enc_key_a).unwrap();
         let auth = authenticate(json!({ "token": token }), &dec_key_b);
@@ -313,11 +316,9 @@ mod tests {
 
         // Expired token
         let mut access_claims = AccessClaims::new(acc);
-        println!("{:?}", access_claims);
         access_claims.jwt.iat -= 300;
         access_claims.jwt.nbf -= 300;
-        access_claims.jwt.exp = (Utc::now().timestamp() as usize) - 100;
-        println!("{:?}", access_claims);
+        access_claims.jwt.exp = (Utc::now().timestamp()) - 100;
         let token = jsonwebtoken::encode(
             &jsonwebtoken::Header::new(Algorithm::EdDSA),
             &access_claims,
@@ -368,7 +369,7 @@ mod tests {
         let mut refresh_claims = RefreshClaims::new("id".into());
         refresh_claims.jwt.iat -= 300;
         refresh_claims.jwt.nbf -= 300;
-        refresh_claims.jwt.exp = (Utc::now().timestamp() as usize) - 100;
+        refresh_claims.jwt.exp = (Utc::now().timestamp()) - 100;
         let token = jsonwebtoken::encode(
             &jsonwebtoken::Header::new(Algorithm::EdDSA),
             &refresh_claims,
@@ -380,10 +381,7 @@ mod tests {
         assert_eq!(auth.unwrap_err(), Error::JwtExpired);
 
         // Access token
-        let acc = PartialAccount {
-            id: "id".into(),
-            hdl: "handle".into(),
-        };
+        let acc = PartialAccount::new("id".into(), "handle".into());
         let token = create_access_token(&acc, &enc_key_b).unwrap();
         let auth = verify_refresh_token(&token, &dec_key_b);
         assert!(auth.is_err());

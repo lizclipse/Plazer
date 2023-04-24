@@ -2,8 +2,6 @@ mod auth;
 mod persist;
 mod schema;
 
-use std::borrow::Cow;
-
 pub use auth::*;
 pub use persist::*;
 pub use schema::*;
@@ -11,10 +9,8 @@ pub use schema::*;
 use async_graphql::{ComplexObject, InputObject, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use secrecy::SecretString;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use surrealdb::sql::Thing;
-
-use crate::error::{Error, Result};
 
 /// A registered account.
 #[derive(SimpleObject, Debug, Deserialize)]
@@ -72,34 +68,138 @@ pub struct AuthCreds {
     pword: SecretString,
 }
 
-/// Account information stored in the JWT.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PartialAccount {
-    id: ID,
-    hdl: String,
-}
+pub use private::{CurrentAccount, PartialAccount};
+// Keep important authentication types in a private module to avoid leaking
+// the internal fields.
+mod private {
+    use std::borrow::Cow;
 
-impl From<PartialAccount> for Cow<'_, PartialAccount> {
-    fn from(acc: PartialAccount) -> Self {
-        Cow::Owned(acc)
+    use async_graphql::ID;
+    use chrono::{DateTime, Utc};
+    use serde::{Deserialize, Serialize};
+
+    use crate::error::{Error, Result};
+
+    #[derive(Debug)]
+    pub struct CurrentAccount(Inner);
+
+    #[derive(Debug)]
+    enum Inner {
+        Unauthenticated,
+        Authenticated(PartialAccount, DateTime<Utc>),
+    }
+
+    impl CurrentAccount {
+        pub fn new(acc: PartialAccount, expiry: DateTime<Utc>) -> Self {
+            Self(Inner::Authenticated(acc, expiry))
+        }
+
+        pub fn account(&self) -> Result<&PartialAccount> {
+            match &self.0 {
+                Inner::Unauthenticated => Err(Error::Unauthenticated),
+                Inner::Authenticated(acc, expiry) => match Utc::now() >= *expiry {
+                    true => Err(Error::Unauthenticated),
+                    false => Ok(acc),
+                },
+            }
+        }
+
+        pub fn id(&self) -> Result<&ID> {
+            self.account().map(|acc| &acc.id)
+        }
+
+        // TODO: remove this when it's used outside of tests
+        #[cfg(test)]
+        pub fn handle(&self) -> Result<&str> {
+            self.account().map(|acc| acc.hdl.as_str())
+        }
+    }
+
+    impl Default for CurrentAccount {
+        fn default() -> Self {
+            Self(Inner::Unauthenticated)
+        }
+    }
+
+    /// Account information stored in the JWT.
+    #[derive(Clone, Debug, Serialize, Deserialize)]
+    pub struct PartialAccount {
+        id: ID,
+        hdl: String,
+    }
+
+    impl PartialAccount {
+        pub fn new(id: ID, hdl: String) -> Self {
+            Self { id, hdl }
+        }
+
+        pub fn id(&self) -> &ID {
+            &self.id
+        }
+
+        pub fn handle(&self) -> &str {
+            self.hdl.as_str()
+        }
+    }
+
+    impl From<PartialAccount> for Cow<'_, PartialAccount> {
+        fn from(acc: PartialAccount) -> Self {
+            Cow::Owned(acc)
+        }
+    }
+
+    impl<'a> From<&'a PartialAccount> for Cow<'a, PartialAccount> {
+        fn from(acc: &'a PartialAccount) -> Self {
+            Cow::Borrowed(acc)
+        }
     }
 }
 
-impl<'a> From<&'a PartialAccount> for Cow<'a, PartialAccount> {
-    fn from(acc: &'a PartialAccount) -> Self {
-        Cow::Borrowed(acc)
+#[cfg(test)]
+mod tests {
+    use async_graphql::ID;
+    use chrono::Utc;
+
+    use super::*;
+
+    #[test]
+    fn current_account() {
+        let acc = PartialAccount::new("test".to_owned().into(), "test".into());
+        let expiry = Utc::now() + chrono::Duration::minutes(5);
+        let current = CurrentAccount::new(acc.clone(), expiry);
+
+        assert!(current.account().is_ok());
+        assert_eq!(current.id().unwrap(), acc.id());
+        assert_eq!(current.handle().unwrap(), acc.handle());
     }
-}
 
-#[derive(Debug, Default)]
-pub struct CurrentAccount(Option<PartialAccount>);
+    #[test]
+    fn current_account_expired() {
+        let acc = PartialAccount::new("test".to_owned().into(), "test".to_owned());
+        let expiry = Utc::now();
+        let current = CurrentAccount::new(acc, expiry);
 
-impl CurrentAccount {
-    pub fn account(&self) -> Result<&PartialAccount> {
-        self.0.as_ref().ok_or(Error::Unauthenticated)
+        assert!(current.account().is_err());
+        assert!(current.id().is_err());
+        assert!(current.handle().is_err());
     }
 
-    pub fn id(&self) -> Result<&ID> {
-        self.account().map(|acc| &acc.id)
+    #[test]
+    fn current_account_default() {
+        let current = CurrentAccount::default();
+
+        assert!(current.account().is_err());
+        assert!(current.id().is_err());
+        assert!(current.handle().is_err());
+    }
+
+    #[test]
+    fn partial_account() {
+        let id: ID = "test".to_owned().into();
+        let hdl = "test".to_owned();
+        let acc = PartialAccount::new(id.clone(), hdl.clone());
+
+        assert_eq!(acc.id(), &id);
+        assert_eq!(acc.handle(), hdl.as_str());
     }
 }

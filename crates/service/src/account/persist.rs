@@ -72,10 +72,7 @@ impl<'a> AccountPersist<'a> {
         }
 
         create_access_token(
-            &PartialAccount {
-                id: acc.id.id.into(),
-                hdl: acc.handle,
-            },
+            &PartialAccount::new(acc.id.id.into(), acc.handle),
             self.jwt_enc_key,
         )
     }
@@ -141,8 +138,8 @@ END
             .db()
             .query("UPDATE type::thing($tbl, $id) SET revoked_at = $revoked_at")
             .bind(("tbl", TABLE_NAME))
-            .bind(("revoked_at", now))
             .bind(("id", acc))
+            .bind(("revoked_at", now))
             .await?;
 
         Ok(now)
@@ -317,6 +314,7 @@ mod tests {
 #[cfg(test)]
 mod testing {
     use base64::prelude::*;
+    use chrono::Duration;
     use ring::rand::{self, SecureRandom as _};
     use secrecy::SecretString;
     use surrealdb::sql::Id;
@@ -353,10 +351,10 @@ mod testing {
             let mut data = Self::new().await;
             let account = data.account();
             let acc = account.create_test_user().await;
-            data.current = CurrentAccount(Some(PartialAccount {
-                id: acc.acc.id_str().into(),
-                hdl: acc.handle.clone(),
-            }));
+            data.current = CurrentAccount::new(
+                PartialAccount::new(acc.acc.id_str().into(), acc.handle.clone()),
+                Utc::now() + Duration::minutes(30),
+            );
             (data, acc)
         }
 
