@@ -80,11 +80,12 @@ mod private {
 
     use crate::error::{Error, Result};
 
-    #[derive(Debug)]
+    #[derive(Debug, Default)]
     pub struct CurrentAccount(Inner);
 
-    #[derive(Debug)]
+    #[derive(Debug, Default)]
     enum Inner {
+        #[default]
         Unauthenticated,
         Authenticated(PartialAccount, DateTime<Utc>),
     }
@@ -112,12 +113,6 @@ mod private {
         #[cfg(test)]
         pub fn handle(&self) -> Result<&str> {
             self.account().map(|acc| acc.hdl.as_str())
-        }
-    }
-
-    impl Default for CurrentAccount {
-        fn default() -> Self {
-            Self(Inner::Unauthenticated)
         }
     }
 

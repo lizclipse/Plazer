@@ -120,8 +120,13 @@ pub async fn serve(
     rng.fill(&mut rng_buf)?;
 
     let jwt_enc_key = Arc::new(jwt_enc_key);
+    let jwt_dec_key = Arc::new(jwt_dec_key);
     let persist = persist::Persist::new(persist_address).await?;
-    let schema = schema(|s| s.data(persist).data(jwt_enc_key.clone()));
+    let schema = schema(|s| {
+        s.data(persist)
+            .data(jwt_enc_key.clone())
+            .data(jwt_dec_key.clone())
+    });
 
     let state = ServiceState::new(schema, jwt_enc_key, jwt_dec_key);
 

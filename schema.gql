@@ -59,6 +59,18 @@ input CreateAccount {
   invite: String
 }
 
+type CreateAccountResult {
+  account: Account!
+  """
+  Request a refresh token for the newly created account.
+  """
+  refreshToken: String!
+  """
+  Request an access token for the newly created account.
+  """
+  accessToken: String!
+}
+
 """
 Implement the DateTime<Utc> scalar
 
@@ -74,7 +86,7 @@ type Mutation {
   """
   Register a new account.
   """
-  createAccount(create: CreateAccount!): Account!
+  createAccount(create: CreateAccount!): CreateAccountResult!
   """
   Revoke all tokens issued for the current account.
   """

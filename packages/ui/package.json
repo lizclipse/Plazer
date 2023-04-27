@@ -14,7 +14,7 @@
     "coverage": "vitest run --coverage",
     "clean": "rm -rf dist build",
     "postinstall": "node scripts/dependency-fix.js",
-    "codegen": "graphql-codegen --config graphql-codegen.yml",
+    "codegen": "graphql-codegen --config .graphqlrc.yml",
     "codegen:watch": "pnpm run codegen --watch"
   },
   "type": "module",
@@ -49,6 +49,7 @@
     "@apollo/client": "^3.7.11",
     "@merged/solid-apollo": "^1.7.1",
     "graphql": "^16.6.0",
-    "graphql-ws": "^5.12.1"
+    "graphql-ws": "^5.12.1",
+    "modern-normalize": "^1.1.0"
   }
 }

@@ -21,6 +21,8 @@ pub struct Persist(DbLayer);
 impl Persist {
     pub async fn new(address: String) -> surrealdb::Result<Self> {
         let db = connect(address).await?;
+        // TODO: select ns & db from config
+        db.use_ns("test").use_db("test").await?;
         Ok(Self(db))
     }
 

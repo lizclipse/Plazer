@@ -1,9 +1,12 @@
-use async_graphql::{Context, Object, Result, ResultExt as _};
+use async_graphql::{ComplexObject, Context, Object, Result, ResultExt as _, SimpleObject};
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use tracing::instrument;
 
-use super::{Account, AuthCreds, CreateAccount};
-use crate::persist::PersistExt as _;
+use super::{
+    create_access_token, create_refresh_token, Account, AuthCreds, CreateAccount, PartialAccount,
+};
+use crate::{persist::PersistExt as _, EncodingKey};
 
 #[derive(Default)]
 pub struct AccountQuery;
@@ -28,6 +31,37 @@ impl AccountQuery {
             .extend()
     }
 }
+#[derive(SimpleObject, Debug, Deserialize)]
+#[graphql(complex)]
+struct CreateAccountResult {
+    account: Account,
+}
+
+#[ComplexObject]
+impl CreateAccountResult {
+    /// Request a refresh token for the newly created account.
+    #[instrument(skip_all)]
+    async fn refresh_token(&self, ctx: &Context<'_>) -> Result<String> {
+        create_refresh_token(
+            self.account.id.id.clone().into(),
+            ctx.data_unchecked::<EncodingKey>(),
+        )
+        .extend()
+    }
+
+    /// Request an access token for the newly created account.
+    #[instrument(skip_all)]
+    async fn access_token(&self, ctx: &Context<'_>) -> Result<String> {
+        create_access_token(
+            &PartialAccount::new(
+                self.account.id.id.clone().into(),
+                self.account.handle.clone(),
+            ),
+            ctx.data_unchecked::<EncodingKey>(),
+        )
+        .extend()
+    }
+}
 
 #[derive(Default)]
 pub struct AccountMutation;
@@ -42,8 +76,14 @@ impl AccountMutation {
 
     /// Register a new account.
     #[instrument(skip_all)]
-    async fn create_account(&self, ctx: &Context<'_>, create: CreateAccount) -> Result<Account> {
-        ctx.account_persist().create(create).await.extend()
+    async fn create_account(
+        &self,
+        ctx: &Context<'_>,
+        create: CreateAccount,
+    ) -> Result<CreateAccountResult> {
+        Ok(CreateAccountResult {
+            account: ctx.account_persist().create(create).await.extend()?,
+        })
     }
 
     /// Revoke all tokens issued for the current account.
