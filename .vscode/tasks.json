@@ -4,7 +4,8 @@
     {
       "label": "build - cli",
       "type": "cargo",
-      "command": "build",
+      "command": "make",
+      "args": ["build-cli"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -17,10 +18,10 @@
     },
     {
       "label": "build - ui",
-      "type": "process",
-      "command": "turbo",
-      "args": ["build"],
-      "problemMatcher": "$rustc",
+      "type": "cargo",
+      "command": "make",
+      "args": ["build-ui"],
+      "problemMatcher": "$tsc",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -32,9 +33,10 @@
     },
     {
       "label": "test - cli",
+      // Use a type of process so we can set as test command
       "type": "process",
       "command": "cargo",
-      "args": ["test"],
+      "args": ["make", "test-cli"],
       "problemMatcher": "$rustc",
       "isTestCommand": true,
       "presentation": {
@@ -47,10 +49,10 @@
       }
     },
     {
-      "label": "lint:fix - cli",
-      "type": "process",
-      "command": "cargo",
-      "args": ["clippy", "--fix", "--allow-staged"],
+      "label": "lint - fix - cli",
+      "type": "cargo",
+      "command": "make",
+      "args": ["lint-fix-cli"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -62,11 +64,12 @@
       }
     },
     {
-      "label": "lint:fix - ui",
-      "type": "process",
-      "command": "turbo",
-      "args": ["lint:fix"],
-      "problemMatcher": "$tsc",
+      "label": "lint - fix - ui",
+      "type": "cargo",
+      "command": "make",
+      "args": ["lint-fix-ui"],
+      // TODO: add proper matcher
+      "problemMatcher": [],
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -77,11 +80,12 @@
       }
     },
     {
-      "label": "lint:fix - prettier",
-      "type": "process",
-      "command": "pnpm",
-      "args": ["run", "lint:fix"],
-      "problemMatcher": "$tsc",
+      "label": "lint - fix - style",
+      "type": "cargo",
+      "command": "make",
+      "args": ["lint-fix-style"],
+      // TODO: add proper matcher
+      "problemMatcher": [],
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -92,8 +96,12 @@
       }
     },
     {
-      "label": "lint:fix - all",
-      "dependsOn": ["lint:fix - cli", "lint:fix - ui", "lint:fix - prettier"],
+      "label": "lint - fix",
+      "type": "cargo",
+      "command": "make",
+      "args": ["lint-fix"],
+      // TODO: add proper matcher
+      "problemMatcher": [],
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -101,15 +109,23 @@
         "panel": "shared",
         "showReuseMessage": true,
         "clear": true
-      },
-      "problemMatcher": []
+      }
     },
     {
       "label": "serve - service",
-      "type": "process",
-      "command": "cargo",
-      "args": ["run", "-p", "c11ity_service"],
-      "problemMatcher": "$rustc",
+      "type": "cargo",
+      "command": "make",
+      "args": ["serve-service"],
+      "problemMatcher": [
+        {
+          "base": "$rustc",
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^\\s*Compiling\\s.*$",
+            "endsPattern": "^\\s*Finished\\s.*$"
+          }
+        }
+      ],
       "isBackground": true,
       "presentation": {
         "echo": true,
@@ -122,9 +138,9 @@
     },
     {
       "label": "serve - cli",
-      "type": "process",
-      "command": "cargo",
-      "args": ["watch", "-x", "run -p c11ity", "-w", "crates"],
+      "type": "cargo",
+      "command": "make",
+      "args": ["serve-cli"],
       "problemMatcher": [
         {
           "base": "$rustc",
@@ -147,9 +163,10 @@
     },
     {
       "label": "serve - ui",
-      "type": "process",
-      "command": "pnpm",
-      "args": ["run", "--filter", "{packages/ui}", "dev"],
+      "type": "cargo",
+      "command": "make",
+      "args": ["serve-ui"],
+      // TODO: add proper matcher
       "problemMatcher": [],
       "isBackground": true,
       "presentation": {
@@ -162,10 +179,9 @@
       }
     },
     {
-      "label": "generate schema - cli",
-      "type": "process",
-      "command": "cargo",
-      "args": ["run", "-p", "c11ity", "--", "schema", "--output", "schema.gql"],
+      "label": "codegen - schema",
+      "type": "shell",
+      "command": "cargo make codegen-schema && cargo make lint-fix-style",
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -177,16 +193,11 @@
       }
     },
     {
-      "label": "generate schema",
-      "dependsOn": ["generate schema - cli", "lint:fix - prettier"],
-      "dependsOrder": "sequence",
-      "problemMatcher": []
-    },
-    {
-      "label": "codegen",
-      "type": "process",
-      "command": "turbo",
-      "args": ["codegen"],
+      "label": "codegen - gql",
+      "type": "cargo",
+      "command": "make",
+      "args": ["codegen-gql"],
+      // TODO: add proper matcher
       "problemMatcher": [],
       "presentation": {
         "echo": true,
@@ -198,10 +209,11 @@
       }
     },
     {
-      "label": "codegen - watch",
-      "type": "process",
-      "command": "turbo",
-      "args": ["codegen:watch"],
+      "label": "codegen - gql - watch",
+      "type": "cargo",
+      "command": "make",
+      "args": ["codegen-gql-watch"],
+      // TODO: add proper matcher
       "problemMatcher": [],
       "isBackground": true,
       "presentation": {

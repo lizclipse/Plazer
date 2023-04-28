@@ -24,7 +24,11 @@ const client = new ApolloClient(
     ? { uri: "http://localhost:8080/api/graphql", cache }
     : {
         link: new GraphQLWsLink(
-          createClient({ url: "ws://localhost:3000/api/graphql/ws" })
+          createClient({
+            url: "ws://localhost:3000/api/graphql/ws",
+            lazyCloseTimeout: 30_000,
+            keepAlive: 60_000,
+          })
         ),
         cache,
       }

@@ -7,10 +7,13 @@ use serde::{Deserialize, Serialize};
 use surrealdb::{error::Db as SrlDbError, Error as SrlError};
 use thiserror::Error;
 use tracing::error;
+use typeshare::typeshare;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Error, PartialEq, Eq)]
+#[typeshare]
+#[derive(Debug, Error, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "code", content = "message")]
 pub enum Error {
     #[error("Unauthenticated")]
     Unauthenticated,
