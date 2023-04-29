@@ -67,14 +67,17 @@ jobs:
       - name: Install node dependencies
         run: pnpm install
 
-      - name: Lint
-        run: cargo make lint-check
+      - name: Build Crates
+        run: cargo make build-cli
 
       - name: Codegen
         run: cargo make codegen
 
+      - name: Build Packages
+        run: cargo make build-ui
+
       - name: Test
         run: cargo make test
 
-      - name: Build
-        run: cargo make build
+      - name: Lint
+        run: cargo make lint-check

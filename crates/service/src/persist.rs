@@ -61,7 +61,7 @@ impl PersistExt for Context<'_> {
         AccountPersist::new(
             self.data_unchecked::<Persist>(),
             self.data_opt::<CurrentAccount>()
-                .unwrap_or_else(|| &self.data_unchecked::<Arc<CurrentAccount>>()),
+                .unwrap_or_else(|| self.data_unchecked::<Arc<CurrentAccount>>()),
             self.data_unchecked::<EncodingKey>(),
             self.data_unchecked::<DecodingKey>(),
         )

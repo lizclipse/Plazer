@@ -4,7 +4,7 @@ dependencies = ["lint-check", "test", "build"]
 
 [tasks.build-cli]
 command = "cargo"
-args = ["build", "--release"]
+args = ["build"]
 
 [tasks.build-ui]
 command = "turbo"
