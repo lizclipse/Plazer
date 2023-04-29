@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_graphql::Context;
 use cfg_if::cfg_if;
-use surrealdb::{engine, opt::Strict, Surreal};
+use surrealdb::{engine, Surreal};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
@@ -14,25 +14,25 @@ cfg_if! {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(_: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::Mem>(Strict).await
+            Surreal::new::<engine::local::Mem>(()).await
         }
     } else if #[cfg(all(not(feature = "backend-mem"), feature = "backend-file", not(feature = "backend-tikv")))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::RocksDb>((address, Strict)).await
+            Surreal::new::<engine::local::RocksDb>(address).await
         }
     } else if #[cfg(all(not(feature = "backend-mem"), not(feature = "backend-file"), feature = "backend-tikv"))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::TiKv>((address, Strict)).await
+            Surreal::new::<engine::local::TiKv>(address).await
         }
     } else {
         pub type DbLayer = Surreal<engine::any::Any>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            engine::any::connect((address, Strict)).await
+            engine::any::connect(address).await
         }
     }
 }
@@ -73,8 +73,6 @@ pub mod testing {
     use super::*;
 
     pub async fn persist() -> Persist {
-        let p = Persist::new("memory".into()).await.unwrap();
-        p.db().use_ns("test").use_db("test").await.unwrap();
-        p
+        Persist::new("memory".into()).await.unwrap()
     }
 }
