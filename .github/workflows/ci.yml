@@ -61,7 +61,8 @@ jobs:
         run: |
           cargo install --locked cargo-make
           pnpm install --global turbo
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          # Disabled until tikv starts working
+          # sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Install node dependencies
         run: pnpm install

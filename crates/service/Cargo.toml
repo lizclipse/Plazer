@@ -44,4 +44,4 @@ graphiql = ["async-graphql/graphiql"]
 backend-mem = ["surrealdb/kv-mem"]
 backend-file = ["surrealdb/kv-rocksdb"]
 # Disabled at the moment due to CI build issues.
-backend-tikv = ["surrealdb/kv-tikv"]
+# backend-tikv = ["surrealdb/kv-tikv"]
