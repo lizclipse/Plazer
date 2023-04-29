@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-links:
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,7 +31,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18.x.x
-          cache: npm
 
       - name: Setup build tools
         id: build-tools
