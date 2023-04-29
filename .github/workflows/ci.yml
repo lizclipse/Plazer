@@ -34,18 +34,9 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
-        id: pnpm-install
         with:
           version: 8
           run_install: false
-
-      - name: Setup build tools
-        id: build-tools
-        run: |
-          cargo install --locked cargo-make
-          pnpm install --global turbo
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-          echo "PNPM_STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
       - name: Setup cargo cache
         uses: actions/cache@v3
@@ -56,11 +47,21 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Get pnpm store path
+        id: pnpm-store
+        run: echo "PNPM_STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
       - name: Setup pnpm cache
         uses: actions/cache@v3
         with:
-          path: ${{ steps.build-tools.outputs.PNPM_STORE_PATH }}
+          path: ${{ steps.pnpm-store.outputs.PNPM_STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Setup build tools
+        run: |
+          cargo install --locked cargo-make
+          pnpm install --global turbo
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Install node dependencies
         run: pnpm install
