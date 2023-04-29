@@ -180,8 +180,9 @@
     },
     {
       "label": "codegen - schema",
-      "type": "shell",
-      "command": "cargo make codegen-schema && cargo make lint-fix-style",
+      "type": "cargo",
+      "command": "make",
+      "args": ["codegen-schema"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,

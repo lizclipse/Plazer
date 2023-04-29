@@ -111,7 +111,7 @@ command = "turbo"
 args = ["codegen:watch"]
 
 [tasks.codegen]
-dependencies = ["codegen-gql", "codegen-typeshare", "lint-fix-style"]
+dependencies = ["codegen-gql", "codegen-typeshare"]
 
 [config]
 default_to_workspace = false
