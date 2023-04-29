@@ -32,11 +32,17 @@ jobs:
         with:
           node-version: 18.x.x
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        id: pnpm-install
+        with:
+          version: 7
+          run_install: false
+
       - name: Setup build tools
         id: build-tools
         run: |
           cargo install --locked cargo-make
-          npm install --global pnpm
           pnpm install --global turbo
           sudo apt-get update && sudo apt-get install -y protobuf-compiler
           echo "PNPM_STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
