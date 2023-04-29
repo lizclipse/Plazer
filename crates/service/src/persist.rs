@@ -1,18 +1,41 @@
 use std::sync::Arc;
 
 use async_graphql::Context;
-use surrealdb::{
-    engine::any::{connect, Any},
-    Surreal,
-};
+use cfg_if::cfg_if;
+use surrealdb::{engine, opt::Strict, Surreal};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
     DecodingKey, EncodingKey,
 };
 
-// TODO: use features to select specific engines when building as a service
-pub type DbLayer = Surreal<Any>;
+cfg_if! {
+    if #[cfg(all(feature = "backend-mem", not(feature = "backend-file"), not(feature = "backend-tikv")))] {
+        pub type DbLayer = Surreal<engine::local::Db>;
+
+        async fn connect(_: String) -> surrealdb::Result<DbLayer> {
+            Surreal::new::<engine::local::Mem>(Strict).await
+        }
+    } else if #[cfg(all(not(feature = "backend-mem"), feature = "backend-file", not(feature = "backend-tikv")))] {
+        pub type DbLayer = Surreal<engine::local::Db>;
+
+        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
+            Surreal::new::<engine::local::RocksDb>((address, Strict)).await
+        }
+    } else if #[cfg(all(not(feature = "backend-mem"), not(feature = "backend-file"), feature = "backend-tikv"))] {
+        pub type DbLayer = Surreal<engine::local::Db>;
+
+        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
+            Surreal::new::<engine::local::TiKv>((address, Strict)).await
+        }
+    } else {
+        pub type DbLayer = Surreal<engine::any::Any>;
+
+        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
+            engine::any::connect((address, Strict)).await
+        }
+    }
+}
 
 pub trait PersistExt {
     fn account_persist(&self) -> AccountPersist;
