@@ -99,7 +99,7 @@ args = [
     "packages/ui/src/__generated__/rust-types.ts",
     "crates/service",
 ]
-install_crate = { crate_name = "typeshare", binary = "typeshare", test_arg = "--version" }
+install_crate = { crate_name = "typeshare-cli", binary = "typeshare", test_arg = "--version" }
 
 [tasks.codegen-gql]
 command = "turbo"
