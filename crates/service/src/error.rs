@@ -60,6 +60,15 @@ impl Error {
             _ => format!("{:?}", self),
         }
     }
+
+    fn log(&self) {
+        match self {
+            Self::ServerMisconfigured(err) => error!("Server misconfigured: {}", err),
+            Self::InternalServerError(err) => error!("Internal server error: {}", err),
+            Self::NotImplemented => error!("Unimplemented feature called"),
+            _ => (),
+        };
+    }
 }
 
 impl From<String> for Error {
@@ -84,12 +93,7 @@ impl ErrorExtensions for Error {
     fn extend(&self) -> async_graphql::Error {
         // Since this is the end for our errors before they are sent to the client,
         // we should log important ones here.
-        match self {
-            Self::ServerMisconfigured(err) => error!("Server misconfigured: {}", err),
-            Self::InternalServerError(err) => error!("Internal server error: {}", err),
-            Self::NotImplemented => error!("Unimplemented feature called"),
-            _ => (),
-        };
+        self.log();
 
         async_graphql::Error::new(self.to_string()).extend_with(|_, e| {
             e.set("code", self.code());
@@ -150,6 +154,10 @@ pub type ErrorResponse = (StatusCode, Json<ErrorData>);
 
 impl From<Error> for ErrorResponse {
     fn from(err: Error) -> Self {
+        // This is the last point before the error is sent back to the client, so
+        // log the important ones here.
+        err.log();
+
         let code = match err {
             Error::Unauthenticated
             | Error::CredentialsInvalid

@@ -1,0 +1,73 @@
+name: "Check & Build"
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# This allows a subsequently queued workflow run to interrupt previous runs
+concurrency:
+  group: "${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Setup node toolchain
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x.x
+          cache: npm
+
+      - name: Setup build tools
+        id: build-tools
+        run: |
+          cargo install --locked cargo-make
+          npm install --global pnpm
+          pnpm install --global turbo
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          echo "PNPM_STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.build-tools.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: pnpm install
+        run: pnpm ci
+
+      - name: Lint
+        run: cargo make lint-check
+
+      - name: Codegen
+        run: cargo make codegen
+
+      - name: Test
+        run: cargo make test
+
+      - name: Build
+        run: cargo make build

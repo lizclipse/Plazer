@@ -96,7 +96,7 @@ args = [
     "--lang",
     "typescript",
     "--output-file",
-    "packages/ui/src/__generated__/crate-types.ts",
+    "packages/ui/src/__generated__/rust-types.ts",
     "crates/service",
 ]
 install_crate = { crate_name = "typeshare", binary = "typeshare", test_arg = "--version" }

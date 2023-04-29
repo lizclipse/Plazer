@@ -9,7 +9,7 @@ use anyhow::Context as _;
 #[cfg(feature = "graphiql")]
 use async_graphql::http::GraphiQLSource;
 use async_graphql::{http::ALL_WEBSOCKET_PROTOCOLS, Data, ResultExt as _};
-use async_graphql_axum::{GraphQLProtocol, GraphQLRequest, GraphQLResponse, GraphQLWebSocket};
+use async_graphql_axum::{GraphQLBatchRequest, GraphQLProtocol, GraphQLResponse, GraphQLWebSocket};
 use axum::{
     extract::{FromRef, State, WebSocketUpgrade},
     headers::{authorization::Bearer, Authorization},
@@ -191,10 +191,13 @@ async fn graphql_handler(
     State(schema): State<ServiceSchema>,
     State(dec_key): State<DecodingKey>,
     auth_header: Option<TypedHeader<Authorization<Bearer>>>,
-    req: GraphQLRequest,
+    req: GraphQLBatchRequest,
 ) -> Result<GraphQLResponse, ErrorResponse> {
     let current = authenticate(auth_header, &dec_key)?;
-    Ok(schema.execute(req.into_inner().data(current)).await.into())
+    Ok(schema
+        .execute_batch(req.into_inner().data(Arc::new(current)))
+        .await
+        .into())
 }
 
 #[instrument(skip_all)]

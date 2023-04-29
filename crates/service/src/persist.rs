@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::Context;
 use surrealdb::{
     engine::any::{connect, Any},
@@ -35,7 +37,8 @@ impl PersistExt for Context<'_> {
     fn account_persist(&self) -> AccountPersist {
         AccountPersist::new(
             self.data_unchecked::<Persist>(),
-            self.data_unchecked::<CurrentAccount>(),
+            self.data_opt::<CurrentAccount>()
+                .unwrap_or_else(|| &self.data_unchecked::<Arc<CurrentAccount>>()),
             self.data_unchecked::<EncodingKey>(),
             self.data_unchecked::<DecodingKey>(),
         )
