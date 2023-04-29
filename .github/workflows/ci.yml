@@ -62,8 +62,8 @@ jobs:
           path: ${{ steps.build-tools.outputs.PNPM_STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: pnpm install
-        run: pnpm ci
+      - name: Install node dependencies
+        run: pnpm install
 
       - name: Lint
         run: cargo make lint-check
