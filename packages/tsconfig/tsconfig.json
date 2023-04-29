@@ -15,6 +15,7 @@
     "resolveJsonModule": true,
     "sourceMap": true,
     "useUnknownInCatchVariables": true,
+    "noPropertyAccessFromIndexSignature": false,
 
     "composite": true
   },

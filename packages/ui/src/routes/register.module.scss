@@ -1,0 +1,28 @@
+%flexy {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+}
+
+.form {
+  @extend %flexy;
+  width: 100%;
+  min-height: 100vh;
+
+  > :first-child {
+    margin-top: auto;
+  }
+
+  > :last-child {
+    margin-bottom: auto;
+  }
+
+  > * {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  form {
+    @extend %flexy;
+  }
+}

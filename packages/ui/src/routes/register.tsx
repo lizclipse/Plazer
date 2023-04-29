@@ -5,6 +5,7 @@ import type {
   CreateAccountMutation,
   CreateAccountMutationVariables,
 } from "./register.gql";
+import styles from "./register.module.scss";
 
 const GQL = gql`
   mutation CreateAccount($account: CreateAccount!) {
@@ -48,16 +49,25 @@ export default function Register() {
   });
 
   return (
-    <Form>
-      <label for={inputs.handle}>Login</label>
-      <input id={inputs.handle} name={inputs.handle} />
+    <section class={styles.form}>
+      <h1>Create a new account</h1>
+      <Form>
+        <label for={inputs.handle}>Login</label>
+        <input id={inputs.handle} name={inputs.handle} required />
 
-      <label for={inputs.pword}>Password</label>
-      <input id={inputs.pword} name={inputs.pword} type="password" />
+        <label for={inputs.pword}>Password</label>
+        <input
+          id={inputs.pword}
+          name={inputs.pword}
+          type="password"
+          required
+          minlength={8}
+        />
 
-      <button type="submit" disabled={create.pending}>
-        Create Account
-      </button>
-    </Form>
+        <button type="submit" disabled={create.pending}>
+          Create Account
+        </button>
+      </Form>
+    </section>
   );
 }

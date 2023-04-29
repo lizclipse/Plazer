@@ -18,7 +18,20 @@
   }
 }
 
+%full-height {
+  min-height: 100vh;
+}
+
+html {
+  @extend %full-height;
+}
+
 body {
+  @extend %full-height;
   background-color: var(--color-primary);
   color: var(--color-text);
+}
+
+main {
+  @extend %full-height;
 }
