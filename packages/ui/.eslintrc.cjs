@@ -10,6 +10,7 @@ module.exports = {
     ".eslintrc.cjs",
     "vite.config.ts",
     "vitest.config.ts",
+    "__generated__/**",
     "*.gql.ts",
   ],
 };

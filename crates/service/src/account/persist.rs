@@ -99,7 +99,7 @@ impl<'a> AccountPersist<'a> {
     pub async fn create(&self, acc: CreateAccount) -> Result<Account> {
         let creds = create_creds(acc.pword.expose_secret())?;
 
-        // TODO: Use unique constraint on handle instead of this when SurrealDB supports it
+        // TODO: Use unique constraint on handle instead of this when an update mechanism is implemented
         // TODO: support invites and reject if required/invalid
         let acc = self
             .persist

@@ -144,8 +144,7 @@ pub fn authenticate(
             None => return Ok(Default::default()),
         };
 
-        let mut validation = Validation::new(Algorithm::EdDSA);
-        validation.validate_nbf = true;
+        let validation = default_validation();
         let token_data = jsonwebtoken::decode::<AccessClaims>(token, dec_key, &validation)?;
 
         match token_data.claims.jwt.kind {
@@ -168,13 +167,19 @@ pub fn create_refresh_token(id: ID, enc_key: &jsonwebtoken::EncodingKey) -> Resu
 }
 
 pub fn verify_refresh_token(token: &str, dec_key: &DecodingKey) -> Result<RefreshClaims> {
-    let validation = Validation::new(Algorithm::EdDSA);
+    let validation = default_validation();
     let token_data = jsonwebtoken::decode::<RefreshClaims>(token, dec_key, &validation)?;
 
     match token_data.claims.jwt.kind {
         JwtKind::Refresh => Ok(token_data.claims),
         _ => Err(Error::JwtInvalid),
     }
+}
+
+fn default_validation() -> Validation {
+    let mut validation = Validation::new(Algorithm::EdDSA);
+    validation.validate_nbf = true;
+    validation
 }
 
 static PBKDF2_ITERS: u32 = 100_000;
