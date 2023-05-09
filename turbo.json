@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "outputs": ["build/**", "dist/**"]
+    },
+    "test": {
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+    },
+    "lint": {},
+    "lint:fix": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "codegen": {
+      "outputs": ["src/__generated__/**", "src/**/.gql.ts"]
+    },
+    "codegen:watch": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

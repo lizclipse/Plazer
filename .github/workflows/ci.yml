@@ -1,0 +1,82 @@
+name: "Check & Build"
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# This allows a subsequently queued workflow run to interrupt previous runs
+concurrency:
+  group: "${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
+        with:
+          components: rustfmt, clippy
+
+      - name: Setup node toolchain
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x.x
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Setup cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ steps.rust-toolchain.outputs.cachekey }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Get pnpm store path
+        id: pnpm-store
+        run: echo "PNPM_STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-store.outputs.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Setup build tools
+        run: |
+          cargo install --locked cargo-make
+          pnpm install --global turbo
+          # Disabled until tikv starts working
+          # sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install node dependencies
+        run: pnpm install
+
+      - name: Build Crates
+        run: cargo make build-cli
+
+      - name: Codegen
+        run: cargo make codegen
+
+      - name: Build Packages
+        run: cargo make build-ui
+
+      - name: Test
+        run: cargo make test
+
+      - name: Lint
+        run: cargo make lint-check

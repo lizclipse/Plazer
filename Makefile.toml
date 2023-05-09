@@ -1,0 +1,117 @@
+[tasks.default]
+clear = true
+dependencies = ["lint-check", "test", "build"]
+
+[tasks.build-cli]
+command = "cargo"
+args = ["build"]
+
+[tasks.build-ui]
+command = "turbo"
+args = ["build"]
+dependencies = ["codegen-gql"]
+
+[tasks.build]
+dependencies = ["build-cli", "build-ui"]
+
+[tasks.test-cli]
+command = "cargo"
+args = ["test"]
+
+[tasks.test]
+dependencies = ["test-cli"]
+
+[tasks.lint-check-cli-fmt]
+command = "cargo"
+args = ["fmt", "--", "--check"]
+
+[tasks.lint-check-cli-clippy]
+command = "cargo"
+args = ["clippy", "--all-targets", "--all-features", "--", "-D", "warnings"]
+
+[tasks.lint-check-cli]
+dependencies = ["lint-check-cli-fmt", "lint-check-cli-clippy"]
+
+[tasks.lint-fix-cli-fmt]
+command = "cargo"
+args = ["fmt"]
+
+[tasks.lint-fix-cli-clippy]
+command = "cargo"
+args = [
+    "clippy",
+    "--all-targets",
+    "--all-features",
+    "--fix",
+    "--allow-staged",
+    "--",
+    "-D",
+    "warnings",
+]
+
+[tasks.lint-fix-cli]
+dependencies = ["lint-fix-cli-fmt", "lint-fix-cli-clippy"]
+
+[tasks.lint-check-ui]
+command = "turbo"
+args = ["lint"]
+
+[tasks.lint-fix-ui]
+command = "turbo"
+args = ["lint:fix"]
+
+[tasks.lint-check-style]
+command = "pnpm"
+args = ["run", "lint"]
+
+[tasks.lint-fix-style]
+command = "pnpm"
+args = ["run", "lint:fix"]
+
+[tasks.lint-check]
+dependencies = ["lint-check-cli", "lint-check-ui", "lint-check-style"]
+
+[tasks.lint-fix]
+dependencies = ["lint-fix-cli", "lint-fix-ui", "lint-fix-style"]
+
+[tasks.serve-service]
+command = "cargo"
+args = ["watch", "-x", "run -p c11ity_service", "-w", "crates"]
+
+[tasks.serve-cli]
+command = "cargo"
+args = ["watch", "-x", "run -p c11ity", "-w", "crates"]
+
+[tasks.serve-ui]
+command = "pnpm"
+args = ["run", "--filter", "{packages/ui}", "dev"]
+
+[tasks.codegen-schema]
+command = "cargo"
+args = ["run", "-p", "c11ity", "--", "schema", "--output", "schema.gql"]
+
+[tasks.codegen-typeshare]
+command = "typeshare"
+args = [
+    "--lang",
+    "typescript",
+    "--output-file",
+    "packages/ui/src/__generated__/rust-types.ts",
+    "crates/service",
+]
+install_crate = { crate_name = "typeshare-cli", binary = "typeshare", test_arg = "--version" }
+
+[tasks.codegen-gql]
+command = "turbo"
+args = ["codegen"]
+dependencies = ["codegen-schema"]
+
+[tasks.codegen-gql-watch]
+command = "turbo"
+args = ["codegen:watch"]
+
+[tasks.codegen]
+dependencies = ["codegen-gql", "codegen-typeshare"]
+
+[config]
+default_to_workspace = false

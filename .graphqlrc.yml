@@ -1,0 +1,5 @@
+schema: "schema.gql"
+documents: "packages/ui/src/**/*.{js,ts,jsx,tsx}"
+exclude:
+  - "packages/ui/src/**/*.gql.ts"
+  - "packages/ui/src/**/__generated__/**"

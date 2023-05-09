@@ -1,0 +1,122 @@
+@use "../../node_modules/modern-normalize/modern-normalize.css";
+
+:root {
+  --colour-primary: #ffebeb;
+  --colour-secondary: #ffd5d5;
+  --colour-hover: #ffe8bd;
+  --colour-text: #050505;
+  --colour-text-clickable: #003dff;
+  --font-size: 16px;
+
+  @media (prefers-color-scheme: dark) {
+    --colour-primary: #521515;
+    --colour-secondary: #6b3d31;
+    --colour-hover: #54482f;
+    --colour-text: #ffffff;
+    --colour-text-clickable: #4d91ff;
+  }
+}
+
+%full-height {
+  min-height: 100vh;
+}
+
+html {
+  @extend %full-height;
+  font-size: var(--font-size);
+}
+
+body {
+  @extend %full-height;
+  background-color: var(--colour-primary);
+  color: var(--colour-text);
+}
+
+main {
+  @extend %full-height;
+
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+
+  > * {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+a {
+  color: var(--colour-text-clickable);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@keyframes flash-outline {
+  0% {
+    outline-width: 0.2rem;
+  }
+  100% {
+    outline-width: 0rem;
+  }
+}
+
+%input-focus {
+  outline: var(--colour-text) solid 0;
+  outline-offset: -0.01rem;
+  animation: flash-outline 0.3s ease-in 0s 1 normal,
+    flash-outline 1.2s linear 0.5s infinite alternate-reverse;
+}
+
+input:not([type]),
+input[type="date"],
+input[type="datetime-local"],
+input[type="email"],
+input[type="month"],
+input[type="number"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="text"],
+input[type="time"],
+input[type="url"],
+input[type="week"],
+textarea {
+  background: var(--colour-secondary);
+  color: var(--colour-text);
+  border: 0.07rem solid var(--colour-text);
+  border-radius: 0.1rem;
+  padding: 0.4rem 0.6rem;
+
+  &:hover {
+    background-color: var(--colour-hover);
+  }
+
+  &:focus {
+    @extend %input-focus;
+  }
+}
+
+button,
+input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+  background: var(--colour-secondary);
+  color: var(--colour-text);
+  border: 0.07rem solid var(--colour-text);
+  border-radius: 0.2rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+
+  &:hover {
+    background: var(--colour-hover);
+  }
+
+  &:focus {
+    @extend %input-focus;
+  }
+}
+
+// TODO: checkbox, color, file, image, radio, range

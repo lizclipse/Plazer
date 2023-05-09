@@ -1,0 +1,13 @@
+dist
+build
+.solid
+.turbo
+
+schema.gql
+**/src/__generated__
+*.gql.ts
+
+crates/
+data/
+target/
+pnpm*.yaml

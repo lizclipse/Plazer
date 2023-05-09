@@ -1,0 +1,17 @@
+{
+  "name": "commonwealthity",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "author": "lizclipse",
+  "license": "MIT",
+  "scripts": {
+    "lint": "prettier --check .",
+    "lint:fix": "prettier --write ."
+  },
+  "pnpm": {
+    "overrides": {
+      "tsconfig-paths": "^4"
+    }
+  }
+}

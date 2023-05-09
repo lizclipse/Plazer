@@ -1,3 +1,35 @@
 /target
 dist/
+
+dist
+.solid
+.output
+.vercel
+.netlify
+netlify
+build
+.turbo
+*.tsbuildinfo
+data/
+
+# dependencies
+node_modules
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+*.launch
+.settings/
+
+# Temp
+gitignore
+
+# System Files
 .DS_Store
+Thumbs.db
+
+# Generated Files
+schema.gql
+*.gql.ts
+__generated__
