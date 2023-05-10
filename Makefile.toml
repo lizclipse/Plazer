@@ -76,11 +76,11 @@ dependencies = ["lint-fix-cli", "lint-fix-ui", "lint-fix-style"]
 
 [tasks.serve-service]
 command = "cargo"
-args = ["watch", "-x", "run -p c11ity_service", "-w", "crates"]
+args = ["watch", "-x", "run -p plazer_service", "-w", "crates"]
 
 [tasks.serve-cli]
 command = "cargo"
-args = ["watch", "-x", "run -p c11ity", "-w", "crates"]
+args = ["watch", "-x", "run -p plazer", "-w", "crates"]
 
 [tasks.serve-ui]
 command = "pnpm"
@@ -88,7 +88,7 @@ args = ["run", "--filter", "{packages/ui}", "dev"]
 
 [tasks.codegen-schema]
 command = "cargo"
-args = ["run", "-p", "c11ity", "--", "schema", "--output", "schema.gql"]
+args = ["run", "-p", "plazer", "--", "schema", "--output", "schema.gql"]
 
 [tasks.codegen-typeshare]
 command = "typeshare"

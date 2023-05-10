@@ -1,5 +1,5 @@
 [package]
-name = "c11ity_service"
+name = "plazer_service"
 version = "0.1.0"
 edition = "2021"
 

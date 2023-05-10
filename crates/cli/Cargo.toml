@@ -1,5 +1,5 @@
 [package]
-name = "c11ity"
+name = "plazer"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.70"
-c11ity_service = { version = "0.1.0", path = "../service", features = [
+plazer_service = { version = "0.1.0", path = "../service", features = [
     "graphiql",
 ] }
 clap = { version = "4.2.1", features = ["cargo", "derive"] }

@@ -547,51 +547,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "c11ity"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "c11ity_service",
- "clap",
- "jsonwebtoken",
- "pkcs8",
- "ring",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "c11ity_service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-graphql",
- "async-graphql-axum",
- "async-stream",
- "async-trait",
- "axum",
- "base64 0.21.0",
- "cfg-if",
- "chrono",
- "futures",
- "hyper",
- "jsonwebtoken",
- "log",
- "pkcs8",
- "ring",
- "secrecy",
- "serde",
- "serde_json",
- "surrealdb",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "typeshare",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1953,6 +1908,51 @@ name = "pkg-config"
 version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ac9a59f73473f1b8d852421e59e64809f025994837ef743615c6d0c5b305160"
+
+[[package]]
+name = "plazer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "jsonwebtoken",
+ "pkcs8",
+ "plazer_service",
+ "ring",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "plazer_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-graphql",
+ "async-graphql-axum",
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64 0.21.0",
+ "cfg-if",
+ "chrono",
+ "futures",
+ "hyper",
+ "jsonwebtoken",
+ "log",
+ "pkcs8",
+ "ring",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "surrealdb",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "typeshare",
+]
 
 [[package]]
 name = "ppv-lite86"

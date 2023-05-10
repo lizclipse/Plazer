@@ -1,12 +1,12 @@
 use std::env;
 
-use c11ity_service::{init_logging, read_key, serve, ServeConfig};
 use cfg_if::cfg_if;
+use plazer_service::{init_logging, read_key, serve, ServeConfig};
 use tracing::Level;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let stdout_level = env::var("C11ITY_LOG_LEVEL_STDOUT")
+    let stdout_level = env::var("PLAZER_LOG_LEVEL_STDOUT")
         .unwrap_or_else(|_| "info".to_owned())
         .parse()
         .unwrap_or({
@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         });
-    let file_level = env::var("C11ITY_LOG_LEVEL_FILE")
+    let file_level = env::var("PLAZER_LOG_LEVEL_FILE")
         .unwrap_or_else(|_| "info".to_owned())
         .parse()
         .unwrap_or({
@@ -31,20 +31,20 @@ async fn main() -> anyhow::Result<()> {
             }
         });
 
-    let log_dir = env::var("C11ITY_LOG_DIR").unwrap_or_else(|_| "./data/logs".to_owned());
+    let log_dir = env::var("PLAZER_LOG_DIR").unwrap_or_else(|_| "./data/logs".to_owned());
     let _guard = init_logging(log_dir, stdout_level, file_level);
 
     let persist_address =
-        env::var("C11ITY_DB_ADDRESS").unwrap_or_else(|_| "file://./data/db".to_owned());
+        env::var("PLAZER_DB_ADDRESS").unwrap_or_else(|_| "file://./data/db".to_owned());
     // TODO: if fs path make parent dirs
 
     let private_key =
-        env::var("C11ITY_PRIVATE_KEY").unwrap_or_else(|_| "./data/private_key.pem".to_string());
+        env::var("PLAZER_PRIVATE_KEY").unwrap_or_else(|_| "./data/private_key.pem".to_string());
 
     let (enc_key, dec_key) = read_key(private_key).await?;
 
-    let host = env::var("C11ITY_HOST").ok();
-    let port: Option<u16> = match env::var("C11ITY_PORT").ok() {
+    let host = env::var("PLAZER_HOST").ok();
+    let port: Option<u16> = match env::var("PLAZER_PORT").ok() {
         Some(port) => Some(port.parse()?),
         None => None,
     };

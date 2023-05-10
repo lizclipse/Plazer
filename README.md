@@ -1,6 +1,6 @@
-# Commonwealthity
+# Plazer
 
-A silly goofy project that i've had in my head for years.
+A silly goofy project that I've had in my head for years.
 
 ## Development
 
