@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use anyhow::Context as _;
-use plazer_service::{init_logging, read_key, schema, serve, ServeConfig};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use pkcs8::der::Decode;
+use plazer_service::{init_logging, read_key, schema, serve, ServeConfig};
 use ring::{rand, signature};
 use tokio::{fs::File, io::AsyncWriteExt};
 use tracing::Level;
