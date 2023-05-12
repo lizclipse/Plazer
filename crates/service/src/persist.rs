@@ -133,13 +133,13 @@ mod test {
             async {
                 p.execute_in_lock(id, || async {
                     sleep(Duration::from_millis(5)).await;
-                    ()
+                    
                 })
                 .await
             },
             async {
                 sleep(Duration::from_millis(2)).await;
-                p.execute_in_lock(id, || async { () }).await
+                p.execute_in_lock(id, || async {  }).await
             },
         );
 

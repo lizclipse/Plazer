@@ -32,7 +32,7 @@ impl Migration for AccountMigration {
 }
 
 impl AccountMigration {
-    fn build_init<'a, C>(query: Query<'a, C>) -> Query<'a, C>
+    fn build_init<C>(query: Query<'_, C>) -> Query<'_, C>
     where
         C: Connection,
     {
