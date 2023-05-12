@@ -1,8 +1,10 @@
 mod auth;
+mod migration;
 mod persist;
 mod schema;
 
 pub use auth::*;
+pub use migration::*;
 pub use persist::*;
 pub use schema::*;
 
@@ -80,10 +82,10 @@ mod private {
 
     use crate::error::{Error, Result};
 
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, Clone, PartialEq, Eq)]
     pub struct CurrentAccount(Inner);
 
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, Clone, PartialEq, Eq)]
     enum Inner {
         #[default]
         Unauthenticated,
@@ -117,7 +119,7 @@ mod private {
     }
 
     /// Account information stored in the JWT.
-    #[derive(Clone, Debug, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct PartialAccount {
         id: ID,
         hdl: String,
@@ -163,6 +165,8 @@ mod tests {
         let expiry = Utc::now() + chrono::Duration::minutes(5);
         let current = CurrentAccount::new(acc.clone(), expiry);
 
+        println!("{acc:?}\n{expiry:?}\n{current:?}");
+
         assert!(current.account().is_ok());
         assert_eq!(current.id().unwrap(), acc.id());
         assert_eq!(current.handle().unwrap(), acc.handle());
@@ -172,7 +176,9 @@ mod tests {
     fn current_account_expired() {
         let acc = PartialAccount::new("test".to_owned().into(), "test".to_owned());
         let expiry = Utc::now();
-        let current = CurrentAccount::new(acc, expiry);
+        let current = CurrentAccount::new(acc.clone(), expiry);
+
+        println!("{acc:?}\n{expiry:?}\n{current:?}");
 
         assert!(current.account().is_err());
         assert!(current.id().is_err());
@@ -182,6 +188,8 @@ mod tests {
     #[test]
     fn current_account_default() {
         let current = CurrentAccount::default();
+
+        println!("{current:?}");
 
         assert!(current.account().is_err());
         assert!(current.id().is_err());
@@ -193,6 +201,8 @@ mod tests {
         let id: ID = "test".to_owned().into();
         let hdl = "test".to_owned();
         let acc = PartialAccount::new(id.clone(), hdl.clone());
+
+        println!("{id:?}\n{hdl:?}\n{acc:?}");
 
         assert_eq!(acc.id(), &id);
         assert_eq!(acc.handle(), hdl.as_str());

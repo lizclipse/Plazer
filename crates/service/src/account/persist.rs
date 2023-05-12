@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use ring::rand::SystemRandom;
 use secrecy::ExposeSecret as _;
 use tracing::instrument;
 
@@ -14,6 +15,7 @@ use crate::{
 pub struct AccountPersist<'a> {
     persist: &'a Persist,
     current: &'a CurrentAccount,
+    csrng: &'a SystemRandom,
     jwt_enc_key: &'a jsonwebtoken::EncodingKey,
     jwt_dec_key: &'a jsonwebtoken::DecodingKey,
 }
@@ -24,12 +26,14 @@ impl<'a> AccountPersist<'a> {
     pub fn new(
         persist: &'a Persist,
         current: &'a CurrentAccount,
+        csrng: &'a SystemRandom,
         jwt_enc_key: &'a jsonwebtoken::EncodingKey,
         jwt_dec_key: &'a jsonwebtoken::DecodingKey,
     ) -> Self {
         Self {
             persist,
             current,
+            csrng,
             jwt_enc_key,
             jwt_dec_key,
         }
@@ -97,7 +101,7 @@ impl<'a> AccountPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn create(&self, acc: CreateAccount) -> Result<Account> {
-        let creds = create_creds(acc.pword.expose_secret())?;
+        let creds = create_creds(self.csrng, acc.pword.expose_secret())?;
 
         // TODO: Use unique constraint on handle instead of this when an update mechanism is implemented
         // TODO: support invites and reject if required/invalid
@@ -162,6 +166,7 @@ mod tests {
         };
 
         let res = account.create(acc).await;
+        println!("{res:?}");
         assert!(res.is_ok());
 
         let res = res.unwrap();
@@ -175,6 +180,7 @@ mod tests {
         let AccData { handle, acc, .. } = account.create_test_user().await;
 
         let res = account.get(&acc.id_str()).await;
+        println!("{res:?}");
         assert!(res.is_ok());
 
         let res = res.unwrap();
@@ -191,6 +197,7 @@ mod tests {
         let AccData { handle, acc, .. } = account.create_test_user().await;
 
         let res = account.get_by_handle(&handle).await;
+        println!("{res:?}");
         assert!(res.is_ok());
 
         let res = res.unwrap();
@@ -213,6 +220,7 @@ mod tests {
         };
 
         let res = account.create(acc).await;
+        println!("{res:?}");
         assert!(res.is_err());
 
         let res = res.unwrap_err();
@@ -226,6 +234,7 @@ mod tests {
         let AccData { handle, pword, .. } = account.create_test_user().await;
 
         let res = account.refresh_token(AuthCreds { handle, pword }).await;
+        println!("{res:?}");
         assert!(res.is_ok());
 
         let res = res.unwrap();
@@ -244,6 +253,7 @@ mod tests {
                 pword: "bad password".to_owned().into(),
             })
             .await;
+        println!("{res:?}");
         assert!(res.is_err());
 
         let res = res.unwrap_err();
@@ -261,6 +271,7 @@ mod tests {
             .unwrap();
 
         let res = account.access_token(refresh_token).await;
+        println!("{res:?}");
         assert!(res.is_ok());
 
         let res = res.unwrap();
@@ -273,6 +284,7 @@ mod tests {
         let account = data.account();
 
         let res = account.access_token("invalid.refresh.token".into()).await;
+        println!("{res:?}");
         assert!(res.is_err());
 
         let res = res.unwrap_err();
@@ -289,9 +301,11 @@ mod tests {
             .unwrap();
 
         let res = account.revoke_tokens().await;
+        println!("{res:?}");
         assert!(res.is_ok());
 
         let res = account.access_token(refresh_token).await;
+        println!("{res:?}");
         assert!(res.is_err());
 
         let res = res.unwrap_err();
@@ -304,6 +318,7 @@ mod tests {
         let account = data.account();
 
         let res = account.revoke_tokens().await;
+        println!("{res:?}");
         assert!(res.is_err());
 
         let res = res.unwrap_err();
@@ -315,7 +330,7 @@ mod tests {
 mod testing {
     use base64::prelude::*;
     use chrono::Duration;
-    use ring::rand::{self, SecureRandom as _};
+    use ring::rand::SecureRandom as _;
     use secrecy::SecretString;
     use surrealdb::sql::Id;
 
@@ -326,6 +341,7 @@ mod testing {
     pub struct TestData {
         pub persist: Persist,
         pub current: CurrentAccount,
+        pub csrng: SystemRandom,
         pub jwt_enc_key: jsonwebtoken::EncodingKey,
         pub jwt_dec_key: jsonwebtoken::DecodingKey,
     }
@@ -342,6 +358,7 @@ mod testing {
             Self {
                 persist: persist().await,
                 current: Default::default(),
+                csrng: SystemRandom::new(),
                 jwt_enc_key,
                 jwt_dec_key,
             }
@@ -362,6 +379,7 @@ mod testing {
             AccountPersist::new(
                 &self.persist,
                 &self.current,
+                &self.csrng,
                 &self.jwt_enc_key,
                 &self.jwt_dec_key,
             )
@@ -370,12 +388,11 @@ mod testing {
 
     impl AccountPersist<'_> {
         pub async fn create_test_user(&self) -> AccData {
-            let rng = rand::SystemRandom::new();
             let mut handle = [0u8; 16];
-            rng.fill(&mut handle).unwrap();
+            self.csrng.fill(&mut handle).unwrap();
             let handle = BASE64_STANDARD_NO_PAD.encode(handle);
             let mut pword = [0u8; 16];
-            rng.fill(&mut pword).unwrap();
+            self.csrng.fill(&mut pword).unwrap();
             let pword = BASE64_STANDARD_NO_PAD.encode(pword);
 
             let acc = CreateAccount {

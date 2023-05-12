@@ -1940,6 +1940,7 @@ dependencies = [
  "hyper",
  "jsonwebtoken",
  "log",
+ "nanorand",
  "pkcs8",
  "ring",
  "secrecy",

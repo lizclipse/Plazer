@@ -1,5 +1,6 @@
 mod account;
 mod error;
+mod migration;
 mod persist;
 mod schema;
 
@@ -13,16 +14,16 @@ use async_graphql_axum::{GraphQLBatchRequest, GraphQLProtocol, GraphQLResponse, 
 use axum::{
     extract::{FromRef, State, WebSocketUpgrade},
     headers::{authorization::Bearer, Authorization},
-    response::{self, IntoResponse},
+    response::IntoResponse,
     routing::{get, post},
     Router, Server, TypedHeader,
 };
 use ring::{
-    rand::{self, SecureRandom as _},
+    rand::{SecureRandom as _, SystemRandom},
     signature::{self, KeyPair as _},
 };
 use thiserror::Error;
-use tracing::{info, instrument, metadata::LevelFilter, Level};
+use tracing::{error, info, instrument, metadata::LevelFilter, Level};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, Layer as _};
 
@@ -30,6 +31,8 @@ use account::authenticate;
 use error::ErrorResponse;
 pub use schema::schema;
 use schema::ServiceSchema;
+
+use crate::migration::Migrations;
 
 pub struct ServeConfig {
     db_address: String,
@@ -86,7 +89,7 @@ pub fn init_logging(
             .with(
                 fmt::Layer::new()
                     .with_writer(io::stdout)
-                    .compact()
+                    .pretty()
                     .with_filter(LevelFilter::from_level(stdout_level)),
             )
             .with(
@@ -115,15 +118,27 @@ pub async fn serve(
     }: ServeConfig,
 ) -> Result<(), ServeError> {
     // Call fill once before starting to initialize the RNG.
-    let rng = rand::SystemRandom::new();
+    let csrng = SystemRandom::new();
     let mut rng_buf = [0u8; 1];
-    rng.fill(&mut rng_buf)?;
+    csrng.fill(&mut rng_buf)?;
 
     let jwt_enc_key = Arc::new(jwt_enc_key);
     let jwt_dec_key = Arc::new(jwt_dec_key);
     let persist = persist::Persist::new(persist_address).await?;
+
+    info!("Configuring database...");
+    if let Err(err) = Migrations::run(&persist).await {
+        error!(
+            error = ?err,
+            "Failed to complete configuration, database may be corrupt"
+        );
+        return Err(err.into());
+    }
+    info!("Database configuration complete");
+
     let schema = schema(|s| {
         s.data(persist)
+            .data(csrng)
             .data(jwt_enc_key.clone())
             .data(jwt_dec_key.clone())
     });
@@ -224,7 +239,7 @@ async fn graphql_ws_handler(
 #[cfg(feature = "graphiql")]
 #[instrument(skip_all)]
 async fn graphiql() -> impl IntoResponse {
-    response::Html(
+    axum::response::Html(
         GraphiQLSource::build()
             .endpoint("/api/graphql")
             .subscription_endpoint("/api/graphql/ws")

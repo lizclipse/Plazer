@@ -12,7 +12,7 @@ use typeshare::typeshare;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[typeshare]
-#[derive(Debug, Error, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Error, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "code", content = "message")]
 pub enum Error {
     #[error("Unauthenticated")]

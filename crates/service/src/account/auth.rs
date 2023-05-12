@@ -10,7 +10,7 @@ use chrono::{DateTime, Duration, LocalResult, TimeZone, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use ring::{
     digest, pbkdf2,
-    rand::{self, SecureRandom as _},
+    rand::{SecureRandom as _, SystemRandom},
 };
 use secrecy::{ExposeSecret as _, SecretString};
 use serde::{Deserialize, Serialize};
@@ -189,12 +189,11 @@ pub struct StoredPword {
     pub hash: SecretString,
 }
 
-pub fn create_creds(pword: &str) -> Result<StoredPword> {
+pub fn create_creds(csrng: &SystemRandom, pword: &str) -> Result<StoredPword> {
     const CREDENTIAL_LEN: usize = digest::SHA512_OUTPUT_LEN;
-    let rng = rand::SystemRandom::new();
 
     let mut pword_salt = [0u8; CREDENTIAL_LEN];
-    rng.fill(&mut pword_salt)?;
+    csrng.fill(&mut pword_salt)?;
 
     let mut pword_hash = [0u8; CREDENTIAL_LEN];
     pbkdf2::derive(
@@ -230,6 +229,7 @@ pub fn verify_creds(
     Ok(())
 }
 
+#[derive(Debug, Clone)]
 pub enum AuthenticateInput {
     Header(Option<TypedHeader<Authorization<Bearer>>>),
     Init(serde_json::Value),
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_creds_valid() {
-        let creds = create_creds("password").unwrap();
+        let creds = create_creds(&SystemRandom::new(), "password").unwrap();
 
         let res = verify_creds(&"password".to_owned().into(), &creds.salt, &creds.hash);
 
@@ -271,10 +271,11 @@ mod tests {
 
     #[test]
     fn test_creds_invalid() {
-        let creds = create_creds("password").unwrap();
+        let creds = create_creds(&SystemRandom::new(), "password").unwrap();
 
         let res = verify_creds(&"password1".to_owned().into(), &creds.salt, &creds.hash);
 
+        println!("{res:?}");
         assert!(res.is_err());
     }
 
@@ -290,6 +291,7 @@ mod tests {
             Some(TypedHeader(Authorization::bearer(&token).unwrap())).into(),
         ] {
             let auth = authenticate(inp, &dec_key);
+            println!("{auth:?}");
             assert!(auth.is_ok());
 
             let auth = auth.unwrap();
@@ -308,6 +310,7 @@ mod tests {
 
         // Invalid token
         let auth = authenticate(json!({ "token": "not a token" }), &dec_key_a);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtMalformed);
 
@@ -316,6 +319,7 @@ mod tests {
 
         let token = create_access_token(&acc, &enc_key_a).unwrap();
         let auth = authenticate(json!({ "token": token }), &dec_key_b);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
 
@@ -331,12 +335,14 @@ mod tests {
         )
         .unwrap();
         let auth = authenticate(json!({ "token": token }), &dec_key_b);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtExpired);
 
         // Refresh token
         let token = create_refresh_token("id".into(), &enc_key_b).unwrap();
         let auth = authenticate(json!({ "token": token }), &dec_key_b);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
     }
@@ -348,6 +354,7 @@ mod tests {
         let token = create_refresh_token("id".into(), &enc_key).unwrap();
 
         let auth = verify_refresh_token(&token, &dec_key);
+        println!("{auth:?}");
         assert!(auth.is_ok());
 
         let auth = auth.unwrap();
@@ -361,12 +368,14 @@ mod tests {
 
         // Invalid token
         let auth = verify_refresh_token("not a token", &dec_key_a);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtMalformed);
 
         // Invalid signature
         let token = create_refresh_token("id".into(), &enc_key_a).unwrap();
         let auth = verify_refresh_token(&token, &dec_key_b);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
 
@@ -382,6 +391,7 @@ mod tests {
         )
         .unwrap();
         let auth = verify_refresh_token(&token, &dec_key_b);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtExpired);
 
@@ -389,6 +399,7 @@ mod tests {
         let acc = PartialAccount::new("id".into(), "handle".into());
         let token = create_access_token(&acc, &enc_key_b).unwrap();
         let auth = verify_refresh_token(&token, &dec_key_b);
+        println!("{auth:?}");
         assert!(auth.is_err());
         assert_eq!(auth.unwrap_err(), Error::JwtInvalid);
     }
@@ -397,12 +408,12 @@ mod tests {
 #[cfg(test)]
 pub mod testing {
     use ring::{
-        rand,
+        rand::SystemRandom,
         signature::{self, KeyPair as _},
     };
 
     pub fn generate_keys() -> (jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey) {
-        let rng = rand::SystemRandom::new();
+        let rng = SystemRandom::new();
         let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
         let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref()).unwrap();
         let enc_key = jsonwebtoken::EncodingKey::from_ed_der(pkcs8_bytes.as_ref());
