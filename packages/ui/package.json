@@ -1,5 +1,5 @@
 {
-  "name": "c11ty-ui",
+  "name": "plazer-ui",
   "scripts": {
     "dev": "solid-start dev",
     "build": "pnpm run codegen && pnpm run build:server && pnpm run build:client",

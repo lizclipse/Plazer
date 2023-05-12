@@ -241,6 +241,36 @@
         "showReuseMessage": true,
         "clear": true
       }
+    },
+    {
+      "label": "codegen",
+      "type": "cargo",
+      "command": "make",
+      "args": ["codegen"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "reset local db",
+      "type": "cargo",
+      "command": "make",
+      "args": ["reset-local-db"],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
     }
   ]
 }

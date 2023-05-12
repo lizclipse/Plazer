@@ -1,5 +1,6 @@
 use std::{fmt::Debug, time::Duration};
 
+use indoc::indoc;
 use nanorand::{Rng as _, WyRand};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use surrealdb::{method::Query, Connection};
@@ -9,9 +10,10 @@ use tracing::{debug, instrument, trace};
 use crate::{account::AccountMigration, persist::Persist};
 
 pub trait Migration: Sized + Default + Serialize + DeserializeOwned + Debug + Send + Sync {
-    fn subsystem() -> &'static str;
+    const SUBSYSTEM: &'static str;
+
     fn next(self) -> Option<Self>;
-    fn build<'a, C>(&self, query: Query<'a, C>) -> Query<'a, C>
+    fn build<'a, C>(&self, q: Query<'a, C>) -> Query<'a, C>
     where
         C: Connection;
 }
@@ -37,25 +39,23 @@ impl Migrations<'_> {
         Ok(())
     }
 
-    #[instrument(skip_all, fields(subsystem = M::subsystem()))]
+    #[instrument(skip_all, fields(subsystem = M::SUBSYSTEM))]
     async fn iterate<M: Migration>(&self) -> surrealdb::Result<()> {
         let mut prng = WyRand::new();
         while let Some(update) = self.next_update::<M>().await? {
             match self
                 .persist
-                .execute_in_lock(M::subsystem(), || async {
+                .execute_in_lock(M::SUBSYSTEM, || async {
                     update
                         .build(self.persist.db().query("BEGIN"))
-                        .query(
-                            "
+                        .query(indoc! {"
                             UPDATE type::thing($__update_tbl, $__update_subsys)
                             SET
                                 current = $__update_done,
                                 history += [{ update: $__update_done, timestamp: time::now() }]
-                            ",
-                        )
+                        "})
                         .bind(("__update_tbl", UPDATE_TABLE))
-                        .bind(("__update_subsys", M::subsystem()))
+                        .bind(("__update_subsys", M::SUBSYSTEM))
                         .bind(("__update_done", &update))
                         .query("COMMIT")
                         .await
@@ -87,7 +87,7 @@ impl Migrations<'_> {
         match self
             .persist
             .db()
-            .select((UPDATE_TABLE, M::subsystem()))
+            .select((UPDATE_TABLE, M::SUBSYSTEM))
             .await?
         {
             Some::<Update<M>>(Update { current }) => match current.next() {

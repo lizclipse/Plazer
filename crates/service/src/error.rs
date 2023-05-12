@@ -22,8 +22,8 @@ pub enum Error {
     #[error("Credentials are invalid")]
     CredentialsInvalid,
 
-    #[error("Handle already exists")]
-    HandleAlreadyExists,
+    #[error("This identifier is already in use")]
+    UnavailableIdent,
 
     #[error("JWT is malformed")]
     JwtMalformed,
@@ -123,9 +123,11 @@ impl From<JwtError> for Error {
 
 impl From<SrlError> for Error {
     fn from(err: SrlError) -> Self {
+        println!("SurrealDB error: {:?}", err);
         match err {
             // This error only occurs when SurrealDB is misconfigured.
             SrlError::Db(SrlDbError::Ds(err)) => Self::ServerMisconfigured(err),
+            SrlError::Db(SrlDbError::IndexExists { .. }) => Self::UnavailableIdent,
             // All other errors are either transient or incorrect logic.
             err => Self::from_err(err),
         }
@@ -164,7 +166,7 @@ impl From<Error> for ErrorResponse {
             | Error::JwtExpired
             | Error::JwtInvalid => StatusCode::UNAUTHORIZED,
             Error::Unauthorized => StatusCode::FORBIDDEN,
-            Error::HandleAlreadyExists => StatusCode::CONFLICT,
+            Error::UnavailableIdent => StatusCode::CONFLICT,
             Error::JwtMalformed | Error::WsInitNotObject | Error::WsInitTokenNotString => {
                 StatusCode::BAD_REQUEST
             }

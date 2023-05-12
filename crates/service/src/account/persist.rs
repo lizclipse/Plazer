@@ -1,11 +1,12 @@
 use chrono::{DateTime, Utc};
+use indoc::indoc;
 use ring::rand::SystemRandom;
 use secrecy::ExposeSecret as _;
 use tracing::instrument;
 
 use super::{
     create_access_token, create_creds, create_refresh_token, verify_creds, verify_refresh_token,
-    Account, AuthCreds, CreateAccount, CurrentAccount, PartialAccount,
+    Account, AuthCreds, CreateAccount, CurrentAccount, PartialAccount, TABLE_NAME,
 };
 use crate::{
     error::{Error, Result},
@@ -19,8 +20,6 @@ pub struct AccountPersist<'a> {
     jwt_enc_key: &'a jsonwebtoken::EncodingKey,
     jwt_dec_key: &'a jsonwebtoken::DecodingKey,
 }
-
-static TABLE_NAME: &str = "account";
 
 impl<'a> AccountPersist<'a> {
     pub fn new(
@@ -103,23 +102,16 @@ impl<'a> AccountPersist<'a> {
     pub async fn create(&self, acc: CreateAccount) -> Result<Account> {
         let creds = create_creds(self.csrng, acc.pword.expose_secret())?;
 
-        // TODO: Use unique constraint on handle instead of this when an update mechanism is implemented
         // TODO: support invites and reject if required/invalid
         let acc = self
             .persist
             .db()
-            .query(
-                "
-IF (SELECT _ FROM type::table($tbl) WHERE handle = $handle) THEN
-    NONE
-ELSE
-    (CREATE type::table($tbl) SET
-        handle = $handle,
-        pword_salt = $pword_salt,
-        pword_hash = $pword_hash)
-END
-            ",
-            )
+            .query(indoc! {"
+                CREATE type::table($tbl) SET
+                    handle = $handle,
+                    pword_salt = $pword_salt,
+                    pword_hash = $pword_hash
+            "})
             .bind(("tbl", TABLE_NAME))
             .bind(("handle", acc.handle))
             .bind(("pword_salt", creds.salt.expose_secret()))
@@ -129,7 +121,7 @@ END
 
         match acc {
             Some(acc) => Ok(acc),
-            None => Err(Error::HandleAlreadyExists),
+            None => Err(Error::UnavailableIdent),
         }
     }
 
@@ -224,7 +216,7 @@ mod tests {
         assert!(res.is_err());
 
         let res = res.unwrap_err();
-        assert_eq!(res, Error::HandleAlreadyExists);
+        assert_eq!(res, Error::UnavailableIdent);
     }
 
     #[tokio::test]

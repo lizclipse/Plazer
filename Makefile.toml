@@ -125,5 +125,11 @@ script = '''
 docker run --rm -it surrealdb/surrealdb sql "$@"
 '''
 
+[tasks.reset-local-db]
+script_runner = "@shell"
+script = '''
+rm -rf data/db
+'''
+
 [config]
 default_to_workspace = false

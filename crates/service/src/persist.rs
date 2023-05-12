@@ -132,12 +132,12 @@ mod test {
         let (a, b) = join!(
             async {
                 p.execute_in_lock(id, || async {
-                    sleep(Duration::from_millis(5)).await;
+                    sleep(Duration::from_millis(10)).await;
                 })
                 .await
             },
             async {
-                sleep(Duration::from_millis(2)).await;
+                sleep(Duration::from_millis(5)).await;
                 p.execute_in_lock(id, || async {}).await
             },
         );
@@ -154,9 +154,13 @@ mod test {
 
 #[cfg(test)]
 pub mod testing {
+    use crate::migration::Migrations;
+
     use super::*;
 
     pub async fn persist() -> Persist {
-        Persist::new("memory".into()).await.unwrap()
+        let persist = Persist::new("memory".into()).await.unwrap();
+        Migrations::run(&persist).await.unwrap();
+        persist
     }
 }

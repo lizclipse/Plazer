@@ -14,6 +14,8 @@ use secrecy::SecretString;
 use serde::Deserialize;
 use surrealdb::sql::Thing;
 
+static TABLE_NAME: &str = "account";
+
 /// A registered account.
 #[derive(SimpleObject, Debug, Deserialize)]
 #[graphql(complex)]
