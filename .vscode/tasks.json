@@ -210,6 +210,39 @@
       }
     },
     {
+      "label": "codegen - scss",
+      "type": "cargo",
+      "command": "make",
+      "args": ["codegen-scss"],
+      // TODO: add proper matcher
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "codegen - scss - watch",
+      "type": "cargo",
+      "command": "make",
+      "args": ["codegen-scss-watch"],
+      // TODO: add proper matcher
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
       "label": "codegen - gql",
       "type": "cargo",
       "command": "make",

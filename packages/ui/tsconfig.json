@@ -6,7 +6,7 @@
 
     "types": ["solid-start/env", "@testing-library/jest-dom"],
     "baseUrl": "./",
-    "rootDir": "./src",
+    "rootDirs": ["./src", "./src/__generated__/scss/src"],
     "paths": {
       "~/*": ["./src/*"]
     },

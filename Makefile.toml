@@ -101,17 +101,25 @@ args = [
 ]
 install_crate = { crate_name = "typeshare-cli", binary = "typeshare", test_arg = "--version" }
 
+[tasks.codegen-scss]
+command = "turbo"
+args = ["codegen:scss"]
+
+[tasks.codegen-scss-watch]
+command = "turbo"
+args = ["codegen:scss:watch"]
+
 [tasks.codegen-gql]
 command = "turbo"
-args = ["codegen"]
+args = ["codegen:gql"]
 dependencies = ["codegen-schema"]
 
 [tasks.codegen-gql-watch]
 command = "turbo"
-args = ["codegen:watch"]
+args = ["codegen:gql:watch"]
 
 [tasks.codegen]
-dependencies = ["codegen-gql", "codegen-typeshare"]
+dependencies = ["codegen-scss", "codegen-gql", "codegen-typeshare"]
 
 [tasks.surreal-db]
 script_runner = "@shell"

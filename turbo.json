@@ -13,10 +13,17 @@
       "cache": false,
       "persistent": true
     },
-    "codegen": {
-      "outputs": ["src/__generated__/**", "src/**/.gql.ts"]
+    "codegen:scss": {
+      "outputs": ["src/**/*.module.scss.d.ts"]
     },
-    "codegen:watch": {
+    "codegen:scss:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "codegen:gql": {
+      "outputs": ["src/__generated__/**", "src/**/*.gql.ts"]
+    },
+    "codegen:gql:watch": {
       "cache": false,
       "persistent": true
     }

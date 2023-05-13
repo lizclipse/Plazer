@@ -14,6 +14,7 @@
     transform: translate(-50%, -50%);
     border-radius: 50%;
     pointer-events: all;
+    user-select: none;
     padding: 0;
 
     $size: 4rem;
