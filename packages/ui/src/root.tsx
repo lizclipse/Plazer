@@ -1,11 +1,6 @@
 // @refresh reload
-import { ApolloClient, InMemoryCache } from "@apollo/client/core";
-import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
-import { ApolloProvider } from "@merged/solid-apollo";
 import { Routes } from "@solidjs/router";
-import { createClient } from "graphql-ws";
 import { Suspense } from "solid-js";
-import { isServer } from "solid-js/web";
 import {
   Body,
   FileRoutes,
@@ -16,26 +11,10 @@ import {
   Title,
 } from "solid-start";
 import { ErrorBoundary } from "solid-start/error-boundary";
-import HubButton from "./components/HubButton";
+import Hub from "./components/Hub";
+import { Contexts } from "./contexts";
 
-const cache = new InMemoryCache();
-
-const client = new ApolloClient(
-  isServer
-    ? { uri: "http://localhost:8080/api/graphql", cache }
-    : {
-        link: new GraphQLWsLink(
-          createClient({
-            url: "ws://localhost:3000/api/graphql/ws",
-            lazyCloseTimeout: 30_000,
-            keepAlive: 60_000,
-          })
-        ),
-        cache,
-      }
-);
-
-export default function Root() {
+export function Root() {
   return (
     <Html lang="en">
       <Head>
@@ -44,20 +23,20 @@ export default function Root() {
         <Meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <Body>
-        <ApolloProvider client={client}>
-          <Suspense>
-            <ErrorBoundary>
-              <HubButton />
-              <main>
-                <Routes>
-                  <FileRoutes />
-                </Routes>
-              </main>
-            </ErrorBoundary>
-          </Suspense>
-        </ApolloProvider>
+        <Suspense>
+          <ErrorBoundary>
+            <Hub />
+            <main>
+              <Routes>
+                <FileRoutes />
+              </Routes>
+            </main>
+          </ErrorBoundary>
+        </Suspense>
         <Scripts />
       </Body>
     </Html>
   );
 }
+
+export default () => <Contexts>{Root}</Contexts>;

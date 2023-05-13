@@ -1,11 +1,13 @@
 .hub {
-  position: absolute;
+  display: none;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
   pointer-events: none;
+  touch-action: none;
 
   button {
     position: relative;
@@ -19,7 +21,8 @@
     height: $size;
 
     // Set an initial position off screen so it doesn't show until we kick in.
-    top: -$size * 2;
+    left: -1000rem;
+    top: -1000rem;
 
     --hub-inner-colour: #ffebeb;
     --hub-outer-colour: #c9acac;

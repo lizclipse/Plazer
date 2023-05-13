@@ -1,6 +1,8 @@
 import { createMemo, createSignal } from "solid-js";
 import {
+  clamp,
   useElementSize,
+  useLocalStorage,
   useMouse,
   useMousePressed,
   useRafFn,
@@ -11,6 +13,11 @@ import styles from "./HubButton.module.scss";
 const acc = 1.2;
 const friction = 0.08;
 const minDist = 0.3;
+const absoluteMax = 10_000;
+
+function minDrag() {
+  return matchMedia("(pointer: coarse)").matches ? 30 : 5;
+}
 
 type Vec2 = readonly [x: number, y: number];
 type Quad = readonly [
@@ -20,22 +27,41 @@ type Quad = readonly [
   name: string
 ];
 
-export default function HubButton() {
+export interface HubButtonProps {
+  onClick?: () => void;
+}
+
+export default function HubButton({ onClick }: HubButtonProps) {
   const { width: screenWidth, height: screenHeight } = useWindowSize();
   const [el, setEl] = createSignal<HTMLButtonElement>();
   const { width: buttonWidth, height: buttonHeight } = useElementSize(el);
   const { x: mouseX, y: mouseY } = useMouse();
   const { pressed } = useMousePressed();
+  const [storedXY, saveXY] = useLocalStorage("hub-button", { x: 0, y: 0 });
+  const [containerDisplay, setContainerDisplay] = createSignal<"block">();
 
-  const [isDragging, setIsDragging] = createSignal(false);
+  const [mouseDrag, setMouseDrag] = createSignal<{
+    dragging: boolean;
+    startX: number;
+    startY: number;
+  }>();
+
+  const startDragging = () => {
+    setMouseDrag({
+      dragging: false,
+      startX: mouseX(),
+      startY: mouseY(),
+    });
+  };
 
   const minX = createMemo(() => buttonWidth() / 2);
   const minY = createMemo(() => buttonHeight() / 2);
   const maxX = createMemo(() => screenWidth() - buttonWidth() / 2);
   const maxY = createMemo(() => screenHeight() - buttonHeight() / 2);
 
-  const [x, setX] = createSignal(screenWidth() / 2);
-  const [y, setY] = createSignal(screenHeight());
+  const stored = storedXY();
+  const [x, setX] = createSignal(stored.x ?? screenWidth() / 2);
+  const [y, setY] = createSignal(stored.y ?? screenHeight());
 
   let vel: Vec2 = [0, 0];
   let current: Vec2 = [x(), y()];
@@ -43,16 +69,28 @@ export default function HubButton() {
   useRafFn(({ delta }) => {
     const prev = current;
 
-    if (isDragging()) {
+    const drag = mouseDrag();
+    if (drag) {
+      const { dragging, startX, startY } = drag;
+
       if (!pressed()) {
-        setIsDragging(false);
+        setMouseDrag(undefined);
+        if (!dragging) onClick?.();
         return;
       }
 
-      current = [mouseX(), mouseY()];
-
       const [px, py] = prev;
+      current = [mouseX(), mouseY()];
       const [cx, cy] = current;
+
+      if (!dragging) {
+        const dist = Math.sqrt(
+          Math.pow(cx - startX, 2) + Math.pow(cy - startY, 2)
+        );
+
+        if (dist < minDrag()) return;
+        setMouseDrag({ dragging: true, startX, startY });
+      }
 
       vel = [cx - px, cy - py];
       setX(cx);
@@ -101,17 +139,24 @@ export default function HubButton() {
 
     // Apply velocity.
     const [vx, vy] = vel;
-    setX(currX + vx * delta * 0.1);
-    setY(currY + vy * delta * 0.1);
+    saveXY({
+      x: setX(clamp(currX + vx * delta * 0.1, -absoluteMax, absoluteMax)),
+      y: setY(clamp(currY + vy * delta * 0.1, -absoluteMax, absoluteMax)),
+    });
     current = [currX, currY];
+
+    if (!containerDisplay()) {
+      setContainerDisplay("block");
+    }
   });
 
   return (
-    <div class={styles.hub}>
+    <div class={styles.hub} style={{ display: containerDisplay() }}>
       <button
         ref={setEl}
         style={{ left: `${x()}px`, top: `${y()}px` }}
-        onMouseDown={() => setIsDragging(true)}
+        onMouseDown={startDragging}
+        onTouchStart={startDragging}
       >
         💠
       </button>
