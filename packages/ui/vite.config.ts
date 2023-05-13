@@ -14,6 +14,7 @@ export default defineConfig({
     solid(),
   ],
   server: {
+    host: true,
     proxy: {
       "/api/graphql/ws": {
         target: "ws://localhost:8080",

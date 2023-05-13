@@ -16,6 +16,7 @@ import {
   Title,
 } from "solid-start";
 import { ErrorBoundary } from "solid-start/error-boundary";
+import HubButton from "./components/HubButton";
 
 const cache = new InMemoryCache();
 
@@ -46,6 +47,7 @@ export default function Root() {
         <ApolloProvider client={client}>
           <Suspense>
             <ErrorBoundary>
+              <HubButton />
               <main>
                 <Routes>
                   <FileRoutes />
