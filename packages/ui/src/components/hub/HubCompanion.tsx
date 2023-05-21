@@ -13,10 +13,21 @@ import styles from "./HubCompanion.module.scss";
 const acc = 1.2;
 const friction = 0.08;
 const minDist = 0.3;
+const minVel = 0.001;
 const absoluteMax = 10_000;
 
 function minDrag() {
   return matchMedia("(pointer: coarse)").matches ? 30 : 5;
+}
+
+function adjustAcc(acc: number, absDist: number): number {
+  return absDist <= minDist * 10
+    ? acc * Math.min((Math.log(absDist + 0.2) + 2) / 3, 1)
+    : acc;
+}
+
+function fixNumber(n: number, name: string): number {
+  return isNaN(n) ? (console.warn(name, "is NaN"), 0) : n;
 }
 
 type Vec2 = readonly [x: number, y: number];
@@ -35,7 +46,7 @@ interface ThrowableInit {
   setY: Setter<number>;
 }
 
-function useThrowable({ onClick, x, setX, y, setY }: ThrowableInit) {
+function motion({ onClick, x, setX, y, setY }: ThrowableInit) {
   const { width: screenWidth, height: screenHeight } = useWindowSize();
   const [el, setEl] = createSignal<HTMLButtonElement>();
   const { width: buttonWidth, height: buttonHeight } = useElementSize(el);
@@ -79,8 +90,7 @@ function useThrowable({ onClick, x, setX, y, setY }: ThrowableInit) {
       }
 
       const [px, py] = prev;
-      current = [mouseX(), mouseY()];
-      const [cx, cy] = current;
+      const [cx, cy] = (current = [mouseX(), mouseY()]);
 
       if (!dragging) {
         const dist = Math.sqrt(
@@ -97,10 +107,11 @@ function useThrowable({ onClick, x, setX, y, setY }: ThrowableInit) {
       return;
     }
 
-    const currX = x();
-    const currY = y();
+    const currX = fixNumber(x(), "x");
+    const currY = fixNumber(y(), "y");
 
     // Define the quadrants and the acceleration.
+    // This is essentially the gravity for each quadrant.
     const quads: Quad[] = [
       [currX - minX(), [-acc, 0], [0, 1], "left"],
       [maxX() - currX, [acc, 0], [0, 1], "right"],
@@ -115,15 +126,15 @@ function useThrowable({ onClick, x, setX, y, setY }: ThrowableInit) {
         const [velX, velY] = vel;
         // Zero the velocity if we're close enough to the boundary.
         const absDist = Math.abs(dist);
-        const applyAbsDist = (v: number, base: number): number =>
-          absDist < minDist ? v * base : v;
+        const applyMinimums = (v: number, base: number): number =>
+          Math.abs(v) < minVel ? 0 : absDist < minDist ? v * base : v;
 
         // Apply the sign since the acceleration should point towards the boundary.
         const s = Math.sign(dist);
         return {
           vel: [
-            applyAbsDist(velX + accX * s, baseX),
-            applyAbsDist(velY + accY * s, baseY),
+            applyMinimums(velX + adjustAcc(accX, absDist) * s, baseX),
+            applyMinimums(velY + adjustAcc(accY, absDist) * s, baseY),
           ],
           dist,
         } as const;
@@ -139,17 +150,22 @@ function useThrowable({ onClick, x, setX, y, setY }: ThrowableInit) {
 
     // Apply velocity.
     const [vx, vy] = vel;
-    setX(
-      clamp(currX + vx * delta * 0.1, -absoluteMax, absoluteMax + screenWidth())
-    );
-    setY(
-      clamp(
-        currY + vy * delta * 0.1,
-        -absoluteMax,
-        absoluteMax + screenHeight()
-      )
-    );
-    current = [currX, currY];
+    current = [
+      setX(
+        clamp(
+          currX + vx * delta * 0.1,
+          -absoluteMax,
+          absoluteMax + screenWidth()
+        )
+      ),
+      setY(
+        clamp(
+          currY + vy * delta * 0.1,
+          -absoluteMax,
+          absoluteMax + screenHeight()
+        )
+      ),
+    ];
 
     if (!containerDisplay()) {
       setContainerDisplay("block");
@@ -159,25 +175,30 @@ function useThrowable({ onClick, x, setX, y, setY }: ThrowableInit) {
   return { setEl, startDragging, containerDisplay };
 }
 
-export type HubCompanionProps = ThrowableInit;
+export interface HubCompanionProps extends ThrowableInit {
+  hidden: Accessor<boolean>;
+}
 
-export default function HubCompanion({ x, y, ...props }: HubCompanionProps) {
-  const { setEl, startDragging, containerDisplay } = useThrowable({
-    x,
-    y,
-    ...props,
-  });
+export default function HubCompanion({
+  x,
+  y,
+  hidden,
+  ...props
+}: HubCompanionProps) {
+  const { setEl, startDragging, containerDisplay } = motion({ x, y, ...props });
 
   return (
     <div class={styles.hub} style={{ display: containerDisplay() }}>
       <HubButton
         ref={setEl}
-        style={{ left: `${x()}px`, top: `${y()}px` }}
+        style={{
+          left: `${x()}px`,
+          top: `${y()}px`,
+          visibility: hidden() ? "hidden" : "visible",
+        }}
         onMouseDown={startDragging}
         onTouchStart={startDragging}
-      >
-        💠
-      </HubButton>
+      />
     </div>
   );
 }

@@ -5,7 +5,10 @@ export type HubButtonProps = JSX.HTMLElementTags["button"];
 
 export default function HubButton(props: HubButtonProps) {
   return (
-    <button {...props} class={styles.button}>
+    <button
+      {...props}
+      class={styles.button + (props.class ? " " + props.class : "")}
+    >
       💠
     </button>
   );
