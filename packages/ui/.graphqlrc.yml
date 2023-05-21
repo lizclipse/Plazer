@@ -1,7 +1,6 @@
 schema: "../../schema.gql"
 documents: "src/**/*.{js,ts,jsx,tsx}"
 exclude:
-  - "src/**/*.gql.ts"
   - "src/**/__generated__/**"
 config:
   preResolveTypes: true
@@ -11,13 +10,7 @@ config:
   nonOptionalTypename: true
   skipTypeNameForRoot: true
 generates:
-  ./src/__generated__/globalTypes.ts:
+  ./src/__generated__/graphql.d.ts:
     plugins:
       - typescript
-  ./src/__generated__:
-    preset: near-operation-file
-    presetConfig:
-      extension: ".gql.ts"
-      baseTypesPath: "./globalTypes.ts"
-    plugins:
       - typescript-operations

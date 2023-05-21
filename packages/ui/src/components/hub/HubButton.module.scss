@@ -1,0 +1,33 @@
+.button {
+  position: relative;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: all;
+  user-select: none;
+  padding: 0;
+
+  $size: 4rem;
+  width: $size;
+  height: $size;
+
+  // Set an initial position off screen so it doesn't show until we kick in.
+  left: -1000rem;
+  top: -1000rem;
+
+  --hub-inner-colour: #ffebeb;
+  --hub-outer-colour: #c9acac;
+
+  @media (prefers-color-scheme: dark) {
+    --hub-inner-colour: #521515;
+    --hub-outer-colour: #6b3d31;
+  }
+
+  --colour-text: var(--hub-outer-colour);
+
+  --colour-hover: radial-gradient(
+    var(--hub-inner-colour),
+    var(--hub-outer-colour)
+  );
+  background: var(--colour-hover);
+  box-shadow: 0 0 0.7rem 0.05rem var(--hub-outer-colour);
+}

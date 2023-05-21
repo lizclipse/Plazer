@@ -1,14 +1,14 @@
-import { createMemo, createSignal } from "solid-js";
+import { type Accessor, createSignal, type Setter } from "solid-js";
 import {
   clamp,
   useElementSize,
-  useLocalStorage,
   useMouse,
   useMousePressed,
   useRafFn,
   useWindowSize,
 } from "solidjs-use";
-import styles from "./HubButton.module.scss";
+import HubButton from "./HubButton";
+import styles from "./HubCompanion.module.scss";
 
 const acc = 1.2;
 const friction = 0.08;
@@ -27,17 +27,20 @@ type Quad = readonly [
   name: string
 ];
 
-export interface HubButtonProps {
-  onClick?: () => void;
+interface ThrowableInit {
+  onClick?: (() => void) | undefined;
+  x: Accessor<number>;
+  setX: Setter<number>;
+  y: Accessor<number>;
+  setY: Setter<number>;
 }
 
-export default function HubButton({ onClick }: HubButtonProps) {
+function useThrowable({ onClick, x, setX, y, setY }: ThrowableInit) {
   const { width: screenWidth, height: screenHeight } = useWindowSize();
   const [el, setEl] = createSignal<HTMLButtonElement>();
   const { width: buttonWidth, height: buttonHeight } = useElementSize(el);
   const { x: mouseX, y: mouseY } = useMouse();
   const { pressed } = useMousePressed();
-  const [storedXY, saveXY] = useLocalStorage("hub-button", { x: 0, y: 0 });
   const [containerDisplay, setContainerDisplay] = createSignal<"block">();
 
   const [mouseDrag, setMouseDrag] = createSignal<{
@@ -54,14 +57,10 @@ export default function HubButton({ onClick }: HubButtonProps) {
     });
   };
 
-  const minX = createMemo(() => buttonWidth() / 2);
-  const minY = createMemo(() => buttonHeight() / 2);
-  const maxX = createMemo(() => screenWidth() - buttonWidth() / 2);
-  const maxY = createMemo(() => screenHeight() - buttonHeight() / 2);
-
-  const stored = storedXY();
-  const [x, setX] = createSignal(stored.x ?? screenWidth() / 2);
-  const [y, setY] = createSignal(stored.y ?? screenHeight());
+  const minX = () => buttonWidth() / 2;
+  const minY = () => buttonHeight() / 2;
+  const maxX = () => screenWidth() - buttonWidth() / 2;
+  const maxY = () => screenHeight() - buttonHeight() / 2;
 
   let vel: Vec2 = [0, 0];
   let current: Vec2 = [x(), y()];
@@ -113,12 +112,13 @@ export default function HubButton({ onClick }: HubButtonProps) {
       (prev, [dist, [accX, accY], [baseX, baseY]]) => {
         if (dist > prev.dist) return prev;
 
-        // Apply the sign since the acceleration is always positive.
         const [velX, velY] = vel;
+        // Zero the velocity if we're close enough to the boundary.
         const absDist = Math.abs(dist);
         const applyAbsDist = (v: number, base: number): number =>
           absDist < minDist ? v * base : v;
 
+        // Apply the sign since the acceleration should point towards the boundary.
         const s = Math.sign(dist);
         return {
           vel: [
@@ -139,10 +139,16 @@ export default function HubButton({ onClick }: HubButtonProps) {
 
     // Apply velocity.
     const [vx, vy] = vel;
-    saveXY({
-      x: setX(clamp(currX + vx * delta * 0.1, -absoluteMax, absoluteMax)),
-      y: setY(clamp(currY + vy * delta * 0.1, -absoluteMax, absoluteMax)),
-    });
+    setX(
+      clamp(currX + vx * delta * 0.1, -absoluteMax, absoluteMax + screenWidth())
+    );
+    setY(
+      clamp(
+        currY + vy * delta * 0.1,
+        -absoluteMax,
+        absoluteMax + screenHeight()
+      )
+    );
     current = [currX, currY];
 
     if (!containerDisplay()) {
@@ -150,16 +156,28 @@ export default function HubButton({ onClick }: HubButtonProps) {
     }
   });
 
+  return { setEl, startDragging, containerDisplay };
+}
+
+export type HubCompanionProps = ThrowableInit;
+
+export default function HubCompanion({ x, y, ...props }: HubCompanionProps) {
+  const { setEl, startDragging, containerDisplay } = useThrowable({
+    x,
+    y,
+    ...props,
+  });
+
   return (
     <div class={styles.hub} style={{ display: containerDisplay() }}>
-      <button
+      <HubButton
         ref={setEl}
         style={{ left: `${x()}px`, top: `${y()}px` }}
         onMouseDown={startDragging}
         onTouchStart={startDragging}
       >
         💠
-      </button>
+      </HubButton>
     </div>
   );
 }

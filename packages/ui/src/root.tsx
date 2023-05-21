@@ -11,7 +11,7 @@ import {
   Title,
 } from "solid-start";
 import { ErrorBoundary } from "solid-start/error-boundary";
-import Hub from "./components/Hub";
+import Hub from "./components/hub/Hub";
 import { Contexts } from "./contexts";
 
 export function Root() {

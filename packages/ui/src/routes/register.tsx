@@ -1,11 +1,11 @@
 import { ApolloError } from "@apollo/client/core";
 import { createMutation, gql } from "@merged/solid-apollo";
 import { createRouteAction, redirect } from "solid-start";
+import styles from "./register.module.scss";
 import type {
   CreateAccountMutation,
   CreateAccountMutationVariables,
-} from "./register.gql";
-import styles from "./register.module.scss";
+} from "~gen/graphql";
 
 const GQL = gql`
   mutation CreateAccount($account: CreateAccount!) {
