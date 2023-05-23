@@ -1,5 +1,5 @@
 import { useTransContext } from "@mbarzda/solid-i18next";
-import { type Accessor, createSignal, type Setter } from "solid-js";
+import { type Accessor, createSignal } from "solid-js";
 import {
   clamp,
   useElementSize,
@@ -10,6 +10,7 @@ import {
 } from "solidjs-use";
 import HubButton from "./HubButton";
 import styles from "./HubCompanion.module.scss";
+import { useHubPosition } from "~/contexts";
 
 const acc = 1.2;
 const friction = 0.08;
@@ -41,19 +42,16 @@ type Quad = readonly [
 
 interface ThrowableInit {
   onClick?: (() => void) | undefined;
-  x: Accessor<number>;
-  setX: Setter<number>;
-  y: Accessor<number>;
-  setY: Setter<number>;
 }
 
-function motion({ onClick, x, setX, y, setY }: ThrowableInit) {
+function motion({ onClick }: ThrowableInit) {
   const { width: screenWidth, height: screenHeight } = useWindowSize();
   const [el, setEl] = createSignal<HTMLButtonElement>();
   const { width: buttonWidth, height: buttonHeight } = useElementSize(el);
   const { x: mouseX, y: mouseY } = useMouse();
   const { pressed } = useMousePressed();
   const [containerDisplay, setContainerDisplay] = createSignal<"block">();
+  const { x, setX, y, setY } = useHubPosition();
 
   const [mouseDrag, setMouseDrag] = createSignal<{
     dragging: boolean;
@@ -180,13 +178,8 @@ export interface HubCompanionProps extends ThrowableInit {
   hidden: Accessor<boolean>;
 }
 
-export default function HubCompanion({
-  x,
-  y,
-  hidden,
-  ...props
-}: HubCompanionProps) {
-  const { setEl, startDragging, containerDisplay } = motion({ x, y, ...props });
+export default function HubCompanion({ hidden, ...props }: HubCompanionProps) {
+  const { setEl, startDragging, containerDisplay } = motion(props);
   const [t] = useTransContext();
 
   return (
@@ -194,11 +187,7 @@ export default function HubCompanion({
       <HubButton
         ref={setEl}
         title={t("nav.openHub")}
-        style={{
-          left: `${x()}px`,
-          top: `${y()}px`,
-          visibility: hidden() ? "hidden" : "visible",
-        }}
+        classList={{ [styles.hidden]: hidden() }}
         onMouseDown={startDragging}
         onTouchStart={startDragging}
       />

@@ -10,9 +10,8 @@
   width: $size;
   height: $size;
 
-  // Set an initial position off screen so it doesn't show until we kick in.
-  left: -1000rem;
-  top: -1000rem;
+  left: var(--hub-button-x);
+  top: var(--hub-button-y);
 
   --hub-inner-colour: #ffebeb;
   --hub-outer-colour: #c9acac;

@@ -12,9 +12,11 @@ import {
 } from "solid-start";
 import { ErrorBoundary } from "solid-start/error-boundary";
 import Hub from "./components/hub/Hub";
-import { Contexts } from "./contexts";
+import { Contexts, useHubPosition } from "./contexts";
 
 export function Root() {
+  const { x, y } = useHubPosition();
+
   return (
     <Html lang="en">
       <Head>
@@ -22,7 +24,12 @@ export function Root() {
         <Meta charset="utf-8" />
         <Meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <Body>
+      <Body
+        style={{
+          ["--hub-button-x"]: `${x()}px`,
+          ["--hub-button-y"]: `${y()}px`,
+        }}
+      >
         <Suspense>
           <ErrorBoundary>
             <Hub />

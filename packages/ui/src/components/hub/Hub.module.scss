@@ -1,20 +1,9 @@
 @use "../../routes/index.scss";
 
-@keyframes fade-in-out {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-%fade-in {
-  animation: fade-in-out var(--animation-duration) ease-in-out;
-}
-
-%fade-out {
-  animation: fade-in-out var(--animation-duration) ease-in-out reverse;
+%trans {
+  transition-property: opacity, top, left;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-in-out;
 }
 
 .dialog {
@@ -24,31 +13,69 @@
   border: none;
   padding: 0;
 
-  --animation-duration: 0.2s;
-
   &::backdrop {
+    @extend %trans;
     background-color: rgba(0, 0, 0, 0.1);
     opacity: 0;
-    transition: opacity var(--animation-duration) ease-in-out;
   }
 
-  &.fadeIn::backdrop {
-    @extend %fade-in;
-  }
-
-  &[open]:not(.fadeOut)::backdrop {
+  &.open:not(.fadeOut)::backdrop {
     opacity: 1;
   }
+}
 
-  &.fadeOut::backdrop {
-    @extend %fade-out;
+%btnTrans {
+  @extend %trans;
+  position: fixed;
+}
+
+button.hubButton {
+  @extend %btnTrans;
+  z-index: 10;
+}
+
+%btn {
+  @extend %btnTrans;
+  left: var(--hub-button-x);
+  top: var(--hub-button-y);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: flex;
+  $size: 4rem;
+  width: $size;
+  height: $size;
+
+  > span {
+    margin: auto;
+  }
+}
+
+.createPost {
+  @extend %btn;
+}
+
+$midLeft: 50svw;
+$midTop: 50svh;
+
+.dialog.open:not(.fadeOut) {
+  .hubButton {
+    left: $midLeft;
+    top: $midTop;
+  }
+
+  .createPost {
+    opacity: 1;
+    left: $midLeft;
+    top: calc(#{$midTop} + 6rem);
   }
 }
 
 %navControl {
+  @extend %trans;
   position: fixed;
   opacity: 0;
-  transition: opacity var(--animation-duration) ease-in-out;
+  z-index: 1;
 
   &:hover {
     text-decoration: none;
@@ -59,21 +86,9 @@
   }
 }
 
-.fadeIn {
-  %navControl {
-    @extend %fade-in;
-  }
-}
-
-.dialog[open]:not(.fadeOut) {
+.dialog.open:not(.fadeOut) {
   %navControl {
     opacity: 1;
-  }
-}
-
-.fadeOut {
-  %navControl {
-    @extend %fade-out;
   }
 }
 
