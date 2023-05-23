@@ -50,9 +50,12 @@
   },
   "dependencies": {
     "@apollo/client": "^3.7.11",
+    "@mbarzda/solid-i18next": "^1.2.2",
     "@merged/solid-apollo": "^1.7.1",
     "graphql": "^16.6.0",
     "graphql-ws": "^5.12.1",
+    "html-parse-string": "^0.0.9",
+    "i18next": "^22.5.0",
     "modern-normalize": "^1.1.0",
     "solidjs-use": "^2.1.0",
     "typed-scss-modules": "^7.1.0"

@@ -1,3 +1,4 @@
+import { useTransContext } from "@mbarzda/solid-i18next";
 import { type Accessor, createSignal, type Setter } from "solid-js";
 import {
   clamp,
@@ -186,11 +187,13 @@ export default function HubCompanion({
   ...props
 }: HubCompanionProps) {
   const { setEl, startDragging, containerDisplay } = motion({ x, y, ...props });
+  const [t] = useTransContext();
 
   return (
     <div class={styles.hub} style={{ display: containerDisplay() }}>
       <HubButton
         ref={setEl}
+        title={t("nav.openHub")}
         style={{
           left: `${x()}px`,
           top: `${y()}px`,

@@ -1,9 +1,11 @@
 import { ApolloClient, InMemoryCache } from "@apollo/client/core";
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
+import { TransProvider } from "@mbarzda/solid-i18next";
 import { ApolloProvider } from "@merged/solid-apollo";
 import { createClient } from "graphql-ws";
 import { type JSX } from "solid-js";
 import { isServer } from "solid-js/web";
+import { i18next } from "./i18n";
 
 const cache = new InMemoryCache();
 
@@ -23,5 +25,9 @@ const client = new ApolloClient(
 );
 
 export function Contexts({ children }: { children: () => JSX.Element }) {
-  return <ApolloProvider client={client}>{children()}</ApolloProvider>;
+  return (
+    <ApolloProvider client={client}>
+      <TransProvider instance={i18next}>{children()}</TransProvider>
+    </ApolloProvider>
+  );
 }

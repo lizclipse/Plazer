@@ -63,11 +63,21 @@ a {
   }
 }
 
-%input-focus {
-  outline: var(--colour-text) solid 0;
-  outline-offset: -0.01rem;
-  animation: flash-outline 0.3s ease-in 0s 1 normal,
-    flash-outline 1.2s linear 0.5s infinite alternate-reverse;
+%generic-input {
+  background: var(--colour-secondary);
+  color: var(--colour-text);
+  border: 0.07rem solid var(--colour-text);
+
+  &:hover {
+    background: var(--colour-hover);
+  }
+
+  &:focus {
+    outline: var(--colour-text) solid 0;
+    outline-offset: -0.01rem;
+    animation: flash-outline 0.3s ease-in 0s 1 normal,
+      flash-outline 1.2s linear 0.5s infinite alternate-reverse;
+  }
 }
 
 input:not([type]),
@@ -83,40 +93,22 @@ input[type="text"],
 input[type="time"],
 input[type="url"],
 input[type="week"],
-textarea {
-  background: var(--colour-secondary);
-  color: var(--colour-text);
-  border: 0.07rem solid var(--colour-text);
+textarea,
+%input {
+  @extend %generic-input;
   border-radius: 0.1rem;
   padding: 0.4rem 0.6rem;
-
-  &:hover {
-    background: var(--colour-hover);
-  }
-
-  &:focus {
-    @extend %input-focus;
-  }
 }
 
 button,
 input[type="button"],
 input[type="reset"],
-input[type="submit"] {
-  background: var(--colour-secondary);
-  color: var(--colour-text);
-  border: 0.07rem solid var(--colour-text);
+input[type="submit"],
+%button {
+  @extend %generic-input;
   border-radius: 0.2rem;
   cursor: pointer;
   padding: 0.5rem 1rem;
-
-  &:hover {
-    background: var(--colour-hover);
-  }
-
-  &:focus {
-    @extend %input-focus;
-  }
 }
 
 // TODO: checkbox, color, file, image, radio, range
