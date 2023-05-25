@@ -47,15 +47,37 @@ export default function Hub() {
             }
           }}
         />
-        <A href="/register" class={styles.navRegister}>
+        <A
+          href="/"
+          title={t("nav.home")}
+          class={styles.navHome}
+          activeClass={styles.activeNav}
+          end
+        >
+          <span>🏡</span>
+        </A>
+        <A
+          href="/search"
+          title={t("nav.search")}
+          class={styles.navSearch}
+          activeClass={styles.activeNav}
+          end
+        >
+          <span>🔍</span>
+        </A>
+        <A
+          href="/register"
+          class={styles.navRegister}
+          activeClass={styles.activeNav}
+        >
           <Trans key="nav.register">
-            <span aria-hidden={true}>{""}</span>
+            <span aria-hidden>{""}</span>
             <span class={styles.inner}>{""}</span>
           </Trans>
         </A>
-        <A href="/login" class={styles.navLogin}>
+        <A href="/login" class={styles.navLogin} activeClass={styles.activeNav}>
           <Trans key="nav.login">
-            <span aria-hidden={true}>{""}</span>
+            <span aria-hidden>{""}</span>
             <span class={styles.inner}>{""}</span>
           </Trans>
         </A>

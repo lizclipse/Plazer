@@ -1,7 +1,7 @@
 @use "../../routes/index.scss";
 
 %trans {
-  transition-property: opacity, top, left;
+  transition-property: opacity, top, left, right, bottom;
   transition-duration: 0.2s;
   transition-timing-function: ease-in-out;
 }
@@ -45,6 +45,7 @@ button.hubButton {
   $size: 4rem;
   width: $size;
   height: $size;
+  z-index: 1;
 
   > span {
     margin: auto;
@@ -75,7 +76,6 @@ $midTop: 50svh;
   @extend %trans;
   position: fixed;
   opacity: 0;
-  z-index: 1;
 
   &:hover {
     text-decoration: none;
@@ -92,6 +92,10 @@ $midTop: 50svh;
   }
 }
 
+.activeNav {
+  background-color: var(--colour-hover);
+}
+
 .navRegister {
   @extend %navControl;
   @extend %button;
@@ -104,4 +108,40 @@ $midTop: 50svh;
   @extend %button;
   top: 5rem;
   right: 2rem;
+}
+
+$nav-button-size: 3rem;
+
+%navButton {
+  @extend %navControl;
+  @extend %button;
+  opacity: 1;
+  bottom: -$nav-button-size;
+  width: $nav-button-size;
+  height: $nav-button-size;
+  transform: translateX(-50%);
+  display: flex;
+  padding: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+
+  > span {
+    margin: auto;
+  }
+}
+
+.dialog.open:not(.fadeOut) {
+  %navButton {
+    bottom: -0.1rem;
+  }
+}
+
+.navHome {
+  @extend %navButton;
+  left: 50vw;
+}
+
+.navSearch {
+  @extend %navButton;
+  left: calc(50vw + #{1 + $nav-button-size});
 }

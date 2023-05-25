@@ -1,9 +1,14 @@
 {
   "nav": {
-    "register": "<0>✍️ </0><1>Register</1>",
-    "login": "<0>👤 </0><1>Login</1>",
-    "openHub": "Open Hub",
     "closeHub": "Close Hub",
+    "openHub": "Open Hub",
+
+    "login": "<0>👤 </0><1>Login</1>",
+    "register": "<0>✍️ </0><1>Register</1>",
+
+    "home": "Home",
+    "search": "Search",
+
     "createPost": "Create Post"
   }
 }
