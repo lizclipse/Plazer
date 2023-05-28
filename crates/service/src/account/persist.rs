@@ -5,8 +5,8 @@ use secrecy::ExposeSecret as _;
 use tracing::instrument;
 
 use super::{
-    create_access_token, create_creds, create_refresh_token, verify_creds, verify_refresh_token,
-    Account, AuthCreds, CreateAccount, CurrentAccount, PartialAccount, TABLE_NAME,
+    create_creds, verify_creds, verify_refresh_token, Account, AuthCreds, AuthenticatedAccount,
+    CreateAccount, CurrentAccount, TABLE_NAME,
 };
 use crate::{
     error::{Error, Result},
@@ -17,7 +17,6 @@ pub struct AccountPersist<'a> {
     persist: &'a Persist,
     current: &'a CurrentAccount,
     csrng: &'a SystemRandom,
-    jwt_enc_key: &'a jsonwebtoken::EncodingKey,
     jwt_dec_key: &'a jsonwebtoken::DecodingKey,
 }
 
@@ -26,14 +25,12 @@ impl<'a> AccountPersist<'a> {
         persist: &'a Persist,
         current: &'a CurrentAccount,
         csrng: &'a SystemRandom,
-        jwt_enc_key: &'a jsonwebtoken::EncodingKey,
         jwt_dec_key: &'a jsonwebtoken::DecodingKey,
     ) -> Self {
         Self {
             persist,
             current,
             csrng,
-            jwt_enc_key,
             jwt_dec_key,
         }
     }
@@ -45,7 +42,7 @@ impl<'a> AccountPersist<'a> {
     }
 
     #[instrument(skip_all)]
-    pub async fn refresh_token(&self, creds: AuthCreds) -> Result<String> {
+    pub async fn login(&self, creds: AuthCreds) -> Result<AuthenticatedAccount> {
         let acc = match self.get_by_handle(&creds.handle).await? {
             Some(acc) => acc,
             None => return Err(Error::CredentialsInvalid),
@@ -53,11 +50,11 @@ impl<'a> AccountPersist<'a> {
 
         verify_creds(&creds.pword, &acc.pword_salt, &acc.pword_hash)?;
 
-        create_refresh_token(acc.id.id.into(), self.jwt_enc_key)
+        Ok(acc.into())
     }
 
     #[instrument(skip_all)]
-    pub async fn access_token(&self, refresh_token: String) -> Result<String> {
+    pub async fn refresh(&self, refresh_token: String) -> Result<AuthenticatedAccount> {
         let claims = match verify_refresh_token(&refresh_token, self.jwt_dec_key) {
             Ok(claims) => claims,
             Err(_) => return Err(Error::CredentialsInvalid),
@@ -74,10 +71,7 @@ impl<'a> AccountPersist<'a> {
             }
         }
 
-        create_access_token(
-            &PartialAccount::new(acc.id.id.into(), acc.handle),
-            self.jwt_enc_key,
-        )
+        Ok(acc.into())
     }
 
     #[instrument(skip_all)]
@@ -99,11 +93,11 @@ impl<'a> AccountPersist<'a> {
     }
 
     #[instrument(skip_all)]
-    pub async fn create(&self, acc: CreateAccount) -> Result<Account> {
+    pub async fn create(&self, acc: CreateAccount) -> Result<AuthenticatedAccount> {
         let creds = create_creds(self.csrng, acc.pword.expose_secret())?;
 
         // TODO: support invites and reject if required/invalid
-        let acc = self
+        let acc: Option<Account> = self
             .persist
             .db()
             .query(indoc! {"
@@ -120,7 +114,7 @@ impl<'a> AccountPersist<'a> {
             .take(0)?;
 
         match acc {
-            Some(acc) => Ok(acc),
+            Some(acc) => Ok(acc.into()),
             None => Err(Error::UnavailableIdent),
         }
     }
@@ -162,7 +156,7 @@ mod tests {
         assert!(res.is_ok());
 
         let res = res.unwrap();
-        assert_eq!(res.handle, "test");
+        assert_eq!(res.account.handle, "test");
     }
 
     #[tokio::test]
@@ -220,27 +214,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_refresh_token() {
+    async fn test_login() {
         let data = TestData::new().await;
         let account = data.account();
         let AccData { handle, pword, .. } = account.create_test_user().await;
 
-        let res = account.refresh_token(AuthCreds { handle, pword }).await;
+        let res = account
+            .login(AuthCreds {
+                handle: handle.clone(),
+                pword,
+            })
+            .await;
         println!("{res:?}");
         assert!(res.is_ok());
 
         let res = res.unwrap();
-        assert!(!res.is_empty());
+        assert_eq!(res.account.handle, handle);
     }
 
     #[tokio::test]
-    async fn test_refresh_token_fail() {
+    async fn test_login_fail() {
         let data = TestData::new().await;
         let account = data.account();
         let AccData { handle, .. } = account.create_test_user().await;
 
         let res = account
-            .refresh_token(AuthCreds {
+            .login(AuthCreds {
                 handle,
                 pword: "bad password".to_owned().into(),
             })
@@ -253,21 +252,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_access_token() {
+    async fn test_refresh() {
         let data = TestData::new().await;
         let account = data.account();
-        let AccData { handle, pword, .. } = account.create_test_user().await;
-        let refresh_token = account
-            .refresh_token(AuthCreds { handle, pword })
-            .await
-            .unwrap();
+        let AccData { handle, acc, .. } = account.create_test_user().await;
+        let refresh_token = create_refresh_token(acc.id_str().into(), &data.jwt_enc_key).unwrap();
 
-        let res = account.access_token(refresh_token).await;
+        let res = account.refresh(refresh_token).await;
         println!("{res:?}");
         assert!(res.is_ok());
 
         let res = res.unwrap();
-        assert!(!res.is_empty());
+        assert_eq!(res.account.id, acc.id);
+        assert_eq!(res.account.handle, handle);
     }
 
     #[tokio::test]
@@ -275,7 +272,7 @@ mod tests {
         let data = TestData::new().await;
         let account = data.account();
 
-        let res = account.access_token("invalid.refresh.token".into()).await;
+        let res = account.refresh("invalid.refresh.token".into()).await;
         println!("{res:?}");
         assert!(res.is_err());
 
@@ -285,18 +282,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_revoke_tokens() {
-        let (data, AccData { handle, pword, .. }) = TestData::with_user().await;
+        let (data, AccData { acc, .. }) = TestData::with_user().await;
         let account = data.account();
-        let refresh_token = account
-            .refresh_token(AuthCreds { handle, pword })
-            .await
-            .unwrap();
+        let refresh_token = create_refresh_token(acc.id_str().into(), &data.jwt_enc_key).unwrap();
 
         let res = account.revoke_tokens().await;
         println!("{res:?}");
         assert!(res.is_ok());
 
-        let res = account.access_token(refresh_token).await;
+        let res = account.refresh(refresh_token).await;
         println!("{res:?}");
         assert!(res.is_err());
 
@@ -368,13 +362,7 @@ mod testing {
         }
 
         pub fn account(&self) -> AccountPersist<'_> {
-            AccountPersist::new(
-                &self.persist,
-                &self.current,
-                &self.csrng,
-                &self.jwt_enc_key,
-                &self.jwt_dec_key,
-            )
+            AccountPersist::new(&self.persist, &self.current, &self.csrng, &self.jwt_dec_key)
         }
     }
 
@@ -396,7 +384,7 @@ mod testing {
             AccData {
                 handle,
                 pword: pword.into(),
-                acc: self.create(acc).await.unwrap(),
+                acc: self.create(acc).await.unwrap().account,
             }
         }
     }

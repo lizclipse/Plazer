@@ -1,17 +1,24 @@
-import { ApolloError } from "@apollo/client/core";
+import { type TypedDocumentNode } from "@apollo/client/core";
 import { createMutation, gql } from "@merged/solid-apollo";
 import { createRouteAction, redirect } from "solid-start";
 import styles from "./register.module.scss";
+import { DisplayError } from "~/components/DisplayError";
+import { useAccount } from "~/contexts";
 import type {
   CreateAccountMutation,
   CreateAccountMutationVariables,
 } from "~gen/graphql";
 
-const GQL = gql`
+const GQL: TypedDocumentNode<
+  CreateAccountMutation,
+  CreateAccountMutationVariables
+> = gql`
   mutation CreateAccount($account: CreateAccount!) {
     createAccount(create: $account) {
       account {
         id
+        handle
+        revokedAt
       }
       refreshToken
       accessToken
@@ -24,10 +31,8 @@ const inputs = {
   pword: "password",
 } as const;
 export default function Register() {
-  const [createAccount] = createMutation<
-    CreateAccountMutation,
-    CreateAccountMutationVariables
-  >(GQL);
+  const { login } = useAccount();
+  const [createAccount] = createMutation(GQL);
 
   const [create, { Form }] = createRouteAction(async (form: FormData) => {
     const account = {
@@ -35,17 +40,9 @@ export default function Register() {
       pword: form.get(inputs.pword) as string,
     };
 
-    try {
-      const result = await createAccount({ variables: { account } });
-      console.debug(result);
-      return redirect("/");
-    } catch (err) {
-      if (err instanceof ApolloError) {
-        console.log(err.graphQLErrors);
-      }
-      console.error(err);
-      throw err;
-    }
+    const result = await createAccount({ variables: { account } });
+    login(result.createAccount);
+    return redirect("/");
   });
 
   return (
@@ -67,6 +64,8 @@ export default function Register() {
         <button type="submit" disabled={create.pending}>
           Create Account
         </button>
+
+        <DisplayError err={() => create.error as unknown} />
       </Form>
     </section>
   );

@@ -10,5 +10,20 @@
     "search": "Search",
 
     "createPost": "Create Post"
+  },
+  "errors": {
+    "Unknown": "An unknown error occurred.",
+    "Unauthenticated": "You are not logged in.",
+    "Unauthorized": "You are not authorised to do this.",
+    "CredentialsInvalid": "Your credentials are invalid.",
+    "UnavailableIdent": "This handle is unavailable.",
+    "JwtMalformed": "The given JWT is malformed.",
+    "JwtExpired": "The given JWT has expired.",
+    "JwtInvalid": "The given JWT is invalid.",
+    "WsInitNotObject": "The WebSocket initialisation object is not an object.",
+    "WsInitTokenNotString": "The WebSocket initialisation token is not a string.",
+    "ServerMisconfigured": "The server is misconfigured.",
+    "InternalServerError": "An internal server error occurred.",
+    "NotImplemented": "This feature is not implemented."
   }
 }

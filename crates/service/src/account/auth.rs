@@ -83,7 +83,7 @@ impl<'a> AccessClaims<'a> {
     pub fn new(acc: impl Into<Cow<'a, PartialAccount>>) -> Self {
         Self {
             acc: acc.into(),
-            jwt: JwtClaims::new(Duration::minutes(30), JwtKind::Access),
+            jwt: JwtClaims::new(Duration::minutes(15), JwtKind::Access),
         }
     }
 }

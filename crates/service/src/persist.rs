@@ -8,7 +8,7 @@ use tracing::{error, instrument};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
-    DecodingKey, EncodingKey,
+    DecodingKey,
 };
 
 cfg_if! {
@@ -109,7 +109,6 @@ impl PersistExt for Context<'_> {
             self.data_opt::<CurrentAccount>()
                 .unwrap_or_else(|| self.data_unchecked::<Arc<CurrentAccount>>()),
             self.data_unchecked::<SystemRandom>(),
-            self.data_unchecked::<EncodingKey>(),
             self.data_unchecked::<DecodingKey>(),
         )
     }

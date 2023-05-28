@@ -1,12 +1,9 @@
-use async_graphql::{ComplexObject, Context, Object, Result, ResultExt as _, SimpleObject};
+use async_graphql::{Context, Object, Result, ResultExt as _};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
 use tracing::instrument;
 
-use super::{
-    create_access_token, create_refresh_token, Account, AuthCreds, CreateAccount, PartialAccount,
-};
-use crate::{persist::PersistExt as _, EncodingKey};
+use super::{Account, AuthCreds, AuthenticatedAccount, CreateAccount};
+use crate::persist::PersistExt as _;
 
 #[derive(Default)]
 pub struct AccountQuery;
@@ -21,46 +18,6 @@ impl AccountQuery {
     async fn me(&self, ctx: &Context<'_>) -> Result<Option<Account>> {
         ctx.account_persist().current().await.extend()
     }
-
-    /// Request an access token for authenticating requests.
-    #[instrument(skip_all)]
-    async fn access_token(&self, ctx: &Context<'_>, refresh_token: String) -> Result<String> {
-        ctx.account_persist()
-            .access_token(refresh_token)
-            .await
-            .extend()
-    }
-}
-#[derive(SimpleObject, Debug, Deserialize)]
-#[graphql(complex)]
-struct CreateAccountResult {
-    account: Account,
-}
-
-#[ComplexObject]
-impl CreateAccountResult {
-    /// Request a refresh token for the newly created account.
-    #[instrument(skip_all)]
-    async fn refresh_token(&self, ctx: &Context<'_>) -> Result<String> {
-        create_refresh_token(
-            self.account.id.id.clone().into(),
-            ctx.data_unchecked::<EncodingKey>(),
-        )
-        .extend()
-    }
-
-    /// Request an access token for the newly created account.
-    #[instrument(skip_all)]
-    async fn access_token(&self, ctx: &Context<'_>) -> Result<String> {
-        create_access_token(
-            &PartialAccount::new(
-                self.account.id.id.clone().into(),
-                self.account.handle.clone(),
-            ),
-            ctx.data_unchecked::<EncodingKey>(),
-        )
-        .extend()
-    }
 }
 
 #[derive(Default)]
@@ -68,10 +25,20 @@ pub struct AccountMutation;
 
 #[Object]
 impl AccountMutation {
-    /// Request a new refresh token.
+    /// Log into the target account.
     #[instrument(skip_all)]
-    async fn refresh_token(&self, ctx: &Context<'_>, creds: AuthCreds) -> Result<String> {
-        ctx.account_persist().refresh_token(creds).await.extend()
+    async fn login(&self, ctx: &Context<'_>, creds: AuthCreds) -> Result<AuthenticatedAccount> {
+        ctx.account_persist().login(creds).await.extend()
+    }
+
+    /// Refresh tokens and account data.
+    #[instrument(skip_all)]
+    async fn refresh(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(validator(min_length = 1, max_length = 256))] refresh_token: String,
+    ) -> Result<AuthenticatedAccount> {
+        ctx.account_persist().refresh(refresh_token).await.extend()
     }
 
     /// Register a new account.
@@ -80,10 +47,8 @@ impl AccountMutation {
         &self,
         ctx: &Context<'_>,
         create: CreateAccount,
-    ) -> Result<CreateAccountResult> {
-        Ok(CreateAccountResult {
-            account: ctx.account_persist().create(create).await.extend()?,
-        })
+    ) -> Result<AuthenticatedAccount> {
+        ctx.account_persist().create(create).await.extend()
     }
 
     /// Revoke all tokens issued for the current account.

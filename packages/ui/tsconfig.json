@@ -8,8 +8,8 @@
     "baseUrl": "./",
     "rootDirs": ["./src", "./src/__generated__/scss/src"],
     "paths": {
-      "~/*": ["./src/*"],
-      "~gen/*": ["./src/__generated__/*"]
+      "~gen/*": ["./src/__generated__/*"],
+      "~/*": ["./src/*"]
     },
 
     "noEmit": true
