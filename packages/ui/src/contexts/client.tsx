@@ -7,8 +7,8 @@ import {
 import { BatchHttpLink } from "@apollo/client/link/batch-http";
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { ApolloProvider } from "@merged/solid-apollo";
-import { createClient } from "graphql-ws";
-import { createEffect, type JSX, on, onCleanup } from "solid-js";
+import { createClient as createWsClient } from "graphql-ws";
+import { createEffect, type FlowProps, on, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import { GQL_ACCOUNT, tokenExpiry, useAccount } from "./account";
 import type { RefreshMutation, RefreshMutationVariables } from "~gen/graphql";
@@ -27,11 +27,7 @@ const GQL_REFRESH: TypedDocumentNode<
 
 const refreshBuffer = 2 * 60_000;
 
-export default function ClientProvider({
-  children,
-}: {
-  readonly children: () => JSX.Element;
-}) {
+export default function ClientProvider(props: FlowProps) {
   const { account, accessToken, refreshToken, login, logout } = useAccount();
 
   const cache = new InMemoryCache();
@@ -50,7 +46,7 @@ export default function ClientProvider({
           batchMax: 20,
         })
       : new GraphQLWsLink(
-          createClient({
+          createWsClient({
             url: `ws://${window.location.host}/api/graphql/ws`,
             lazyCloseTimeout: 30_000,
             keepAlive: 60_000,
@@ -74,6 +70,7 @@ export default function ClientProvider({
           })
         ),
     cache,
+    ssrMode: isServer,
   });
 
   createEffect(
@@ -153,5 +150,5 @@ export default function ClientProvider({
     })
   );
 
-  return <ApolloProvider client={client}>{children()}</ApolloProvider>;
+  return <ApolloProvider client={client}>{props.children}</ApolloProvider>;
 }

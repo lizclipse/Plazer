@@ -1,6 +1,6 @@
 import { ApolloError } from "@apollo/client/core";
 import { Trans } from "@mbarzda/solid-i18next";
-import { type JSX, Show } from "solid-js";
+import { Show } from "solid-js";
 import styles from "./DisplayError.module.scss";
 import type { Error as BackendError } from "~gen/backend";
 

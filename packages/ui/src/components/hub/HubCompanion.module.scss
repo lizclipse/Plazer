@@ -1,5 +1,5 @@
 .hub {
-  display: none;
+  visibility: hidden;
   position: fixed;
   left: 0;
   top: 0;
@@ -8,6 +8,10 @@
   overflow: hidden;
   pointer-events: none;
   touch-action: none;
+
+  &.visible {
+    visibility: visible;
+  }
 }
 
 .hidden {

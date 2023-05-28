@@ -50,7 +50,14 @@ export default function Register() {
         <label for={inputs.handle}>
           <Trans key="account.handle" />
         </label>
-        <input id={inputs.handle} name={inputs.handle} required />
+        <input
+          id={inputs.handle}
+          name={inputs.handle}
+          autoCapitalize="off"
+          spellcheck={false}
+          autocorrect="off"
+          required
+        />
 
         <label for={inputs.pword}>
           <Trans key="account.password" />

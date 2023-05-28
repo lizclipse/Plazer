@@ -1,6 +1,7 @@
 import {
   type Accessor,
   createContext,
+  type FlowProps,
   type JSX,
   type Setter,
   useContext,
@@ -22,18 +23,30 @@ export function useHubPosition(): HubPosition {
   return useContext(HubPositionContext)!;
 }
 
-export default function HubPositionProvider({
-  children,
-}: {
-  readonly children: () => JSX.Element;
-}): JSX.Element {
+const maxInitialDistance = 1000;
+const repositionOffset = 100;
+
+export default function HubPositionProvider(props: FlowProps): JSX.Element {
   const { width: screenWidth, height: screenHeight } = useWindowSize();
   const [x, setX] = useLocalStorage("hub-button-x", screenWidth() / 2);
   const [y, setY] = useLocalStorage("hub-button-y", screenHeight());
 
+  for (const [axis, setAxis, screen] of [
+    [x, setX, screenWidth],
+    [y, setY, screenHeight],
+  ] as const) {
+    const ax = axis();
+    const sc = screen();
+    if (ax < -maxInitialDistance) {
+      setAxis(-repositionOffset);
+    } else if (ax > sc + maxInitialDistance) {
+      setAxis(sc + repositionOffset);
+    }
+  }
+
   return (
     <HubPositionContext.Provider value={{ x, setX, y, setY }}>
-      {children()}
+      {props.children}
     </HubPositionContext.Provider>
   );
 }

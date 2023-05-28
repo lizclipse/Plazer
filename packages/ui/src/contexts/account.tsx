@@ -4,6 +4,7 @@ import {
   type Accessor,
   batch,
   createContext,
+  type FlowProps,
   onCleanup,
   useContext,
 } from "solid-js";
@@ -74,11 +75,7 @@ export function useAccount(): AccountCtx {
 const tokenCheckInterval = 60_000; // 1 minute
 const removeBuffer = 2 * tokenCheckInterval; // 2x check interval
 
-export default function AccountProvider({
-  children,
-}: {
-  readonly children: () => JSX.Element;
-}): JSX.Element {
+export default function AccountProvider(props: FlowProps): JSX.Element {
   const [account, setAccount] = useLocalStorage<Account | undefined>(
     "account",
     undefined,
@@ -133,7 +130,7 @@ export default function AccountProvider({
     <AccountContext.Provider
       value={{ account, refreshToken, accessToken, logout, login }}
     >
-      {children()}
+      {props.children}
     </AccountContext.Provider>
   );
 }

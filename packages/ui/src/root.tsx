@@ -46,4 +46,8 @@ export function Root() {
   );
 }
 
-export default () => <Contexts>{Root}</Contexts>;
+export default () => (
+  <Contexts>
+    <Root />
+  </Contexts>
+);
