@@ -22,10 +22,10 @@ export function useHubPosition(): HubPosition {
   return useContext(HubPositionContext)!;
 }
 
-export function HubPositionProvider({
+export default function HubPositionProvider({
   children,
 }: {
-  children: () => JSX.Element;
+  readonly children: () => JSX.Element;
 }): JSX.Element {
   const { width: screenWidth, height: screenHeight } = useWindowSize();
   const [x, setX] = useLocalStorage("hub-button-x", screenWidth() / 2);

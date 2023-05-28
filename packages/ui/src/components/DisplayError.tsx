@@ -1,6 +1,6 @@
 import { ApolloError } from "@apollo/client/core";
 import { Trans } from "@mbarzda/solid-i18next";
-import { Show } from "solid-js";
+import { type JSX, Show } from "solid-js";
 import styles from "./DisplayError.module.scss";
 import type { Error as BackendError } from "~gen/backend";
 
@@ -30,14 +30,31 @@ export function parseError(err: unknown): Err | undefined {
   }
 }
 
-export function DisplayError({ err }: { err: () => unknown }) {
+export interface DisplayErrorProps {
+  readonly error: () => unknown;
+  readonly keepSpacing?: boolean;
+}
+
+export default function DisplayError({
+  error,
+  keepSpacing,
+}: DisplayErrorProps) {
   return (
-    <Show when={parseError(err())}>
-      {(error) => (
+    <Show
+      when={parseError(error())}
+      fallback={
+        keepSpacing ? (
+          <p classList={{ [styles.error]: true, [styles.hidden]: true }}>
+            &nbsp;
+          </p>
+        ) : undefined
+      }
+    >
+      {(err) => (
         <p class={styles.error} role="alert">
           <Trans
-            key={`errors.${error().code}`}
-            options={{ defaultValue: error().message }}
+            key={`errors.${err().code}`}
+            options={{ defaultValue: err().message }}
           />
         </p>
       )}

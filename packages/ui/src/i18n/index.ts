@@ -1,12 +1,12 @@
 import { createInstance } from "i18next";
 import { isServer } from "solid-js/web";
-import enCommon from "./en/common.json";
+import enCore from "./en/core.json";
 
-export const defaultNS = "common";
+export const defaultNS = "core";
 
 export const resources = {
   "en-GB": {
-    common: enCommon,
+    core: enCore,
   },
 } as const;
 

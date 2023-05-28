@@ -25,5 +25,11 @@
     "ServerMisconfigured": "The server is misconfigured.",
     "InternalServerError": "An internal server error occurred.",
     "NotImplemented": "This feature is not implemented."
+  },
+  "account": {
+    "handle": "Handle",
+    "password": "Password",
+    "createTitle": "Create a new account",
+    "createSubmit": "Create Account"
   }
 }

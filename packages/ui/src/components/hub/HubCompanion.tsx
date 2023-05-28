@@ -41,7 +41,7 @@ type Quad = readonly [
 ];
 
 interface ThrowableInit {
-  onClick?: (() => void) | undefined;
+  readonly onClick?: (() => void) | undefined;
 }
 
 function motion({ onClick }: ThrowableInit) {
@@ -175,7 +175,7 @@ function motion({ onClick }: ThrowableInit) {
 }
 
 export interface HubCompanionProps extends ThrowableInit {
-  hidden: Accessor<boolean>;
+  readonly hidden: Accessor<boolean>;
 }
 
 export default function HubCompanion({ hidden, ...props }: HubCompanionProps) {

@@ -1,9 +1,10 @@
 import { type TypedDocumentNode } from "@apollo/client/core";
+import { Trans } from "@mbarzda/solid-i18next";
 import { createMutation, gql } from "@merged/solid-apollo";
 import { createRouteAction, redirect } from "solid-start";
 import styles from "./register.module.scss";
-import { DisplayError } from "~/components/DisplayError";
-import { useAccount } from "~/contexts";
+import DisplayError from "~/components/DisplayError";
+import { GQL_ACCOUNT, useAccount } from "~/contexts";
 import type {
   CreateAccountMutation,
   CreateAccountMutationVariables,
@@ -13,15 +14,10 @@ const GQL: TypedDocumentNode<
   CreateAccountMutation,
   CreateAccountMutationVariables
 > = gql`
+  ${GQL_ACCOUNT}
   mutation CreateAccount($account: CreateAccount!) {
     createAccount(create: $account) {
-      account {
-        id
-        handle
-        revokedAt
-      }
-      refreshToken
-      accessToken
+      ...AccountFields
     }
   }
 `;
@@ -47,12 +43,18 @@ export default function Register() {
 
   return (
     <section class={styles.form}>
-      <h1>Create a new account</h1>
+      <h1>
+        <Trans key="account.createTitle" />
+      </h1>
       <Form>
-        <label for={inputs.handle}>Login</label>
+        <label for={inputs.handle}>
+          <Trans key="account.handle" />
+        </label>
         <input id={inputs.handle} name={inputs.handle} required />
 
-        <label for={inputs.pword}>Password</label>
+        <label for={inputs.pword}>
+          <Trans key="account.password" />
+        </label>
         <input
           id={inputs.pword}
           name={inputs.pword}
@@ -62,10 +64,10 @@ export default function Register() {
         />
 
         <button type="submit" disabled={create.pending}>
-          Create Account
+          <Trans key="account.createSubmit" />
         </button>
 
-        <DisplayError err={() => create.error as unknown} />
+        <DisplayError error={() => create.error as unknown} keepSpacing />
       </Form>
     </section>
   );
