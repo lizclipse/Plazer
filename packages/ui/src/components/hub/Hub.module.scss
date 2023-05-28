@@ -96,14 +96,16 @@ $midTop: 50svh;
   background-color: var(--colour-hover);
 }
 
-.navRegister {
+.navRegister,
+.navSettings {
   @extend %navControl;
   @extend %button;
   top: 2rem;
   right: 2rem;
 }
 
-.navLogin {
+.navLogin,
+.navLogout {
   @extend %navControl;
   @extend %button;
   top: 5rem;
@@ -112,36 +114,33 @@ $midTop: 50svh;
 
 $nav-button-size: 3rem;
 
-%navButton {
-  @extend %navControl;
-  @extend %button;
-  opacity: 1;
+.navButtons {
+  @extend %trans;
+  position: fixed;
   bottom: -$nav-button-size;
-  width: $nav-button-size;
-  height: $nav-button-size;
+  left: 50vw;
+  opacity: 1;
   transform: translateX(-50%);
   display: flex;
-  padding: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
+  gap: 1rem;
 
-  > span {
-    margin: auto;
+  a {
+    @extend %button;
+    width: $nav-button-size;
+    height: $nav-button-size;
+    display: flex;
+    padding: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+
+    > span {
+      margin: auto;
+    }
   }
 }
 
 .dialog.open:not(.fadeOut) {
-  %navButton {
+  .navButtons {
     bottom: -0.1rem;
   }
-}
-
-.navHome {
-  @extend %navButton;
-  left: 50vw;
-}
-
-.navSearch {
-  @extend %navButton;
-  left: calc(50vw + #{1 + $nav-button-size});
 }

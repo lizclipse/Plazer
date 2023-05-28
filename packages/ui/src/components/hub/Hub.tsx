@@ -1,16 +1,102 @@
 import { Trans, useTransContext } from "@mbarzda/solid-i18next";
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { A } from "solid-start";
 import styles from "./Hub.module.scss";
 import HubButton from "./HubButton";
 import HubCompanion from "./HubCompanion";
+import { useAccount } from "~/contexts";
 
 type State = "closed" | "opening" | "open" | "closing";
+
+function Actions() {
+  const [t] = useTransContext();
+
+  return (
+    <>
+      <button title={t("nav.createPost")} class={styles.createPost}>
+        <span>📝</span>
+      </button>
+    </>
+  );
+}
+
+function NavButtons() {
+  const [t] = useTransContext();
+
+  return (
+    <nav class={styles.navButtons}>
+      <A href="/" title={t("nav.home")} activeClass={styles.activeNav} end>
+        <span>🏡</span>
+      </A>
+      <A href="/search" title={t("nav.search")} activeClass={styles.activeNav}>
+        <span>🔍</span>
+      </A>
+    </nav>
+  );
+}
+
+function AnonLinks() {
+  return (
+    <>
+      <A
+        href="/register"
+        class={styles.navRegister}
+        activeClass={styles.activeNav}
+      >
+        <Trans key="nav.register">
+          <span aria-hidden>{""}</span>
+          <span class={styles.inner}>{""}</span>
+        </Trans>
+      </A>
+      <A href="/login" class={styles.navLogin} activeClass={styles.activeNav}>
+        <Trans key="nav.login">
+          <span aria-hidden>{""}</span>
+          <span class={styles.inner}>{""}</span>
+        </Trans>
+      </A>
+    </>
+  );
+}
+
+function AccountLinks({ close }: { readonly close: () => void }) {
+  const { logout } = useAccount();
+
+  return (
+    <>
+      <A
+        href="/settings"
+        class={styles.navSettings}
+        activeClass={styles.activeNav}
+      >
+        <Trans key="nav.settings">
+          <span aria-hidden>{""}</span>
+          <span class={styles.inner}>{""}</span>
+        </Trans>
+      </A>
+      <button
+        class={styles.navLogout}
+        onClick={() => {
+          logout();
+          // Logout seems to suppress the event bubbling.
+          close();
+        }}
+      >
+        <Trans key="nav.logout">
+          <span aria-hidden>{""}</span>
+          <span class={styles.inner}>{""}</span>
+        </Trans>
+      </button>
+    </>
+  );
+}
 
 export default function Hub() {
   const [dialog, setDialog] = createSignal<HTMLDialogElement>();
   const [state, setState] = createSignal<State>("closed");
   const [t] = useTransContext();
+  const { account } = useAccount();
+
+  const close = () => setState("closing");
 
   return (
     <>
@@ -28,9 +114,7 @@ export default function Hub() {
           [styles.open]: state() !== "closed",
           [styles.fadeOut]: state() === "closing",
         }}
-        onClick={() => {
-          setState("closing");
-        }}
+        onClick={close}
       >
         <HubButton
           title={t("nav.closeHub")}
@@ -47,43 +131,11 @@ export default function Hub() {
             }
           }}
         />
-        <A
-          href="/"
-          title={t("nav.home")}
-          class={styles.navHome}
-          activeClass={styles.activeNav}
-          end
-        >
-          <span>🏡</span>
-        </A>
-        <A
-          href="/search"
-          title={t("nav.search")}
-          class={styles.navSearch}
-          activeClass={styles.activeNav}
-          end
-        >
-          <span>🔍</span>
-        </A>
-        <A
-          href="/register"
-          class={styles.navRegister}
-          activeClass={styles.activeNav}
-        >
-          <Trans key="nav.register">
-            <span aria-hidden>{""}</span>
-            <span class={styles.inner}>{""}</span>
-          </Trans>
-        </A>
-        <A href="/login" class={styles.navLogin} activeClass={styles.activeNav}>
-          <Trans key="nav.login">
-            <span aria-hidden>{""}</span>
-            <span class={styles.inner}>{""}</span>
-          </Trans>
-        </A>
-        <button title={t("nav.createPost")} class={styles.createPost}>
-          <span>📝</span>
-        </button>
+        <NavButtons />
+        <Show when={account()} fallback={<AnonLinks />}>
+          <AccountLinks close={close} />
+        </Show>
+        <Actions />
       </dialog>
     </>
   );

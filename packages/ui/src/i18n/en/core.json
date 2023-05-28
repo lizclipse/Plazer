@@ -5,6 +5,8 @@
 
     "login": "<0>👤 </0><1>Login</1>",
     "register": "<0>✍️ </0><1>Register</1>",
+    "settings": "<0>⚙️ </0><1>Settings</1>",
+    "logout": "<0>🚪 </0><1>Logout</1>",
 
     "home": "Home",
     "search": "Search",

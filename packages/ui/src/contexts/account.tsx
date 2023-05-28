@@ -112,19 +112,21 @@ export default function AccountProvider(props: FlowProps): JSX.Element {
   const checkRef = setInterval(removedExpired, tokenCheckInterval);
   onCleanup(() => clearInterval(checkRef));
 
-  const logout = () =>
+  const logout = () => {
     batch(() => {
       setAccount(undefined);
       setRefreshToken(undefined);
       setAccessToken(undefined);
     });
+  };
 
-  const login = (acc: AuthenticatedAccount) =>
+  const login = (acc: AuthenticatedAccount) => {
     batch(() => {
       setAccount(acc.account);
       setRefreshToken(acc.refreshToken);
       setAccessToken(acc.accessToken);
     });
+  };
 
   return (
     <AccountContext.Provider
