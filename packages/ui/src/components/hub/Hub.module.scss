@@ -2,7 +2,7 @@
 
 %trans {
   transition-property: opacity, top, left, right, bottom;
-  transition-duration: 0.2s;
+  transition-duration: 0.15s;
   transition-timing-function: ease-in-out;
 }
 
@@ -92,10 +92,6 @@ $midTop: 50svh;
   }
 }
 
-.activeNav {
-  background-color: var(--colour-hover);
-}
-
 .navRegister,
 .navSettings {
   @extend %navControl;
@@ -133,6 +129,10 @@ $nav-button-size: 3rem;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 
+    &:hover {
+      text-decoration: none;
+    }
+
     > span {
       margin: auto;
     }
@@ -143,4 +143,8 @@ $nav-button-size: 3rem;
   .navButtons {
     bottom: -0.1rem;
   }
+}
+
+a.activeNav {
+  background-color: var(--colour-hover);
 }

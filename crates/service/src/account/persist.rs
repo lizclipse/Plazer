@@ -138,6 +138,8 @@ impl<'a> AccountPersist<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::account::create_refresh_token;
+
     use super::{testing::*, *};
 
     #[tokio::test]
@@ -320,7 +322,10 @@ mod testing {
     use secrecy::SecretString;
     use surrealdb::sql::Id;
 
-    use crate::{account::testing::generate_keys, persist::testing::persist};
+    use crate::{
+        account::{testing::generate_keys, PartialAccount},
+        persist::testing::persist,
+    };
 
     use super::*;
 

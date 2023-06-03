@@ -13,7 +13,11 @@ function Actions() {
 
   return (
     <>
-      <button title={t("nav.createPost")} class={styles.createPost}>
+      <button
+        title={t("nav.createPost")}
+        class={styles.createPost}
+        onClick={() => console.log("create post")}
+      >
         <span>📝</span>
       </button>
     </>
