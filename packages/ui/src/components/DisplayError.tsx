@@ -1,7 +1,7 @@
 import { ApolloError } from "@apollo/client/core";
-import { Trans } from "@mbarzda/solid-i18next";
 import { Show } from "solid-js";
 import styles from "./DisplayError.module.scss";
+import { Trans } from "~/i18n";
 import type { Error as BackendError } from "~gen/backend";
 
 export interface Err {
@@ -52,10 +52,7 @@ export default function DisplayError({
     >
       {(err) => (
         <p class={styles.error} role="alert">
-          <Trans
-            key={`errors.${err().code}`}
-            options={{ defaultValue: err().message }}
-          />
+          <Trans>{(t) => t.core.errors[err().code]()}</Trans>
         </p>
       )}
     </Show>

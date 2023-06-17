@@ -1,10 +1,10 @@
 import type { TypedDocumentNode } from "@apollo/client";
-import { Trans } from "@mbarzda/solid-i18next";
 import { createMutation, gql } from "@merged/solid-apollo";
 import { createRouteAction, redirect } from "solid-start";
 import styles from "./register.module.scss";
 import DisplayError from "~/components/DisplayError";
 import { GQL_ACCOUNT, useAccount } from "~/contexts";
+import { Trans } from "~/i18n";
 import type { LoginMutation, LoginMutationVariables } from "~gen/graphql";
 
 const GQL: TypedDocumentNode<LoginMutation, LoginMutationVariables> = gql`
@@ -38,11 +38,11 @@ export default function Login() {
   return (
     <section class={styles.form}>
       <h1>
-        <Trans key="account.loginTitle" />
+        <Trans>{(t) => t.core.account.loginTitle()}</Trans>
       </h1>
       <Form>
         <label for={inputs.handle}>
-          <Trans key="account.handle" />
+          <Trans>{(t) => t.core.account.handle()}</Trans>
         </label>
         <input
           id={inputs.handle}
@@ -54,7 +54,7 @@ export default function Login() {
         />
 
         <label for={inputs.pword}>
-          <Trans key="account.password" />
+          <Trans>{(t) => t.core.account.password()}</Trans>
         </label>
         <input
           id={inputs.pword}
@@ -65,7 +65,7 @@ export default function Login() {
         />
 
         <button type="submit" disabled={create.pending}>
-          <Trans key="account.loginSubmit" />
+          <Trans>{(t) => t.core.account.loginSubmit()}</Trans>
         </button>
 
         <DisplayError error={() => create.error as unknown} keepSpacing />

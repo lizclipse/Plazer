@@ -1,9 +1,9 @@
-import { Trans } from "@mbarzda/solid-i18next";
+import { Trans } from "~/i18n";
 
 export default function NotFound() {
   return (
     <p>
-      <Trans key="nav.notFound" />
+      <Trans>{(t) => t.core.nav.notFound()}</Trans>
     </p>
   );
 }

@@ -1,10 +1,10 @@
 import { type TypedDocumentNode } from "@apollo/client/core";
-import { Trans } from "@mbarzda/solid-i18next";
 import { createMutation, gql } from "@merged/solid-apollo";
 import { createRouteAction, redirect } from "solid-start";
 import styles from "./register.module.scss";
 import DisplayError from "~/components/DisplayError";
 import { GQL_ACCOUNT, useAccount } from "~/contexts";
+import { Trans } from "~/i18n";
 import type {
   CreateAccountMutation,
   CreateAccountMutationVariables,
@@ -44,11 +44,11 @@ export default function Register() {
   return (
     <section class={styles.form}>
       <h1>
-        <Trans key="account.createTitle" />
+        <Trans>{(t) => t.core.account.createTitle()}</Trans>
       </h1>
       <Form>
         <label for={inputs.handle}>
-          <Trans key="account.handle" />
+          <Trans>{(t) => t.core.account.handle()}</Trans>
         </label>
         <input
           id={inputs.handle}
@@ -60,7 +60,7 @@ export default function Register() {
         />
 
         <label for={inputs.pword}>
-          <Trans key="account.password" />
+          <Trans>{(t) => t.core.account.password()}</Trans>
         </label>
         <input
           id={inputs.pword}
@@ -71,7 +71,7 @@ export default function Register() {
         />
 
         <button type="submit" disabled={create.pending}>
-          <Trans key="account.createSubmit" />
+          <Trans>{(t) => t.core.account.createSubmit()}</Trans>
         </button>
 
         <DisplayError error={() => create.error as unknown} keepSpacing />

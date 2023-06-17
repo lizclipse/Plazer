@@ -9,11 +9,8 @@ import {
   useContext,
 } from "solid-js";
 import type { JSX } from "solid-js/web/types/jsx";
-import {
-  StorageSerializers,
-  useLocalStorage,
-  useSessionStorage,
-} from "solidjs-use";
+import { StorageSerializers } from "solidjs-use";
+import { createStorage } from "~/storage";
 import type {
   Account,
   AccountFieldsFragment,
@@ -76,20 +73,21 @@ const tokenCheckInterval = 60_000; // 1 minute
 const removeBuffer = 2 * tokenCheckInterval; // 2x check interval
 
 export default function AccountProvider(props: FlowProps): JSX.Element {
-  const [account, setAccount] = useLocalStorage<Account | undefined>(
+  const [account, setAccount] = createStorage<Account | undefined>(
     "account",
     undefined,
     { serializer: StorageSerializers.object }
   );
-  const [refreshToken, setRefreshToken] = useLocalStorage<string | undefined>(
+  const [refreshToken, setRefreshToken] = createStorage<string | undefined>(
     "refreshToken",
     undefined,
     { serializer: StorageSerializers.string }
   );
-  const [accessToken, setAccessToken] = useSessionStorage<string | undefined>(
+  const [accessToken, setAccessToken] = createStorage<string | undefined>(
     "accessToken",
     undefined,
-    { serializer: StorageSerializers.string }
+    { serializer: StorageSerializers.string },
+    globalThis.sessionStorage
   );
 
   // Remove expired tokens

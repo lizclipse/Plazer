@@ -1,4 +1,8 @@
-lockfileVersion: '6.0'
+lockfileVersion: '6.1'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 overrides:
   tsconfig-paths: ^4
@@ -48,9 +52,6 @@ importers:
       '@apollo/client':
         specifier: ^3.7.14
         version: 3.7.14(graphql-ws@5.13.1)(graphql@16.6.0)
-      '@mbarzda/solid-i18next':
-        specifier: ^1.2.2
-        version: 1.2.2(html-parse-string@0.0.9)(i18next@22.5.0)(solid-js@1.7.5)
       '@merged/solid-apollo':
         specifier: ^1.7.1
         version: 1.7.1(@apollo/client@3.7.14)(solid-js@1.7.5)
@@ -60,12 +61,6 @@ importers:
       graphql-ws:
         specifier: ^5.13.1
         version: 5.13.1(graphql@16.6.0)
-      html-parse-string:
-        specifier: ^0.0.9
-        version: 0.0.9
-      i18next:
-        specifier: ^22.5.0
-        version: 22.5.0
       jwt-decode:
         specifier: ^3.1.2
         version: 3.1.2
@@ -1550,6 +1545,7 @@ packages:
     engines: {node: '>=6.9.0'}
     dependencies:
       regenerator-runtime: 0.13.11
+    dev: true
 
   /@babel/template@7.21.9:
     resolution: {integrity: sha512-MK0X5k8NKOuWRamiEfc3KEJiHMTkGZNUjzMipqCGDDc6ijRl/B7RGSKVGncu4Ro/HdyzzY6cmoXuKI2Gffk7vQ==}
@@ -2577,21 +2573,6 @@ packages:
       '@jridgewell/resolve-uri': 3.1.0
       '@jridgewell/sourcemap-codec': 1.4.14
     dev: true
-
-  /@mbarzda/solid-i18next@1.2.2(html-parse-string@0.0.9)(i18next@22.5.0)(solid-js@1.7.5):
-    resolution: {integrity: sha512-qXXFcBKnR8F91yexj1WfYiwCW6Y39mWZt/g79FDbxEvQwxhxdIrGCLLY0+YLNdQVrQ0M6bNJ1v6yOE828mRvUA==}
-    peerDependencies:
-      html-parse-string: <=1.x
-      i18next: '>=22.x'
-      solid-js: '>=1.6.x'
-    peerDependenciesMeta:
-      html-parse-string:
-        optional: true
-    dependencies:
-      html-parse-string: 0.0.9
-      i18next: 22.5.0
-      solid-js: 1.7.5
-    dev: false
 
   /@merged/solid-apollo@1.7.1(@apollo/client@3.7.14)(solid-js@1.7.5):
     resolution: {integrity: sha512-tahQvobTBjPQJKvNOllABdCru05wy/DI0zSieFIRfwu5/b9H9IxkIEQGErkFbZN4pJrTSEJYeDj/bu0w07+0Zg==}
@@ -5476,10 +5457,6 @@ packages:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
     dev: true
 
-  /html-parse-string@0.0.9:
-    resolution: {integrity: sha512-wyGnsOolHbNrcb8N6bdJF4EHyzd3zVGCb9/mBxeNjAYBDOZqD7YkqLBz7kXtdgHwNnV8lN/BpSDpsI1zm8Sd8g==}
-    dev: false
-
   /http-proxy-agent@5.0.0:
     resolution: {integrity: sha512-n2hY8YdoRE1i7r6M0w9DIw5GgZN0G25P8zLCRQ8rjXtTU3vsNFBI/vWK/UIeE6g5MUUz6avwAPXmL6Fy9D/90w==}
     engines: {node: '>= 6'}
@@ -5530,12 +5507,6 @@ packages:
     resolution: {integrity: sha512-nZXjEF2nbo7lIw3mgYjItAfgQXog3OjJogSbKa2CQIIvSGWcKgeJnQlNXip6NglNzYH45nSRiEVimMvYL8DDqQ==}
     engines: {node: '>=14.18.0'}
     dev: true
-
-  /i18next@22.5.0:
-    resolution: {integrity: sha512-sqWuJFj+wJAKQP2qBQ+b7STzxZNUmnSxrehBCCj9vDOW9RDYPfqCaK1Hbh2frNYQuPziz6O2CGoJPwtzY3vAYA==}
-    dependencies:
-      '@babel/runtime': 7.22.0
-    dev: false
 
   /iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
@@ -6975,6 +6946,7 @@ packages:
 
   /regenerator-runtime@0.13.11:
     resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
+    dev: true
 
   /regenerator-transform@0.15.1:
     resolution: {integrity: sha512-knzmNAcuyxV+gQCufkYcvOqX/qIIfHLv0u5x79kRxuGojfYVky1f15TzZEu2Avte8QGepvUNTnLskf8E6X6Vyg==}

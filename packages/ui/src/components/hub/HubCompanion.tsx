@@ -1,4 +1,3 @@
-import { useTransContext } from "@mbarzda/solid-i18next";
 import { type Accessor, createSignal, onMount } from "solid-js";
 import {
   clamp,
@@ -11,6 +10,7 @@ import {
 import HubButton from "./HubButton";
 import styles from "./HubCompanion.module.scss";
 import { useHubPosition } from "~/contexts";
+import { useTrans } from "~/i18n";
 
 const acc = 1.2;
 const friction = 0.08;
@@ -184,7 +184,7 @@ export interface HubCompanionProps extends ThrowableInit {
 
 export default function HubCompanion({ hidden, ...props }: HubCompanionProps) {
   const { setEl, startDragging, containerDisplayed, resume } = motion(props);
-  const [t] = useTransContext();
+  const [t] = useTrans();
 
   onMount(resume);
 
@@ -195,7 +195,7 @@ export default function HubCompanion({ hidden, ...props }: HubCompanionProps) {
     >
       <HubButton
         ref={setEl}
-        title={t("nav.openHub")}
+        title={t().core.nav.openHub()}
         classList={{ [styles.hidden]: hidden() }}
         onMouseDown={startDragging}
         onTouchStart={startDragging}

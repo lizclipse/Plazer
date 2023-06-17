@@ -1,20 +1,20 @@
-import { Trans, useTransContext } from "@mbarzda/solid-i18next";
 import { createSignal, Show } from "solid-js";
 import { A } from "solid-start";
 import styles from "./Hub.module.scss";
 import HubButton from "./HubButton";
 import HubCompanion from "./HubCompanion";
 import { useAccount } from "~/contexts";
+import { Trans, useTrans } from "~/i18n";
 
 type State = "closed" | "opening" | "open" | "closing";
 
 function Actions() {
-  const [t] = useTransContext();
+  const [t] = useTrans();
 
   return (
     <>
       <button
-        title={t("nav.createPost")}
+        title={t().core.nav.createPost()}
         class={styles.createPost}
         onClick={() => console.log("create post")}
       >
@@ -25,14 +25,23 @@ function Actions() {
 }
 
 function NavButtons() {
-  const [t] = useTransContext();
+  const [t] = useTrans();
 
   return (
     <nav class={styles.navButtons}>
-      <A href="/" title={t("nav.home")} activeClass={styles.activeNav} end>
+      <A
+        href="/"
+        title={t().core.nav.home()}
+        activeClass={styles.activeNav}
+        end
+      >
         <span>🏡</span>
       </A>
-      <A href="/search" title={t("nav.search")} activeClass={styles.activeNav}>
+      <A
+        href="/search"
+        title={t().core.nav.search()}
+        activeClass={styles.activeNav}
+      >
         <span>🔍</span>
       </A>
     </nav>
@@ -47,15 +56,13 @@ function AnonLinks() {
         class={styles.navRegister}
         activeClass={styles.activeNav}
       >
-        <Trans key="nav.register">
-          <span aria-hidden>{""}</span>
-          <span class={styles.inner}>{""}</span>
+        <Trans>
+          {(t) => t.core.nav.register({ span: { class: styles.inner } })}
         </Trans>
       </A>
       <A href="/login" class={styles.navLogin} activeClass={styles.activeNav}>
-        <Trans key="nav.login">
-          <span aria-hidden>{""}</span>
-          <span class={styles.inner}>{""}</span>
+        <Trans>
+          {(t) => t.core.nav.login({ span: { class: styles.inner } })}
         </Trans>
       </A>
     </>
@@ -72,9 +79,8 @@ function AccountLinks({ close }: { readonly close: () => void }) {
         class={styles.navSettings}
         activeClass={styles.activeNav}
       >
-        <Trans key="nav.settings">
-          <span aria-hidden>{""}</span>
-          <span class={styles.inner}>{""}</span>
+        <Trans>
+          {(t) => t.core.nav.settings({ span: { class: styles.inner } })}
         </Trans>
       </A>
       <button
@@ -85,9 +91,8 @@ function AccountLinks({ close }: { readonly close: () => void }) {
           close();
         }}
       >
-        <Trans key="nav.logout">
-          <span aria-hidden>{""}</span>
-          <span class={styles.inner}>{""}</span>
+        <Trans>
+          {(t) => t.core.nav.logout({ span: { class: styles.inner } })}
         </Trans>
       </button>
     </>
@@ -97,7 +102,7 @@ function AccountLinks({ close }: { readonly close: () => void }) {
 export default function Hub() {
   const [dialog, setDialog] = createSignal<HTMLDialogElement>();
   const [state, setState] = createSignal<State>("closed");
-  const [t] = useTransContext();
+  const [t] = useTrans();
   const { account } = useAccount();
 
   const close = () => setState("closing");
@@ -121,7 +126,7 @@ export default function Hub() {
         onClick={close}
       >
         <HubButton
-          title={t("nav.closeHub")}
+          title={t().core.nav.closeHub()}
           class={styles.hubButton}
           onTransitionEnd={() => {
             switch (state()) {

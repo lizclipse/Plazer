@@ -1,24 +1,14 @@
-import { createInstance } from "i18next";
-import { isServer } from "solid-js/web";
-import enCore from "./en/core.json";
+import en_gb from "./en_gb";
+import { Trans as TransBase, useTrans as useTransBase } from "./trans";
 
-export const defaultNS = "core";
+export { TransProvider, type TransProviderProps } from "./trans";
 
-export const resources = {
-  "en-GB": {
-    core: enCore,
-  },
-} as const;
+export const baseTrans = en_gb;
+export type BaseTrans = typeof baseTrans;
 
-const i18next = createInstance();
+export const translations = {
+  "en-GB": en_gb,
+};
 
-await i18next.init({
-  lng: "en-GB",
-  fallbackLng: "en-GB",
-  debug: import.meta.env.DEV && !isServer,
-  defaultNS,
-  resources,
-  returnNull: false,
-});
-
-export { i18next };
+export const useTrans = useTransBase<BaseTrans>;
+export const Trans = TransBase<BaseTrans>;
