@@ -14,7 +14,6 @@ use async_graphql_axum::{GraphQLBatchRequest, GraphQLProtocol, GraphQLResponse, 
 use axum::{
     extract::{FromRef, State, WebSocketUpgrade},
     headers::{authorization::Bearer, Authorization},
-    response::IntoResponse,
     routing::{get, post},
     Router, Server, TypedHeader,
 };
@@ -221,7 +220,7 @@ async fn graphql_ws_handler(
     State(dec_key): State<DecodingKey>,
     protocol: GraphQLProtocol,
     upgrade: WebSocketUpgrade,
-) -> impl IntoResponse {
+) -> axum::response::Response {
     upgrade
         .protocols(ALL_WEBSOCKET_PROTOCOLS)
         .on_upgrade(move |stream| {
@@ -238,7 +237,7 @@ async fn graphql_ws_handler(
 
 #[cfg(feature = "graphiql")]
 #[instrument(skip_all)]
-async fn graphiql() -> impl IntoResponse {
+async fn graphiql() -> axum::response::Html<String> {
     axum::response::Html(
         GraphiQLSource::build()
             .endpoint("/api/graphql")
