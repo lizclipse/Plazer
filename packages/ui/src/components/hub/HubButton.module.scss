@@ -13,11 +13,10 @@
   left: var(--hub-button-x);
   top: var(--hub-button-y);
 
-  --hub-inner-colour: #ffebeb;
+  --hub-inner-colour: var(--colour-primary) 40%;
   --hub-outer-colour: #c9acac;
 
   @media (prefers-color-scheme: dark) {
-    --hub-inner-colour: #521515;
     --hub-outer-colour: #6b3d31;
   }
 
