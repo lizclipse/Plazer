@@ -38,10 +38,10 @@ impl AccountMigration {
         C: Connection,
     {
         q.query(formatdoc! {"
-            DEFINE INDEX account_handle_index
+            DEFINE INDEX account_user_id_index
             ON {tbl}
             FIELDS
-                handle UNIQUE
+                user_id UNIQUE
         ", tbl = TABLE_NAME})
     }
 }

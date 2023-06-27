@@ -21,7 +21,7 @@ export const GQL_ACCOUNT: TypedDocumentNode<AccountFieldsFragment, void> = gql`
   fragment AccountFields on AuthenticatedAccount {
     account {
       id
-      handle
+      userId
       revokedAt
     }
     accessToken
@@ -39,7 +39,7 @@ export interface AccountCtx {
 
 export interface AccessToken {
   exp: number;
-  hdl: string;
+  uid: string;
   iat: number;
   id: string;
   kind: "Access";

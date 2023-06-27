@@ -43,7 +43,7 @@ impl<'a> AccountPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn login(&self, creds: AuthCreds) -> Result<AuthenticatedAccount> {
-        let acc = match self.get_by_handle(&creds.handle).await? {
+        let acc = match self.get_by_user_id(&creds.user_id).await? {
             Some(acc) => acc,
             None => return Err(Error::CredentialsInvalid),
         };
@@ -80,13 +80,13 @@ impl<'a> AccountPersist<'a> {
     }
 
     #[instrument(skip_all)]
-    pub async fn get_by_handle(&self, handle: &str) -> Result<Option<Account>> {
+    pub async fn get_by_user_id(&self, user_id: &str) -> Result<Option<Account>> {
         let acc = self
             .persist
             .db()
-            .query("SELECT * FROM type::table($tbl) WHERE handle = $handle")
+            .query("SELECT * FROM type::table($tbl) WHERE user_id = $user_id")
             .bind(("tbl", TABLE_NAME))
-            .bind(("handle", handle))
+            .bind(("user_id", user_id))
             .await?
             .take(0)?;
         Ok(acc)
@@ -102,12 +102,12 @@ impl<'a> AccountPersist<'a> {
             .db()
             .query(indoc! {"
                 CREATE type::table($tbl) SET
-                    handle = $handle,
+                    user_id = $user_id,
                     pword_salt = $pword_salt,
                     pword_hash = $pword_hash
             "})
             .bind(("tbl", TABLE_NAME))
-            .bind(("handle", acc.handle))
+            .bind(("user_id", acc.user_id))
             .bind(("pword_salt", creds.salt.expose_secret()))
             .bind(("pword_hash", creds.hash.expose_secret()))
             .await?
@@ -148,7 +148,7 @@ mod tests {
         let account = data.account();
 
         let acc = CreateAccount {
-            handle: "test".into(),
+            user_id: "test".into(),
             pword: "test".to_owned().into(),
             invite: None,
         };
@@ -158,14 +158,14 @@ mod tests {
         assert!(res.is_ok());
 
         let res = res.unwrap();
-        assert_eq!(res.account.handle, "test");
+        assert_eq!(res.account.user_id, "test");
     }
 
     #[tokio::test]
     async fn test_get() {
         let data = TestData::new().await;
         let account = data.account();
-        let AccData { handle, acc, .. } = account.create_test_user().await;
+        let AccData { user_id, acc, .. } = account.create_test_user().await;
 
         let res = account.get(&acc.id_str()).await;
         println!("{res:?}");
@@ -175,16 +175,16 @@ mod tests {
         assert!(res.is_some());
 
         let res = res.unwrap();
-        assert_eq!(res.handle, handle);
+        assert_eq!(res.user_id, user_id);
     }
 
     #[tokio::test]
-    async fn test_get_handle() {
+    async fn test_get_user_id() {
         let data = TestData::new().await;
         let account = data.account();
-        let AccData { handle, acc, .. } = account.create_test_user().await;
+        let AccData { user_id, acc, .. } = account.create_test_user().await;
 
-        let res = account.get_by_handle(&handle).await;
+        let res = account.get_by_user_id(&user_id).await;
         println!("{res:?}");
         assert!(res.is_ok());
 
@@ -196,13 +196,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_duplicate_handle() {
+    async fn test_duplicate_user_id() {
         let data = TestData::new().await;
         let account = data.account();
-        let AccData { handle, .. } = account.create_test_user().await;
+        let AccData { user_id, .. } = account.create_test_user().await;
 
         let acc = CreateAccount {
-            handle,
+            user_id,
             pword: "test2".to_owned().into(),
             invite: None,
         };
@@ -219,11 +219,11 @@ mod tests {
     async fn test_login() {
         let data = TestData::new().await;
         let account = data.account();
-        let AccData { handle, pword, .. } = account.create_test_user().await;
+        let AccData { user_id, pword, .. } = account.create_test_user().await;
 
         let res = account
             .login(AuthCreds {
-                handle: handle.clone(),
+                user_id: user_id.clone(),
                 pword,
             })
             .await;
@@ -231,18 +231,18 @@ mod tests {
         assert!(res.is_ok());
 
         let res = res.unwrap();
-        assert_eq!(res.account.handle, handle);
+        assert_eq!(res.account.user_id, user_id);
     }
 
     #[tokio::test]
     async fn test_login_fail() {
         let data = TestData::new().await;
         let account = data.account();
-        let AccData { handle, .. } = account.create_test_user().await;
+        let AccData { user_id, .. } = account.create_test_user().await;
 
         let res = account
             .login(AuthCreds {
-                handle,
+                user_id,
                 pword: "bad password".to_owned().into(),
             })
             .await;
@@ -257,7 +257,7 @@ mod tests {
     async fn test_refresh() {
         let data = TestData::new().await;
         let account = data.account();
-        let AccData { handle, acc, .. } = account.create_test_user().await;
+        let AccData { user_id, acc, .. } = account.create_test_user().await;
         let refresh_token = create_refresh_token(acc.id_str().into(), &data.jwt_enc_key).unwrap();
 
         let res = account.refresh(refresh_token).await;
@@ -266,7 +266,7 @@ mod tests {
 
         let res = res.unwrap();
         assert_eq!(res.account.id, acc.id);
-        assert_eq!(res.account.handle, handle);
+        assert_eq!(res.account.user_id, user_id);
     }
 
     #[tokio::test]
@@ -338,7 +338,7 @@ mod testing {
     }
 
     pub struct AccData {
-        pub handle: String,
+        pub user_id: String,
         pub pword: SecretString,
         pub acc: Account,
     }
@@ -360,7 +360,7 @@ mod testing {
             let account = data.account();
             let acc = account.create_test_user().await;
             data.current = CurrentAccount::new(
-                PartialAccount::new(acc.acc.id_str().into(), acc.handle.clone()),
+                PartialAccount::new(acc.acc.id_str().into(), acc.user_id.clone()),
                 Utc::now() + Duration::minutes(30),
             );
             (data, acc)
@@ -373,21 +373,21 @@ mod testing {
 
     impl AccountPersist<'_> {
         pub async fn create_test_user(&self) -> AccData {
-            let mut handle = [0u8; 16];
-            self.csrng.fill(&mut handle).unwrap();
-            let handle = BASE64_STANDARD_NO_PAD.encode(handle);
+            let mut user_id = [0u8; 16];
+            self.csrng.fill(&mut user_id).unwrap();
+            let user_id = BASE64_STANDARD_NO_PAD.encode(user_id);
             let mut pword = [0u8; 16];
             self.csrng.fill(&mut pword).unwrap();
             let pword = BASE64_STANDARD_NO_PAD.encode(pword);
 
             let acc = CreateAccount {
-                handle: handle.clone(),
+                user_id: user_id.clone(),
                 pword: pword.clone().into(),
                 invite: None,
             };
 
             AccData {
-                handle,
+                user_id,
                 pword: pword.into(),
                 acc: self.create(acc).await.unwrap().account,
             }

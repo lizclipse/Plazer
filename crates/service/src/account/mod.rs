@@ -24,12 +24,12 @@ static TABLE_NAME: &str = "account";
 pub struct Account {
     #[graphql(skip)]
     id: Thing,
-    /// The account's unique handle. This is used to create default names for
+    /// The account's unique user ID. This is used to create default names for
     /// resources and for logging in.
     ///
     /// It can be changed, but this will not change the name of any resources
-    /// that were created with the old handle.
-    handle: String,
+    /// that were created with the old user ID.
+    user_id: String,
     /// A timestamp indicating the last time the user revoked all of their
     /// tokens.
     ///
@@ -77,7 +77,7 @@ impl AuthenticatedAccount {
         create_access_token(
             &PartialAccount::new(
                 self.account.id.id.clone().into(),
-                self.account.handle.clone(),
+                self.account.user_id.clone(),
             ),
             ctx.data_unchecked::<EncodingKey>(),
         )
@@ -94,10 +94,10 @@ impl From<Account> for AuthenticatedAccount {
 /// The information needed to create a new account.
 #[derive(InputObject, Debug)]
 pub struct CreateAccount {
-    /// The account's unique handle. This is used to create default names for
+    /// The account's unique user ID. This is used to create default names for
     /// resources and for logging in.
     #[graphql(validator(min_length = 1, max_length = 64))]
-    handle: String,
+    user_id: String,
     /// The account's password.
     #[graphql(validator(min_length = 8, max_length = 1024), secret)]
     pword: SecretString,
@@ -111,9 +111,9 @@ pub struct CreateAccount {
 /// The information needed to authenticate an account.
 #[derive(InputObject, Debug)]
 pub struct AuthCreds {
-    /// The handle of the account to authenticate.
+    /// The user ID of the account to authenticate.
     #[graphql(validator(min_length = 1, max_length = 64))]
-    handle: String,
+    user_id: String,
     /// The account's password.
     #[graphql(validator(min_length = 8, max_length = 1024), secret)]
     pword: SecretString,
@@ -165,8 +165,8 @@ mod private {
 
         // TODO: remove this when it's used outside of tests
         #[cfg(test)]
-        pub fn handle(&self) -> Result<&str> {
-            self.account().map(|acc| acc.hdl.as_str())
+        pub fn user_id(&self) -> Result<&str> {
+            self.account().map(|acc| acc.uid.as_str())
         }
     }
 
@@ -174,20 +174,20 @@ mod private {
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct PartialAccount {
         id: ID,
-        hdl: String,
+        uid: String,
     }
 
     impl PartialAccount {
-        pub fn new(id: ID, hdl: String) -> Self {
-            Self { id, hdl }
+        pub fn new(id: ID, uid: String) -> Self {
+            Self { id, uid }
         }
 
         pub fn id(&self) -> &ID {
             &self.id
         }
 
-        pub fn handle(&self) -> &str {
-            self.hdl.as_str()
+        pub fn user_id(&self) -> &str {
+            self.uid.as_str()
         }
     }
 
@@ -221,7 +221,7 @@ mod tests {
 
         assert!(current.account().is_ok());
         assert_eq!(current.id().unwrap(), acc.id());
-        assert_eq!(current.handle().unwrap(), acc.handle());
+        assert_eq!(current.user_id().unwrap(), acc.user_id());
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
 
         assert!(current.account().is_err());
         assert!(current.id().is_err());
-        assert!(current.handle().is_err());
+        assert!(current.user_id().is_err());
     }
 
     #[test]
@@ -245,18 +245,18 @@ mod tests {
 
         assert!(current.account().is_err());
         assert!(current.id().is_err());
-        assert!(current.handle().is_err());
+        assert!(current.user_id().is_err());
     }
 
     #[test]
     fn partial_account() {
         let id: ID = "test".to_owned().into();
-        let hdl = "test".to_owned();
-        let acc = PartialAccount::new(id.clone(), hdl.clone());
+        let uid = "test".to_owned();
+        let acc = PartialAccount::new(id.clone(), uid.clone());
 
-        println!("{id:?}\n{hdl:?}\n{acc:?}");
+        println!("{id:?}\n{uid:?}\n{acc:?}");
 
         assert_eq!(acc.id(), &id);
-        assert_eq!(acc.handle(), hdl.as_str());
+        assert_eq!(acc.user_id(), uid.as_str());
     }
 }

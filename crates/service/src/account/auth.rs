@@ -283,7 +283,7 @@ mod tests {
     fn test_access_token_valid() {
         let (enc_key, dec_key) = generate_keys();
 
-        let acc = PartialAccount::new("id".into(), "handle".into());
+        let acc = PartialAccount::new("id".into(), "user_id".into());
         let token = create_access_token(&acc, &enc_key).unwrap();
 
         for inp in [
@@ -297,8 +297,8 @@ mod tests {
             let auth = auth.unwrap();
             assert_eq!(auth.id().expect("current account to have ID"), acc.id());
             assert_eq!(
-                auth.handle().expect("current account to have handle"),
-                acc.handle()
+                auth.user_id().expect("current account to have user_id"),
+                acc.user_id()
             );
         }
     }
@@ -315,7 +315,7 @@ mod tests {
         assert_eq!(auth.unwrap_err(), Error::JwtMalformed);
 
         // Invalid signature
-        let acc = PartialAccount::new("id".into(), "handle".into());
+        let acc = PartialAccount::new("id".into(), "user_id".into());
 
         let token = create_access_token(&acc, &enc_key_a).unwrap();
         let auth = authenticate(json!({ "token": token }), &dec_key_b);
@@ -396,7 +396,7 @@ mod tests {
         assert_eq!(auth.unwrap_err(), Error::JwtExpired);
 
         // Access token
-        let acc = PartialAccount::new("id".into(), "handle".into());
+        let acc = PartialAccount::new("id".into(), "user_id".into());
         let token = create_access_token(&acc, &enc_key_b).unwrap();
         let auth = verify_refresh_token(&token, &dec_key_b);
         println!("{auth:?}");

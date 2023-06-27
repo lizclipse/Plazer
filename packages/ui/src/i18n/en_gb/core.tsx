@@ -42,7 +42,7 @@ export default {
     Unauthenticated: () => "You are not logged in",
     Unauthorized: () => "You are not authorised to do this",
     CredentialsInvalid: () => "Invalid login credentials",
-    UnavailableIdent: () => "This handle is unavailable",
+    UnavailableIdent: () => "This username is unavailable",
     JwtMalformed: () => "The given JWT is malformed",
     JwtExpired: () => "The given JWT has expired",
     JwtInvalid: () => "The given JWT is invalid",
@@ -55,7 +55,7 @@ export default {
     NotImplemented: () => "This feature is not implemented",
   },
   account: {
-    handle: () => "Handle",
+    userId: () => "Username",
     password: () => "Password",
     createTitle: () => "Create a new account",
     createSubmit: () => "Create Account",

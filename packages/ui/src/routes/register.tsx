@@ -23,7 +23,7 @@ const GQL: TypedDocumentNode<
 `;
 
 const inputs = {
-  handle: "handle",
+  userId: "userId",
   pword: "password",
 } as const;
 export default function Register() {
@@ -32,7 +32,7 @@ export default function Register() {
 
   const [create, { Form }] = createRouteAction(async (form: FormData) => {
     const account = {
-      handle: form.get(inputs.handle) as string,
+      userId: form.get(inputs.userId) as string,
       pword: form.get(inputs.pword) as string,
     };
 
@@ -47,12 +47,12 @@ export default function Register() {
         <Trans>{(t) => t.core.account.createTitle()}</Trans>
       </h1>
       <Form>
-        <label for={inputs.handle}>
-          <Trans>{(t) => t.core.account.handle()}</Trans>
+        <label for={inputs.userId}>
+          <Trans>{(t) => t.core.account.userId()}</Trans>
         </label>
         <input
-          id={inputs.handle}
-          name={inputs.handle}
+          id={inputs.userId}
+          name={inputs.userId}
           autoCapitalize="off"
           spellcheck={false}
           autocorrect="off"

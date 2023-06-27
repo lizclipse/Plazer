@@ -17,7 +17,7 @@ const GQL: TypedDocumentNode<LoginMutation, LoginMutationVariables> = gql`
 `;
 
 const inputs = {
-  handle: "handle",
+  userId: "userId",
   pword: "password",
 } as const;
 export default function Login() {
@@ -26,7 +26,7 @@ export default function Login() {
 
   const [create, { Form }] = createRouteAction(async (form: FormData) => {
     const creds = {
-      handle: form.get(inputs.handle) as string,
+      userId: form.get(inputs.userId) as string,
       pword: form.get(inputs.pword) as string,
     };
 
@@ -41,12 +41,12 @@ export default function Login() {
         <Trans>{(t) => t.core.account.loginTitle()}</Trans>
       </h1>
       <Form>
-        <label for={inputs.handle}>
-          <Trans>{(t) => t.core.account.handle()}</Trans>
+        <label for={inputs.userId}>
+          <Trans>{(t) => t.core.account.userId()}</Trans>
         </label>
         <input
-          id={inputs.handle}
-          name={inputs.handle}
+          id={inputs.userId}
+          name={inputs.userId}
           autoCapitalize="off"
           spellcheck={false}
           autocorrect="off"
