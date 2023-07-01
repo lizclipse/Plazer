@@ -1,7 +1,7 @@
 {
   "name": "tsconfig",
   "dependencies": {
-    "@tsconfig/esm": "^1.0.3",
+    "@tsconfig/esm": "^1.0.4",
     "@tsconfig/strictest": "^2.0.1"
   }
 }
