@@ -1,4 +1,6 @@
 mod account;
+mod board;
+mod conv;
 mod error;
 mod migration;
 mod persist;
@@ -174,7 +176,7 @@ pub enum ServeError {
     ServeError(#[from] hyper::Error),
     #[error("Failed to initialise database: {0}")]
     PersistError(#[from] surrealdb::Error),
-    #[error("Failed to initialise cryptography: {0}")]
+    #[error("Failed to initialise cryptography")]
     CryptoError(#[from] ring::error::Unspecified),
 }
 

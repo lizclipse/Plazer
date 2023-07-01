@@ -8,6 +8,7 @@ use tracing::{error, instrument};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
+    board::BoardPersist,
     DecodingKey,
 };
 
@@ -40,7 +41,9 @@ cfg_if! {
 }
 
 pub trait PersistExt {
+    fn current_account(&self) -> &CurrentAccount;
     fn account_persist(&self) -> AccountPersist;
+    fn board_persist(&self) -> BoardPersist;
 }
 
 pub struct Persist(DbLayer);
@@ -103,14 +106,22 @@ impl Persist {
 }
 
 impl PersistExt for Context<'_> {
+    fn current_account(&self) -> &CurrentAccount {
+        self.data_opt::<CurrentAccount>()
+            .unwrap_or_else(|| self.data_unchecked::<Arc<CurrentAccount>>())
+    }
+
     fn account_persist(&self) -> AccountPersist {
         AccountPersist::new(
             self.data_unchecked::<Persist>(),
-            self.data_opt::<CurrentAccount>()
-                .unwrap_or_else(|| self.data_unchecked::<Arc<CurrentAccount>>()),
+            self.current_account(),
             self.data_unchecked::<SystemRandom>(),
             self.data_unchecked::<DecodingKey>(),
         )
+    }
+
+    fn board_persist(&self) -> BoardPersist {
+        BoardPersist::new(self.data_unchecked::<Persist>(), self.current_account())
     }
 }
 

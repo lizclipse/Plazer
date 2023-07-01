@@ -7,7 +7,7 @@ use surrealdb::{method::Query, Connection};
 use tokio::time::sleep;
 use tracing::{debug, instrument, trace};
 
-use crate::{account::AccountMigration, persist::Persist};
+use crate::{account::AccountMigration, board::BoardMigration, persist::Persist};
 
 pub trait Migration: Sized + Default + Serialize + DeserializeOwned + Debug + Send + Sync {
     const SUBSYSTEM: &'static str;
@@ -35,6 +35,7 @@ impl Migrations<'_> {
         let migrations = Migrations { persist };
 
         migrations.iterate::<AccountMigration>().await?;
+        migrations.iterate::<BoardMigration>().await?;
 
         Ok(())
     }

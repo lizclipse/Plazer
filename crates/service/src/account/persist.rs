@@ -138,7 +138,10 @@ impl<'a> AccountPersist<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::account::create_refresh_token;
+    use crate::{
+        account::create_refresh_token,
+        conv::{IntoGqlId as _, ToGqlId as _},
+    };
 
     use super::{testing::*, *};
 
@@ -167,7 +170,7 @@ mod tests {
         let account = data.account();
         let AccData { user_id, acc, .. } = account.create_test_user().await;
 
-        let res = account.get(&acc.id_str()).await;
+        let res = account.get(&acc.id.into_gql_id()).await;
         println!("{res:?}");
         assert!(res.is_ok());
 
@@ -258,7 +261,7 @@ mod tests {
         let data = TestData::new().await;
         let account = data.account();
         let AccData { user_id, acc, .. } = account.create_test_user().await;
-        let refresh_token = create_refresh_token(acc.id_str().into(), &data.jwt_enc_key).unwrap();
+        let refresh_token = create_refresh_token(acc.id.to_gql_id(), &data.jwt_enc_key).unwrap();
 
         let res = account.refresh(refresh_token).await;
         println!("{res:?}");
@@ -286,7 +289,7 @@ mod tests {
     async fn test_revoke_tokens() {
         let (data, AccData { acc, .. }) = TestData::with_user().await;
         let account = data.account();
-        let refresh_token = create_refresh_token(acc.id_str().into(), &data.jwt_enc_key).unwrap();
+        let refresh_token = create_refresh_token(acc.id.into_gql_id(), &data.jwt_enc_key).unwrap();
 
         let res = account.revoke_tokens().await;
         println!("{res:?}");
@@ -320,10 +323,10 @@ mod testing {
     use chrono::Duration;
     use ring::rand::SecureRandom as _;
     use secrecy::SecretString;
-    use surrealdb::sql::Id;
 
     use crate::{
         account::{testing::generate_keys, PartialAccount},
+        conv::ToGqlId as _,
         persist::testing::persist,
     };
 
@@ -360,7 +363,7 @@ mod testing {
             let account = data.account();
             let acc = account.create_test_user().await;
             data.current = CurrentAccount::new(
-                PartialAccount::new(acc.acc.id_str().into(), acc.user_id.clone()),
+                PartialAccount::new(acc.acc.id.to_gql_id(), acc.user_id.clone()),
                 Utc::now() + Duration::minutes(30),
             );
             (data, acc)
@@ -390,15 +393,6 @@ mod testing {
                 user_id,
                 pword: pword.into(),
                 acc: self.create(acc).await.unwrap().account,
-            }
-        }
-    }
-
-    impl Account {
-        pub fn id_str(&self) -> String {
-            match &self.id.id {
-                Id::String(id) => id.clone(),
-                _ => panic!("unexpected id type"),
             }
         }
     }

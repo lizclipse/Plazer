@@ -3,6 +3,7 @@ use axum::Json;
 use base64::DecodeError as Base64DecodeError;
 use hyper::StatusCode;
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
+use name_variant::NamedVariant;
 use serde::{Deserialize, Serialize};
 use surrealdb::{error::Db as SrlDbError, Error as SrlError};
 use thiserror::Error;
@@ -12,7 +13,7 @@ use typeshare::typeshare;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[typeshare]
-#[derive(Debug, Clone, Error, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Error, PartialEq, Eq, Serialize, Deserialize, NamedVariant)]
 #[serde(tag = "code", content = "message")]
 pub enum Error {
     #[error("Unauthenticated")]
@@ -24,6 +25,8 @@ pub enum Error {
 
     #[error("This identifier is already in use")]
     UnavailableIdent,
+    #[error("Missing identifier")]
+    MissingIdent,
 
     #[error("JWT is malformed")]
     JwtMalformed,
@@ -54,11 +57,7 @@ impl Error {
     }
 
     pub fn code(&self) -> String {
-        match self {
-            Self::ServerMisconfigured(_) => "ServerMisconfigured".into(),
-            Self::InternalServerError(_) => "InternalServerError".into(),
-            _ => format!("{:?}", self),
-        }
+        self.variant_name().into()
     }
 
     fn log(&self) {
@@ -154,26 +153,33 @@ pub struct ErrorData {
 
 pub type ErrorResponse = (StatusCode, Json<ErrorData>);
 
-impl From<Error> for ErrorResponse {
-    fn from(err: Error) -> Self {
-        // This is the last point before the error is sent back to the client, so
-        // log the important ones here.
-        err.log();
-
-        let code = match err {
+impl Error {
+    fn as_status_code(&self) -> StatusCode {
+        match self {
             Error::Unauthenticated
             | Error::CredentialsInvalid
             | Error::JwtExpired
             | Error::JwtInvalid => StatusCode::UNAUTHORIZED,
             Error::Unauthorized => StatusCode::FORBIDDEN,
             Error::UnavailableIdent => StatusCode::CONFLICT,
-            Error::JwtMalformed | Error::WsInitNotObject | Error::WsInitTokenNotString => {
-                StatusCode::BAD_REQUEST
-            }
+            Error::MissingIdent
+            | Error::JwtMalformed
+            | Error::WsInitNotObject
+            | Error::WsInitTokenNotString => StatusCode::BAD_REQUEST,
             Error::ServerMisconfigured(_)
             | Error::InternalServerError(_)
             | Error::NotImplemented => StatusCode::INTERNAL_SERVER_ERROR,
-        };
+        }
+    }
+}
+
+impl From<Error> for ErrorResponse {
+    fn from(err: Error) -> Self {
+        // This is the last point before the error is sent back to the client, so
+        // log the important ones here.
+        err.log();
+
+        let code = err.as_status_code();
         let data = ErrorData {
             code: err.code(),
             message: err.to_string(),

@@ -15,6 +15,9 @@ use chrono::{DateTime, Utc};
 use secrecy::SecretString;
 use serde::Deserialize;
 use surrealdb::sql::Thing;
+use tracing::instrument;
+
+use crate::{conv::ToGqlId as _, EncodingKey};
 
 static TABLE_NAME: &str = "account";
 
@@ -46,8 +49,10 @@ pub struct Account {
 #[ComplexObject]
 impl Account {
     /// The account's unique ID.
+    ///
+    /// This cannot change, and can be safely used to refer to the account permanently.
     async fn id(&self) -> ID {
-        self.id.id.to_owned().into()
+        self.id.to_gql_id()
     }
 }
 
@@ -65,7 +70,7 @@ impl AuthenticatedAccount {
     #[instrument(skip_all)]
     async fn refresh_token(&self, ctx: &Context<'_>) -> GqlResult<String> {
         create_refresh_token(
-            self.account.id.id.clone().into(),
+            self.account.id.to_gql_id(),
             ctx.data_unchecked::<EncodingKey>(),
         )
         .extend()
@@ -75,10 +80,7 @@ impl AuthenticatedAccount {
     #[instrument(skip_all)]
     async fn access_token(&self, ctx: &Context<'_>) -> GqlResult<String> {
         create_access_token(
-            &PartialAccount::new(
-                self.account.id.id.clone().into(),
-                self.account.user_id.clone(),
-            ),
+            &PartialAccount::new(self.account.id.to_gql_id(), self.account.user_id.clone()),
             ctx.data_unchecked::<EncodingKey>(),
         )
         .extend()
@@ -96,7 +98,7 @@ impl From<Account> for AuthenticatedAccount {
 pub struct CreateAccount {
     /// The account's unique user ID. This is used to create default names for
     /// resources and for logging in.
-    #[graphql(validator(min_length = 1, max_length = 64))]
+    #[graphql(validator(min_length = 1, max_length = 128))]
     user_id: String,
     /// The account's password.
     #[graphql(validator(min_length = 8, max_length = 1024), secret)]
@@ -120,9 +122,6 @@ pub struct AuthCreds {
 }
 
 pub use private::{CurrentAccount, PartialAccount};
-use tracing::instrument;
-
-use crate::EncodingKey;
 // Keep important authentication types in a private module to avoid leaking
 // the internal fields.
 mod private {
@@ -163,8 +162,6 @@ mod private {
             self.account().map(|acc| &acc.id)
         }
 
-        // TODO: remove this when it's used outside of tests
-        #[cfg(test)]
         pub fn user_id(&self) -> Result<&str> {
             self.account().map(|acc| acc.uid.as_str())
         }

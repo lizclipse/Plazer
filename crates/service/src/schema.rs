@@ -1,12 +1,15 @@
 use async_graphql::{EmptySubscription, MergedObject, Schema, SchemaBuilder};
 
-use crate::account::{AccountMutation, AccountQuery};
+use crate::{
+    account::{AccountMutation, AccountQuery},
+    board::{BoardMutation, BoardQuery},
+};
 
 #[derive(MergedObject, Default)]
-pub struct Query(AccountQuery);
+pub struct Query(AccountQuery, BoardQuery);
 
 #[derive(MergedObject, Default)]
-pub struct Mutation(AccountMutation);
+pub struct Mutation(AccountMutation, BoardMutation);
 
 pub type ServiceSchema = Schema<Query, Mutation, EmptySubscription>;
 

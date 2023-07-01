@@ -23,6 +23,7 @@ hyper = "0.14.27"
 indoc = "2.0.1"
 jsonwebtoken = "8.3.0"
 log = "0.4.19"
+name-variant = "0.1.0"
 nanorand = { version = "0.7.0", default-features = false, features = [
     "wyrand",
     "std",
