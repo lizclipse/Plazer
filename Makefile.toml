@@ -1,6 +1,13 @@
 [tasks.default]
 clear = true
-dependencies = ["install", "lint-check", "test", "build"]
+dependencies = [
+    "install",
+    "build-cli",
+    "codegen",
+    "build-ui",
+    "test",
+    "lint-check",
+]
 
 [tasks.install]
 dependencies = ["install-ui"]
