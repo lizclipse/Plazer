@@ -43,6 +43,7 @@ export default {
     Unauthorized: () => "You are not authorised to do this",
     CredentialsInvalid: () => "Invalid login credentials",
     UnavailableIdent: () => "This username is unavailable",
+    MissingIdent: () => "Handle cannot be empty",
     JwtMalformed: () => "The given JWT is malformed",
     JwtExpired: () => "The given JWT has expired",
     JwtInvalid: () => "The given JWT is invalid",
