@@ -1,6 +1,13 @@
 [tasks.default]
 clear = true
-dependencies = ["lint-check", "test", "build"]
+dependencies = ["install", "lint-check", "test", "build"]
+
+[tasks.install]
+dependencies = ["install-ui"]
+
+[tasks.install-ui]
+command = "pnpm"
+args = ["install"]
 
 [tasks.build-cli]
 command = "cargo"
