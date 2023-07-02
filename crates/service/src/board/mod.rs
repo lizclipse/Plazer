@@ -20,22 +20,22 @@ static TABLE_NAME: &str = "board";
 #[graphql(complex)]
 pub struct Board {
     #[graphql(skip)]
-    id: Thing,
+    pub id: Thing,
     #[graphql(skip)]
-    creator_id: Option<Thing>,
+    pub creator_id: Option<Thing>,
 
     /// The board's unique handle. This is used to refer to the board in URLs
     /// and by users. It must be unique, but can be changed (if the server allows it).
-    handle: String,
+    pub handle: String,
     /// The board's display name. If not present, the handle is (usually) used instead.
-    name: Option<String>,
+    pub name: Option<String>,
     /// The board's description.
-    description: Option<String>,
+    pub description: Option<String>,
 
     /// A timestamp indicating when the board was created.
-    created_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
     /// A timestamp indicating the last time the board was updated.
-    updated_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[ComplexObject]

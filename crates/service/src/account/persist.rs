@@ -157,10 +157,12 @@ impl AccountPersist<'_> {
             invite: None,
         };
 
+        let acc = self.create(acc).await.unwrap().account;
         super::testing::AccData {
+            id: acc.id.clone(),
             user_id,
             pword: pword.into(),
-            acc: self.create(acc).await.unwrap().account,
+            acc,
         }
     }
 }

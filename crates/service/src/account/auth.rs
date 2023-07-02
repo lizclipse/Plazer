@@ -413,6 +413,7 @@ pub mod testing {
         signature::{self, KeyPair as _},
     };
     use secrecy::SecretString;
+    use surrealdb::sql::Thing;
 
     use crate::account::{Account, AccountPersist, CurrentAccount};
     use crate::persist::Persist;
@@ -437,6 +438,7 @@ pub mod testing {
     }
 
     pub struct AccData {
+        pub id: Thing,
         pub user_id: String,
         pub pword: SecretString,
         pub acc: Account,

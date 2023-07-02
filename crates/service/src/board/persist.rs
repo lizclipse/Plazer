@@ -2,7 +2,7 @@ use indoc::indoc;
 use tracing::instrument;
 
 use crate::{
-    account::CurrentAccount,
+    account::{CurrentAccount, ToAccountThing as _},
     error::{Error, Result},
     persist::Persist,
 };
@@ -65,7 +65,10 @@ impl<'a> BoardPersist<'a> {
                     updated_at = time::now()
             "})
             .bind(("tbl", TABLE_NAME))
-            .bind(("creator_id", self.current.user_id().ok()))
+            .bind((
+                "creator_id",
+                self.current.id().map(|id| id.to_account_thing()).ok(),
+            ))
             .bind(("handle", handle))
             .bind(("name", board.name))
             .bind(("description", board.description))
@@ -168,6 +171,47 @@ mod tests {
         let res = res.unwrap_err();
         println!("{res:?}");
         assert_eq!(res, Error::UnavailableIdent);
+    }
+
+    #[tokio::test]
+    async fn test_anon_create_default_fail() {
+        let data = TestData::new().await;
+        let board_persist = data.board();
+
+        let board = CreateBoard {
+            handle: None,
+            name: Some("Test".into()),
+            description: Some("Test".into()),
+        };
+
+        let res = board_persist.create(board).await;
+        println!("{res:?}");
+        assert!(res.is_err());
+
+        let res = res.unwrap_err();
+        println!("{res:?}");
+        assert_eq!(res, Error::MissingIdent);
+    }
+
+    #[tokio::test]
+    async fn test_authed_create_default() {
+        let (data, acc) = TestData::with_user().await;
+        let board_persist = data.board();
+
+        let board = CreateBoard {
+            handle: None,
+            name: Some("Test".into()),
+            description: Some("Test".into()),
+        };
+
+        let res = board_persist.create(board).await;
+        println!("{res:?}");
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        println!("{res:?}");
+        assert_eq!(res.handle, acc.user_id);
+        assert_eq!(res.creator_id, Some(acc.id));
     }
 }
 

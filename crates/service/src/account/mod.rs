@@ -21,24 +21,34 @@ use crate::{conv::ToGqlId as _, EncodingKey};
 
 static TABLE_NAME: &str = "account";
 
+pub trait ToAccountThing {
+    fn to_account_thing(&self) -> Thing;
+}
+
+impl ToAccountThing for ID {
+    fn to_account_thing(&self) -> Thing {
+        (TABLE_NAME.to_owned(), self.0.clone()).into()
+    }
+}
+
 /// A registered account.
 #[derive(SimpleObject, Debug, Deserialize)]
 #[graphql(complex)]
 pub struct Account {
     #[graphql(skip)]
-    id: Thing,
+    pub id: Thing,
     /// The account's unique user ID. This is used to create default names for
     /// resources and for logging in.
     ///
     /// It can be changed, but this will not change the name of any resources
     /// that were created with the old user ID.
-    user_id: String,
+    pub user_id: String,
     /// A timestamp indicating the last time the user revoked all of their
     /// tokens.
     ///
     /// This is used to invalidate all tokens that were issued before the
     /// revocation.
-    revoked_at: Option<DateTime<Utc>>,
+    pub revoked_at: Option<DateTime<Utc>>,
 
     #[graphql(skip)]
     pword_salt: SecretString,
@@ -61,7 +71,7 @@ impl Account {
 #[graphql(complex)]
 pub struct AuthenticatedAccount {
     /// The account that has been authenticated.
-    account: Account,
+    pub account: Account,
 }
 
 #[ComplexObject]
