@@ -1,11 +1,7 @@
 use indoc::indoc;
 use tracing::instrument;
 
-use crate::{
-    account::{CurrentAccount, ToAccountThing as _},
-    error::{Error, Result},
-    persist::Persist,
-};
+use crate::{account::CurrentAccount, persist::Persist, prelude::*};
 
 use super::{Board, CreateBoard, TABLE_NAME};
 

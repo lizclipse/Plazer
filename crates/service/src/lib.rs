@@ -4,7 +4,9 @@ mod conv;
 mod error;
 mod migration;
 mod persist;
+mod prelude;
 mod schema;
+mod types;
 
 use std::{io, net::SocketAddr, path::Path, sync::Arc};
 

@@ -1,11 +1,12 @@
 use async_graphql::ErrorExtensions;
+pub use async_graphql::{Error as GqlError, Result as GqlResult};
 use axum::Json;
 use base64::DecodeError as Base64DecodeError;
 use hyper::StatusCode;
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
 use name_variant::NamedVariant;
 use serde::{Deserialize, Serialize};
-use surrealdb::{error::Db as SrlDbError, Error as SrlError};
+pub use surrealdb::{error::Db as SrlDbError, Error as SrlError};
 use thiserror::Error;
 use tracing::error;
 use typeshare::typeshare;
@@ -89,12 +90,12 @@ impl From<&str> for Error {
 }
 
 impl ErrorExtensions for Error {
-    fn extend(&self) -> async_graphql::Error {
+    fn extend(&self) -> GqlError {
         // Since this is the end for our errors before they are sent to the client,
         // we should log important ones here.
         self.log();
 
-        async_graphql::Error::new(self.to_string()).extend_with(|_, e| {
+        GqlError::new(self.to_string()).extend_with(|_, e| {
             e.set("code", self.code());
         })
     }

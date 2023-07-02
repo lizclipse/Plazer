@@ -1,7 +1,7 @@
-use async_graphql::{Context, Object, Result, ResultExt};
+use async_graphql::{Context, Object};
 use tracing::instrument;
 
-use crate::persist::PersistExt;
+use crate::prelude::*;
 
 use super::{Board, CreateBoard};
 
@@ -12,7 +12,7 @@ pub struct BoardQuery;
 impl BoardQuery {
     /// Gets a board by its handle.
     #[instrument(skip_all)]
-    async fn get_board(&self, ctx: &Context<'_>, handle: String) -> Result<Option<Board>> {
+    async fn board(&self, ctx: &Context<'_>, handle: String) -> GqlResult<Option<Board>> {
         ctx.board_persist().get_by_handle(&handle).await.extend()
     }
 }
@@ -24,7 +24,7 @@ pub struct BoardMutation;
 impl BoardMutation {
     /// Creates a new board.
     #[instrument(skip_all)]
-    async fn create_board(&self, ctx: &Context<'_>, create: CreateBoard) -> Result<Board> {
+    async fn create_board(&self, ctx: &Context<'_>, create: CreateBoard) -> GqlResult<Board> {
         ctx.board_persist().create(create).await.extend()
     }
 }

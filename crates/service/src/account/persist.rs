@@ -13,10 +13,7 @@ use super::{
     create_creds, verify_creds, verify_refresh_token, Account, AuthCreds, AuthenticatedAccount,
     CreateAccount, CurrentAccount, TABLE_NAME,
 };
-use crate::{
-    error::{Error, Result},
-    persist::Persist,
-};
+use crate::{persist::Persist, prelude::*};
 
 pub struct AccountPersist<'a> {
     persist: &'a Persist,
@@ -169,10 +166,7 @@ impl AccountPersist<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        account::{create_refresh_token, testing::*},
-        conv::{IntoGqlId as _, ToGqlId as _},
-    };
+    use crate::account::{create_refresh_token, testing::*};
 
     use super::*;
 

@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use surrealdb::sql::Thing;
 
-use crate::conv::ToGqlId as _;
+use crate::prelude::*;
 
 static TABLE_NAME: &str = "board";
 

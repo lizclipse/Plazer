@@ -16,7 +16,7 @@ use secrecy::{ExposeSecret as _, SecretString};
 use serde::{Deserialize, Serialize};
 
 use super::{CurrentAccount, PartialAccount};
-use crate::error::{Error, Result};
+use crate::prelude::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct JwtClaims {
