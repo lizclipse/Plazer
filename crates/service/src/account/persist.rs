@@ -1,3 +1,8 @@
+#[cfg(test)]
+use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine as _};
+#[cfg(test)]
+use ring::rand::SecureRandom as _;
+
 use chrono::{DateTime, Utc};
 use indoc::indoc;
 use ring::rand::SystemRandom;
@@ -137,18 +142,42 @@ impl<'a> AccountPersist<'a> {
 }
 
 #[cfg(test)]
+impl AccountPersist<'_> {
+    pub async fn create_test_user(&self) -> super::testing::AccData {
+        let mut user_id = [0u8; 16];
+        self.csrng.fill(&mut user_id).unwrap();
+        let user_id = BASE64_STANDARD_NO_PAD.encode(user_id);
+        let mut pword = [0u8; 16];
+        self.csrng.fill(&mut pword).unwrap();
+        let pword = BASE64_STANDARD_NO_PAD.encode(pword);
+
+        let acc = CreateAccount {
+            user_id: user_id.clone(),
+            pword: pword.clone().into(),
+            invite: None,
+        };
+
+        super::testing::AccData {
+            user_id,
+            pword: pword.into(),
+            acc: self.create(acc).await.unwrap().account,
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use crate::{
-        account::create_refresh_token,
+        account::{create_refresh_token, testing::*},
         conv::{IntoGqlId as _, ToGqlId as _},
     };
 
-    use super::{testing::*, *};
+    use super::*;
 
     #[tokio::test]
     async fn test_create() {
         let data = TestData::new().await;
-        let account = data.account();
+        let acc_persist = data.account();
 
         let acc = CreateAccount {
             user_id: "test".into(),
@@ -156,7 +185,7 @@ mod tests {
             invite: None,
         };
 
-        let res = account.create(acc).await;
+        let res = acc_persist.create(acc).await;
         println!("{res:?}");
         assert!(res.is_ok());
 
@@ -167,10 +196,10 @@ mod tests {
     #[tokio::test]
     async fn test_get() {
         let data = TestData::new().await;
-        let account = data.account();
-        let AccData { user_id, acc, .. } = account.create_test_user().await;
+        let acc_persist = data.account();
+        let AccData { user_id, acc, .. } = acc_persist.create_test_user().await;
 
-        let res = account.get(&acc.id.into_gql_id()).await;
+        let res = acc_persist.get(&acc.id.into_gql_id()).await;
         println!("{res:?}");
         assert!(res.is_ok());
 
@@ -184,10 +213,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_user_id() {
         let data = TestData::new().await;
-        let account = data.account();
-        let AccData { user_id, acc, .. } = account.create_test_user().await;
+        let acc_persist = data.account();
+        let AccData { user_id, acc, .. } = acc_persist.create_test_user().await;
 
-        let res = account.get_by_user_id(&user_id).await;
+        let res = acc_persist.get_by_user_id(&user_id).await;
         println!("{res:?}");
         assert!(res.is_ok());
 
@@ -201,8 +230,8 @@ mod tests {
     #[tokio::test]
     async fn test_duplicate_user_id() {
         let data = TestData::new().await;
-        let account = data.account();
-        let AccData { user_id, .. } = account.create_test_user().await;
+        let acc_persist = data.account();
+        let AccData { user_id, .. } = acc_persist.create_test_user().await;
 
         let acc = CreateAccount {
             user_id,
@@ -210,7 +239,7 @@ mod tests {
             invite: None,
         };
 
-        let res = account.create(acc).await;
+        let res = acc_persist.create(acc).await;
         println!("{res:?}");
         assert!(res.is_err());
 
@@ -221,10 +250,10 @@ mod tests {
     #[tokio::test]
     async fn test_login() {
         let data = TestData::new().await;
-        let account = data.account();
-        let AccData { user_id, pword, .. } = account.create_test_user().await;
+        let acc_persist = data.account();
+        let AccData { user_id, pword, .. } = acc_persist.create_test_user().await;
 
-        let res = account
+        let res = acc_persist
             .login(AuthCreds {
                 user_id: user_id.clone(),
                 pword,
@@ -240,10 +269,10 @@ mod tests {
     #[tokio::test]
     async fn test_login_fail() {
         let data = TestData::new().await;
-        let account = data.account();
-        let AccData { user_id, .. } = account.create_test_user().await;
+        let acc_persist = data.account();
+        let AccData { user_id, .. } = acc_persist.create_test_user().await;
 
-        let res = account
+        let res = acc_persist
             .login(AuthCreds {
                 user_id,
                 pword: "bad password".to_owned().into(),
@@ -259,11 +288,11 @@ mod tests {
     #[tokio::test]
     async fn test_refresh() {
         let data = TestData::new().await;
-        let account = data.account();
-        let AccData { user_id, acc, .. } = account.create_test_user().await;
+        let acc_persist = data.account();
+        let AccData { user_id, acc, .. } = acc_persist.create_test_user().await;
         let refresh_token = create_refresh_token(acc.id.to_gql_id(), &data.jwt_enc_key).unwrap();
 
-        let res = account.refresh(refresh_token).await;
+        let res = acc_persist.refresh(refresh_token).await;
         println!("{res:?}");
         assert!(res.is_ok());
 
@@ -275,9 +304,9 @@ mod tests {
     #[tokio::test]
     async fn test_access_token_fail() {
         let data = TestData::new().await;
-        let account = data.account();
+        let acc_persist = data.account();
 
-        let res = account.refresh("invalid.refresh.token".into()).await;
+        let res = acc_persist.refresh("invalid.refresh.token".into()).await;
         println!("{res:?}");
         assert!(res.is_err());
 
@@ -288,14 +317,14 @@ mod tests {
     #[tokio::test]
     async fn test_revoke_tokens() {
         let (data, AccData { acc, .. }) = TestData::with_user().await;
-        let account = data.account();
+        let acc_persist = data.account();
         let refresh_token = create_refresh_token(acc.id.into_gql_id(), &data.jwt_enc_key).unwrap();
 
-        let res = account.revoke_tokens().await;
+        let res = acc_persist.revoke_tokens().await;
         println!("{res:?}");
         assert!(res.is_ok());
 
-        let res = account.refresh(refresh_token).await;
+        let res = acc_persist.refresh(refresh_token).await;
         println!("{res:?}");
         assert!(res.is_err());
 
@@ -306,94 +335,13 @@ mod tests {
     #[tokio::test]
     async fn test_revoke_tokens_fail() {
         let data = TestData::new().await;
-        let account = data.account();
+        let acc_persist = data.account();
 
-        let res = account.revoke_tokens().await;
+        let res = acc_persist.revoke_tokens().await;
         println!("{res:?}");
         assert!(res.is_err());
 
         let res = res.unwrap_err();
         assert_eq!(res, Error::Unauthenticated);
-    }
-}
-
-#[cfg(test)]
-mod testing {
-    use base64::prelude::*;
-    use chrono::Duration;
-    use ring::rand::SecureRandom as _;
-    use secrecy::SecretString;
-
-    use crate::{
-        account::{testing::generate_keys, PartialAccount},
-        conv::ToGqlId as _,
-        persist::testing::persist,
-    };
-
-    use super::*;
-
-    pub struct TestData {
-        pub persist: Persist,
-        pub current: CurrentAccount,
-        pub csrng: SystemRandom,
-        pub jwt_enc_key: jsonwebtoken::EncodingKey,
-        pub jwt_dec_key: jsonwebtoken::DecodingKey,
-    }
-
-    pub struct AccData {
-        pub user_id: String,
-        pub pword: SecretString,
-        pub acc: Account,
-    }
-
-    impl TestData {
-        pub async fn new() -> Self {
-            let (jwt_enc_key, jwt_dec_key) = generate_keys();
-            Self {
-                persist: persist().await,
-                current: Default::default(),
-                csrng: SystemRandom::new(),
-                jwt_enc_key,
-                jwt_dec_key,
-            }
-        }
-
-        pub async fn with_user() -> (Self, AccData) {
-            let mut data = Self::new().await;
-            let account = data.account();
-            let acc = account.create_test_user().await;
-            data.current = CurrentAccount::new(
-                PartialAccount::new(acc.acc.id.to_gql_id(), acc.user_id.clone()),
-                Utc::now() + Duration::minutes(30),
-            );
-            (data, acc)
-        }
-
-        pub fn account(&self) -> AccountPersist<'_> {
-            AccountPersist::new(&self.persist, &self.current, &self.csrng, &self.jwt_dec_key)
-        }
-    }
-
-    impl AccountPersist<'_> {
-        pub async fn create_test_user(&self) -> AccData {
-            let mut user_id = [0u8; 16];
-            self.csrng.fill(&mut user_id).unwrap();
-            let user_id = BASE64_STANDARD_NO_PAD.encode(user_id);
-            let mut pword = [0u8; 16];
-            self.csrng.fill(&mut pword).unwrap();
-            let pword = BASE64_STANDARD_NO_PAD.encode(pword);
-
-            let acc = CreateAccount {
-                user_id: user_id.clone(),
-                pword: pword.clone().into(),
-                invite: None,
-            };
-
-            AccData {
-                user_id,
-                pword: pword.into(),
-                acc: self.create(acc).await.unwrap().account,
-            }
-        }
     }
 }

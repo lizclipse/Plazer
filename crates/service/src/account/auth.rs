@@ -407,10 +407,16 @@ mod tests {
 
 #[cfg(test)]
 pub mod testing {
+    use chrono::{Duration, Utc};
     use ring::{
         rand::SystemRandom,
         signature::{self, KeyPair as _},
     };
+    use secrecy::SecretString;
+
+    use crate::account::{Account, AccountPersist, CurrentAccount};
+    use crate::persist::Persist;
+    use crate::{account::PartialAccount, conv::ToGqlId as _, persist::testing::persist};
 
     pub fn generate_keys() -> (jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey) {
         let rng = SystemRandom::new();
@@ -420,5 +426,47 @@ pub mod testing {
         let dec_key = jsonwebtoken::DecodingKey::from_ed_der(key_pair.public_key().as_ref());
 
         (enc_key, dec_key)
+    }
+
+    pub struct TestData {
+        pub persist: Persist,
+        pub current: CurrentAccount,
+        pub csrng: SystemRandom,
+        pub jwt_enc_key: jsonwebtoken::EncodingKey,
+        pub jwt_dec_key: jsonwebtoken::DecodingKey,
+    }
+
+    pub struct AccData {
+        pub user_id: String,
+        pub pword: SecretString,
+        pub acc: Account,
+    }
+
+    impl TestData {
+        pub async fn new() -> Self {
+            let (jwt_enc_key, jwt_dec_key) = generate_keys();
+            Self {
+                persist: persist().await,
+                current: Default::default(),
+                csrng: SystemRandom::new(),
+                jwt_enc_key,
+                jwt_dec_key,
+            }
+        }
+
+        pub async fn with_user() -> (Self, AccData) {
+            let mut data = Self::new().await;
+            let account = data.account();
+            let acc = account.create_test_user().await;
+            data.current = CurrentAccount::new(
+                PartialAccount::new(acc.acc.id.to_gql_id(), acc.user_id.clone()),
+                Utc::now() + Duration::minutes(30),
+            );
+            (data, acc)
+        }
+
+        pub fn account(&self) -> AccountPersist<'_> {
+            AccountPersist::new(&self.persist, &self.current, &self.csrng, &self.jwt_dec_key)
+        }
     }
 }

@@ -65,7 +65,7 @@ impl<'a> BoardPersist<'a> {
                     updated_at = time::now()
             "})
             .bind(("tbl", TABLE_NAME))
-            .bind(("creator_id", self.current.user_id()?))
+            .bind(("creator_id", self.current.user_id().ok()))
             .bind(("handle", handle))
             .bind(("name", board.name))
             .bind(("description", board.description))
@@ -75,6 +75,135 @@ impl<'a> BoardPersist<'a> {
         match board {
             Some(board) => Ok(board),
             None => Err(Error::UnavailableIdent),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{account::testing::*, board::persist::testing::BoardTestData as _};
+
+    #[tokio::test]
+    async fn test_create() {
+        let data = TestData::new().await;
+        let board_persist = data.board();
+
+        let board = CreateBoard {
+            handle: Some("test".into()),
+            name: Some("Test".into()),
+            description: Some("Test".into()),
+        };
+
+        let res = board_persist.create(board).await;
+        println!("{res:?}");
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert_eq!(res.handle, "test");
+        assert_eq!(res.name, Some("Test".to_owned()));
+        assert_eq!(res.description, Some("Test".to_owned()));
+    }
+
+    #[tokio::test]
+    async fn test_get() {
+        let data = TestData::new().await;
+        let board_persist = data.board();
+        let board = data.generate_board().await;
+
+        let res = board_persist.get(&board.id.id.to_raw()).await;
+        println!("{res:?}");
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert!(res.is_some());
+
+        let res = res.unwrap();
+        println!("{res:?}");
+        assert_eq!(res.id, board.id);
+        assert_eq!(res.creator_id, board.creator_id);
+        assert_eq!(res.handle, board.handle);
+        assert_eq!(res.name, board.name);
+        assert_eq!(res.description, board.description);
+    }
+
+    #[tokio::test]
+    async fn test_get_handle() {
+        let data = TestData::new().await;
+        let board_persist = data.board();
+        let board = data.generate_board().await;
+
+        let res = board_persist.get_by_handle(&board.handle).await;
+        println!("{res:?}");
+        assert!(res.is_ok());
+
+        let res = res.unwrap();
+        assert!(res.is_some());
+
+        let res = res.unwrap();
+        println!("{res:?}");
+        assert_eq!(res.id, board.id);
+        assert_eq!(res.creator_id, board.creator_id);
+        assert_eq!(res.handle, board.handle);
+        assert_eq!(res.name, board.name);
+        assert_eq!(res.description, board.description);
+    }
+
+    #[tokio::test]
+    async fn test_duplicate_handle() {
+        let data = TestData::new().await;
+        let board_persist = data.board();
+        let board = data.generate_board().await;
+
+        let create = CreateBoard {
+            handle: Some(board.handle),
+            name: Some("Test".into()),
+            description: Some("Test".into()),
+        };
+
+        let res = board_persist.create(create).await;
+        println!("{res:?}");
+        assert!(res.is_err());
+
+        let res = res.unwrap_err();
+        println!("{res:?}");
+        assert_eq!(res, Error::UnavailableIdent);
+    }
+}
+
+#[cfg(test)]
+mod testing {
+    use async_trait::async_trait;
+
+    use crate::{
+        account::testing::TestData,
+        board::{Board, CreateBoard},
+    };
+
+    use super::BoardPersist;
+
+    #[async_trait]
+    pub trait BoardTestData {
+        fn board(&self) -> BoardPersist<'_>;
+        async fn generate_board(&self) -> Board;
+    }
+
+    #[async_trait]
+    impl BoardTestData for TestData {
+        fn board(&self) -> BoardPersist<'_> {
+            BoardPersist::new(&self.persist, &self.current)
+        }
+
+        async fn generate_board(&self) -> Board {
+            let board_persist = self.board();
+            board_persist
+                .create(CreateBoard {
+                    handle: Some("test".into()),
+                    name: Some("Test".into()),
+                    description: Some("Test".into()),
+                })
+                .await
+                .unwrap()
         }
     }
 }
