@@ -1,6 +1,9 @@
 {
   "extends": "tsconfig/tsconfig.json",
   "compilerOptions": {
+    "module": "es2022",
+    "moduleResolution": "bundler",
+
     "jsxImportSource": "solid-js",
     "jsx": "preserve",
 
