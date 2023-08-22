@@ -198,10 +198,7 @@ impl From<PaginationInput<OpaqueCursor<String>>> for PaginationOptions {
                 .into(),
             )),
             result_slice_opts: ResultSliceOptions {
-                reverse_results: match direction {
-                    Some(PaginationDirection::Last(_)) => true,
-                    _ => false,
-                },
+                reverse_results: matches!(direction, Some(PaginationDirection::Last(_))),
                 after,
                 before,
             },
@@ -239,18 +236,12 @@ where
     ) -> ResultSlice<T> {
         let size = results.len();
         let has_previous_page = match after {
-            Some(after) => match results.first() {
-                Some(first) if *first == after => true,
-                _ => false,
-            },
+            Some(after) => matches!(results.first(), Some(first) if *first == after),
             None => false,
         };
 
         let has_next_page = match before {
-            Some(before) => match results.last() {
-                Some(last) if *last == before => true,
-                _ => false,
-            },
+            Some(before) => matches!(results.last(), Some(last) if *last == before),
             None => false,
         };
 

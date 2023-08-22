@@ -1,8 +1,5 @@
 {
-  "extends": [
-    "@tsconfig/esm/tsconfig.json",
-    "@tsconfig/strictest/tsconfig.json"
-  ],
+  "extends": ["@tsconfig/strictest/tsconfig.json"],
   "compilerOptions": {
     "target": "es2022",
     "lib": ["es2022", "dom"],

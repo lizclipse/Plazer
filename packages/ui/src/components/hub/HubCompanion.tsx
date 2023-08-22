@@ -37,7 +37,7 @@ type Quad = readonly [
   distance: number,
   appliedAcc: Vec2,
   base: Vec2,
-  name: string
+  name: string,
 ];
 
 interface ThrowableInit {
@@ -95,7 +95,7 @@ function motion({ onClick }: ThrowableInit) {
 
         if (!dragging) {
           const dist = Math.sqrt(
-            Math.pow(cx - startX, 2) + Math.pow(cy - startY, 2)
+            Math.pow(cx - startX, 2) + Math.pow(cy - startY, 2),
           );
 
           if (dist < minDrag()) return;
@@ -143,7 +143,7 @@ function motion({ onClick }: ThrowableInit) {
         {
           vel,
           dist: Infinity,
-        }
+        },
       ));
 
       // Apply friction.
@@ -156,15 +156,15 @@ function motion({ onClick }: ThrowableInit) {
           clamp(
             currX + vx * delta * 0.1,
             -absoluteMax,
-            absoluteMax + screenWidth()
-          )
+            absoluteMax + screenWidth(),
+          ),
         ),
         setY(
           clamp(
             currY + vy * delta * 0.1,
             -absoluteMax,
-            absoluteMax + screenHeight()
-          )
+            absoluteMax + screenHeight(),
+          ),
         ),
       ];
 
@@ -172,7 +172,7 @@ function motion({ onClick }: ThrowableInit) {
         setContainerDisplayed(true);
       }
     },
-    { immediate: false }
+    { immediate: false },
   );
 
   return { setEl, startDragging, containerDisplayed, pause, resume };
