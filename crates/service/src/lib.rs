@@ -2,11 +2,12 @@ mod account;
 mod board;
 mod conv;
 mod error;
+mod macros;
 mod migration;
 mod persist;
 mod prelude;
+mod query;
 mod schema;
-mod types;
 
 use std::{io, net::SocketAddr, path::Path, sync::Arc};
 

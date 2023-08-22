@@ -15,7 +15,7 @@ use serde::Deserialize;
 use surrealdb::sql::Thing;
 use tracing::instrument;
 
-use crate::{prelude::*, EncodingKey};
+use crate::{id_obj_impls, prelude::*, EncodingKey};
 
 static TABLE_NAME: &str = "account";
 
@@ -47,6 +47,10 @@ pub struct Account {
     /// This is used to invalidate all tokens that were issued before the
     /// revocation.
     pub revoked_at: Option<DateTime<Utc>>,
+    /// A timestamp indicating when the account was created.
+    pub created_at: DateTime<Utc>,
+    /// A timestamp indicating the last time the account was updated.
+    pub updated_at: DateTime<Utc>,
 
     #[graphql(skip)]
     pword_salt: SecretString,
@@ -63,6 +67,8 @@ impl Account {
         self.id.to_gql_id()
     }
 }
+
+id_obj_impls!(Account);
 
 /// An account that has been authenticated, along with tokens to access it.
 #[derive(SimpleObject, Debug, Deserialize)]

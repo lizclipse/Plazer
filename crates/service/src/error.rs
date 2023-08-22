@@ -28,6 +28,8 @@ pub enum Error {
     UnavailableIdent,
     #[error("Missing identifier")]
     MissingIdent,
+    #[error("Pagination arguments are invalid: {0}")]
+    PaginationInvalid(String),
 
     #[error("JWT is malformed")]
     JwtMalformed,
@@ -165,6 +167,7 @@ impl Error {
             Error::UnavailableIdent => StatusCode::CONFLICT,
             Error::MissingIdent
             | Error::JwtMalformed
+            | Error::PaginationInvalid(_)
             | Error::WsInitNotObject
             | Error::WsInitTokenNotString => StatusCode::BAD_REQUEST,
             Error::ServerMisconfigured(_)

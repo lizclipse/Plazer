@@ -1,9 +1,15 @@
+use async_graphql::connection::{Connection, Edge, OpaqueCursor};
 use indoc::indoc;
 use tracing::instrument;
 
-use crate::{account::CurrentAccount, persist::Persist, prelude::*};
+use crate::{
+    account::CurrentAccount,
+    persist::Persist,
+    prelude::*,
+    query::{values_table, PaginationInput, PaginationOptions, ResultSlice},
+};
 
-use super::{Board, CreateBoard, TABLE_NAME};
+use super::{Board, BoardCursor, CreateBoard, TABLE_NAME};
 
 pub struct BoardPersist<'a> {
     persist: &'a Persist,
@@ -51,7 +57,7 @@ impl<'a> BoardPersist<'a> {
             .persist
             .db()
             .query(indoc! {"
-                CREATE type::table($tbl) SET
+                CREATE type::thing($tbl, rand::uuid::v7()) SET
                     creator_id = $creator_id,
                     handle = $handle,
                     name = $name,
@@ -75,6 +81,66 @@ impl<'a> BoardPersist<'a> {
             Some(board) => Ok(board),
             None => Err(Error::UnavailableIdent),
         }
+    }
+
+    #[instrument(skip_all)]
+    pub fn list(&self) -> BoardListRequest<'_> {
+        BoardListRequest::new(self.persist)
+    }
+}
+
+pub struct BoardListRequest<'a> {
+    persist: &'a Persist,
+    pagination: Option<PaginationInput<OpaqueCursor<String>>>,
+}
+
+impl<'a> BoardListRequest<'a> {
+    fn new(persist: &'a Persist) -> Self {
+        Self {
+            persist,
+            pagination: None,
+        }
+    }
+
+    pub fn with_pagination(
+        mut self,
+        args: impl Into<PaginationInput<OpaqueCursor<String>>>,
+    ) -> Self {
+        self.pagination = Some(args.into());
+        self
+    }
+
+    pub async fn execute(self) -> Result<Connection<BoardCursor, Board>> {
+        let PaginationOptions {
+            cond,
+            order,
+            limit,
+            result_slice_opts,
+        } = self.pagination.into();
+
+        let query = srql::SelectStatement {
+            expr: srql::Fields::all(),
+            what: values_table(TABLE_NAME),
+            order: srql::Orders(order.into_iter().collect()).into(),
+            cond,
+            limit,
+            ..Default::default()
+        };
+
+        let boards: Vec<Board> = self.persist.db().query(query).await?.take(0)?;
+        let ResultSlice {
+            results: boards,
+            has_previous_page,
+            has_next_page,
+        } = ResultSlice::new(boards, result_slice_opts);
+
+        let mut connection = Connection::new(has_previous_page, has_next_page);
+        connection.edges = boards
+            .into_iter()
+            .map(|board| Edge::new(OpaqueCursor(board.id.to_gql_id().0), board))
+            .collect();
+
+        Ok(connection)
     }
 }
 

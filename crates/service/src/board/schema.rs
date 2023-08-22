@@ -1,9 +1,9 @@
-use async_graphql::{Context, Object};
+use async_graphql::{connection::Connection, Context, Object};
 use tracing::instrument;
 
-use crate::prelude::*;
+use crate::{prelude::*, query::PaginationArgs};
 
-use super::{Board, CreateBoard};
+use super::{Board, BoardCursor, CreateBoard};
 
 #[derive(Default)]
 pub struct BoardQuery;
@@ -14,6 +14,33 @@ impl BoardQuery {
     #[instrument(skip_all)]
     async fn board(&self, ctx: &Context<'_>, handle: String) -> GqlResult<Option<Board>> {
         ctx.board_persist().get_by_handle(&handle).await.extend()
+    }
+
+    /// Lists boards.
+    #[instrument(skip_all)]
+    async fn boards(
+        &self,
+        ctx: &Context<'_>,
+        after: Option<String>,
+        before: Option<String>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> GqlResult<Connection<BoardCursor, Board>> {
+        ctx.board_persist()
+            .list()
+            .with_pagination(
+                PaginationArgs {
+                    after,
+                    before,
+                    first,
+                    last,
+                }
+                .validate()
+                .extend()?,
+            )
+            .execute()
+            .await
+            .extend()
     }
 }
 

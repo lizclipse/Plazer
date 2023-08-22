@@ -136,22 +136,16 @@ args = ["codegen:gql:watch"]
 dependencies = ["codegen-scss", "codegen-gql", "codegen-typeshare"]
 
 [tasks.surreal-db]
-script_runner = "@shell"
-script = '''
-docker run --rm -it -v "$(pwd)/data/db:/data" -p 8000:8000 surrealdb/surrealdb start "file:///data" --pass root "$@"
-'''
+command = "surreal"
+args = ["start", "file://./data/db", "--pass", "root"]
 
 [tasks.surreal-sql]
-script_runner = "@shell"
-script = '''
-docker run --rm -it surrealdb/surrealdb sql "$@"
-'''
+command = "surreal"
+args = ["sql", "--conn", "ws://localhost:8000"]
 
 [tasks.reset-local-db]
-script_runner = "@shell"
-script = '''
-rm -rf data/db
-'''
+command = "rm"
+args = ["-rf", "data/db"]
 
 [config]
 default_to_workspace = false

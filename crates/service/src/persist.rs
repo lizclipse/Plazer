@@ -13,19 +13,31 @@ use crate::{
 };
 
 cfg_if! {
-    if #[cfg(all(feature = "backend-mem", not(feature = "backend-file"), not(feature = "backend-tikv")))] {
+    if #[cfg(all(
+        feature = "backend-mem",
+        not(feature = "backend-file"),
+        not(feature = "backend-tikv")
+    ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(_: String) -> surrealdb::Result<DbLayer> {
             Surreal::new::<engine::local::Mem>(()).await
         }
-    } else if #[cfg(all(not(feature = "backend-mem"), feature = "backend-file", not(feature = "backend-tikv")))] {
+    } else if #[cfg(all(
+        not(feature = "backend-mem"),
+        feature = "backend-file",
+        not(feature = "backend-tikv")
+    ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {
             Surreal::new::<engine::local::RocksDb>(address).await
         }
-    } else if #[cfg(all(not(feature = "backend-mem"), not(feature = "backend-file"), feature = "backend-tikv"))] {
+    } else if #[cfg(all(
+        not(feature = "backend-mem"),
+        not(feature = "backend-file"),
+        feature = "backend-tikv"
+    ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {

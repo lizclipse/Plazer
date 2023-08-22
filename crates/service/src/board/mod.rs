@@ -6,14 +6,16 @@ pub use migration::*;
 pub use persist::*;
 pub use schema::*;
 
-use async_graphql::{ComplexObject, InputObject, SimpleObject, ID};
+use async_graphql::{connection::OpaqueCursor, ComplexObject, InputObject, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use surrealdb::sql::Thing;
 
-use crate::prelude::*;
+use crate::{id_obj_impls, prelude::*};
 
 static TABLE_NAME: &str = "board";
+
+pub type BoardCursor = OpaqueCursor<String>;
 
 /// A registered account.
 #[derive(SimpleObject, Debug, Deserialize)]
@@ -54,6 +56,8 @@ impl Board {
         self.creator_id.as_ref().map(|id| id.to_gql_id())
     }
 }
+
+id_obj_impls!(Board);
 
 #[derive(InputObject, Debug)]
 pub struct CreateBoard {

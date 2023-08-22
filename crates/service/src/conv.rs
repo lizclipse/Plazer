@@ -74,3 +74,40 @@ impl ToGqlId for Thing {
         self.id.to_gql_id()
     }
 }
+
+pub trait AsMaybeStr {
+    fn as_maybe_str(&self) -> Option<&str>;
+}
+
+impl AsMaybeStr for ID {
+    fn as_maybe_str(&self) -> Option<&str> {
+        Some(&self.0)
+    }
+}
+
+impl AsMaybeStr for String {
+    fn as_maybe_str(&self) -> Option<&str> {
+        Some(self)
+    }
+}
+
+impl AsMaybeStr for str {
+    fn as_maybe_str(&self) -> Option<&str> {
+        Some(self)
+    }
+}
+
+impl AsMaybeStr for SrlId {
+    fn as_maybe_str(&self) -> Option<&str> {
+        match self {
+            SrlId::String(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
+impl AsMaybeStr for Thing {
+    fn as_maybe_str(&self) -> Option<&str> {
+        self.id.as_maybe_str()
+    }
+}

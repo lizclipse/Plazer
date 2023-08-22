@@ -103,10 +103,13 @@ impl<'a> AccountPersist<'a> {
             .persist
             .db()
             .query(indoc! {"
-                CREATE type::table($tbl) SET
+                CREATE type::thing($tbl, rand::uuid::v7()) SET
                     user_id = $user_id,
                     pword_salt = $pword_salt,
-                    pword_hash = $pword_hash
+                    pword_hash = $pword_hash,
+
+                    created_at = time::now(),
+                    updated_at = time::now()
             "})
             .bind(("tbl", TABLE_NAME))
             .bind(("user_id", acc.user_id))
@@ -128,7 +131,10 @@ impl<'a> AccountPersist<'a> {
 
         self.persist
             .db()
-            .query("UPDATE type::thing($tbl, $id) SET revoked_at = $revoked_at")
+            .query(indoc! {"
+                UPDATE type::thing($tbl, $id) SET
+                    revoked_at = $revoked_at
+            "})
             .bind(("tbl", TABLE_NAME))
             .bind(("id", acc))
             .bind(("revoked_at", now))
