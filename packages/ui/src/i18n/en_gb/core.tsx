@@ -1,4 +1,7 @@
 import type { JSX } from "solid-js";
+import type { Error as BackendError } from "~gen/backend";
+
+type ErrorCode = BackendError["code"];
 
 export default {
   nav: {
@@ -44,6 +47,7 @@ export default {
     CredentialsInvalid: () => "Invalid login credentials",
     UnavailableIdent: () => "This username is unavailable",
     MissingIdent: () => "Handle cannot be empty",
+    PaginationInvalid: () => "Invalid pagination parameters",
     JwtMalformed: () => "The given JWT is malformed",
     JwtExpired: () => "The given JWT has expired",
     JwtInvalid: () => "The given JWT is invalid",
@@ -54,7 +58,7 @@ export default {
     ServerMisconfigured: () => "The server is misconfigured",
     InternalServerError: () => "An internal server error occurred",
     NotImplemented: () => "This feature is not implemented",
-  },
+  } satisfies Record<ErrorCode | "Unknown", () => string>,
   account: {
     userId: () => "Username",
     password: () => "Password",
