@@ -48,6 +48,7 @@ export default {
     UnavailableIdent: () => "This username is unavailable",
     MissingIdent: () => "Handle cannot be empty",
     PaginationInvalid: () => "Invalid pagination parameters",
+    ParseError: () => "The given JSON is invalid",
     JwtMalformed: () => "The given JWT is malformed",
     JwtExpired: () => "The given JWT has expired",
     JwtInvalid: () => "The given JWT is invalid",

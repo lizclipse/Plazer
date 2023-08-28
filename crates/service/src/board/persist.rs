@@ -1,4 +1,4 @@
-use async_graphql::connection::{Connection, Edge, OpaqueCursor};
+use async_graphql::connection::{Connection, Edge};
 use indoc::indoc;
 use tracing::instrument;
 
@@ -6,7 +6,7 @@ use crate::{
     account::CurrentAccount,
     persist::Persist,
     prelude::*,
-    query::{values_table, PaginationInput, PaginationOptions, ResultSlice},
+    query::{values_table, OpaqueCursor, PaginationInput, PaginationOptions, ResultSlice},
 };
 
 use super::{Board, BoardCursor, CreateBoard, TABLE_NAME};

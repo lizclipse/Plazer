@@ -30,10 +30,79 @@ dependencies = ["build-cli", "build-ui"]
 
 [tasks.test-cli]
 command = "cargo"
-args = ["test"]
+args = ["test", "--all-features"]
 
 [tasks.test]
+clear = true
 dependencies = ["test-cli"]
+
+[tasks.coverage-cli-setup]
+script = [
+    "rm -rf ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/debug/coverage/*.profraw",
+]
+
+[tasks.coverage-cli-lcov]
+command = "grcov"
+args = [
+    ".",
+    "-s",
+    "./crates/",
+    "--binary-path",
+    "./target/debug/",
+    "-t",
+    "lcov",
+    "--branch",
+    "--ignore-not-existing",
+    "--keep-only",
+    "**/src/**",
+    "--ignore",
+    "**/.cargo/**",
+    "-o",
+    "./target/debug/coverage/lcov.info",
+]
+install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--version" }
+
+[tasks.coverage-cli-md]
+command = "grcov"
+args = [
+    ".",
+    "-s",
+    "./crates/",
+    "--binary-path",
+    "./target/debug/",
+    "-t",
+    "markdown",
+    "--branch",
+    "--ignore-not-existing",
+    "--keep-only",
+    "**/src/**",
+    "--ignore",
+    "**/.cargo/**",
+    "-o",
+    "./target/debug/coverage/coverage.md",
+]
+install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--version" }
+
+[tasks.coverage-cli-report]
+command = "cat"
+args = ["./target/debug/coverage/coverage.md"]
+
+[tasks.coverage-cli]
+dependencies = [
+    "coverage-cli-setup",
+    "test-cli",
+    "coverage-cli-lcov",
+    "coverage-cli-md",
+    "coverage-cli-report",
+]
+
+[tasks.coverage]
+dependencies = ["coverage-cli"]
+
+# Enable backtrace & coverage for tests
+[tasks.coverage-cli-setup.env]
+RUST_BACKTRACE = "1"
+RUSTFLAGS = '-Cinstrument-coverage --cfg uuid_unstable'
 
 [tasks.lint-check-cli-fmt]
 command = "cargo"
@@ -149,3 +218,6 @@ args = ["-rf", "data/db"]
 
 [config]
 default_to_workspace = false
+
+[env]
+LLVM_PROFILE_FILE = '${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/debug/coverage/cargo-test-%p-%m.profraw'

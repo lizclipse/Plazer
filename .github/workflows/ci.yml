@@ -24,7 +24,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         id: rust-toolchain
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools
 
       - name: Setup node toolchain
         uses: actions/setup-node@v3
@@ -80,3 +80,7 @@ jobs:
 
       - name: Lint
         run: cargo make lint-check
+
+      # TODO: Upload coverage somewhere
+      - name: Coverage
+        run: cargo make coverage

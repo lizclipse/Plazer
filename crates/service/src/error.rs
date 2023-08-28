@@ -31,6 +31,9 @@ pub enum Error {
     #[error("Pagination arguments are invalid: {0}")]
     PaginationInvalid(String),
 
+    #[error("JSON is malformed: {0}")]
+    ParseError(String),
+
     #[error("JWT is malformed")]
     JwtMalformed,
     #[error("JWT is expired")]
@@ -148,6 +151,12 @@ impl From<Base64DecodeError> for Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Self::ParseError(err.to_string())
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorData {
     code: String,
@@ -168,6 +177,7 @@ impl Error {
             Error::MissingIdent
             | Error::JwtMalformed
             | Error::PaginationInvalid(_)
+            | Error::ParseError(_)
             | Error::WsInitNotObject
             | Error::WsInitTokenNotString => StatusCode::BAD_REQUEST,
             Error::ServerMisconfigured(_)

@@ -6,12 +6,12 @@ pub use migration::*;
 pub use persist::*;
 pub use schema::*;
 
-use async_graphql::{connection::OpaqueCursor, ComplexObject, InputObject, SimpleObject, ID};
+use async_graphql::{ComplexObject, InputObject, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use surrealdb::sql::Thing;
 
-use crate::{id_obj_impls, prelude::*};
+use crate::{id_obj_impls, prelude::*, query::OpaqueCursor};
 
 static TABLE_NAME: &str = "board";
 

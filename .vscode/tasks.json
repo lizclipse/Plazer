@@ -33,12 +33,42 @@
     },
     {
       "label": "test - cli",
+      "type": "cargo",
+      "command": "make",
+      "args": ["test-cli"],
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "test",
       // Use a type of process so we can set as test command
       "type": "process",
       "command": "cargo",
-      "args": ["make", "test-cli"],
+      "args": ["make", "test"],
       "problemMatcher": "$rustc",
       "isTestCommand": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "coverage",
+      "type": "cargo",
+      "command": "make",
+      "args": ["coverage"],
+      "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
         "reveal": "always",
