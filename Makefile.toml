@@ -93,7 +93,7 @@ install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--version"
 
 [tasks.coverage-cli-report]
 command = "cat"
-args = ["./target/debug/coverage/coverage.md"]
+args = ["./target/coverage/coverage.md"]
 
 [tasks.coverage-cli]
 dependencies = [
