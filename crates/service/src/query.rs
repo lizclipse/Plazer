@@ -335,6 +335,8 @@ mod tests {
         assert_eq!(last_direction.limit(), 5);
     }
 
+    // TODO: split this (and following) into multiple tests
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_pagination_input_try_from() {
         let pagination_args = PaginationArgs {
@@ -455,6 +457,7 @@ mod tests {
         assert!(matches!(result.unwrap_err(), Error::PaginationInvalid(_)));
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_pagination_options_from() {
         let pagination_input = PaginationInput {

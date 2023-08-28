@@ -38,8 +38,16 @@ dependencies = ["test-cli"]
 
 [tasks.coverage-cli-setup]
 script = [
-    "rm -rf ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/debug/coverage/*.profraw",
+    "rm -rf ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage/raw/*.profraw",
 ]
+
+# Enable backtrace & coverage for tests
+[tasks.coverage-cli-setup.env]
+RUST_BACKTRACE = "1"
+RUSTFLAGS = '-Cinstrument-coverage --cfg uuid_unstable'
+# To prevent the build cache from being smashed by the differences between the
+# coverage and non-coverage builds, we need to set a different target directory.
+CARGO_TARGET_DIR = '${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage'
 
 [tasks.coverage-cli-lcov]
 command = "grcov"
@@ -48,7 +56,7 @@ args = [
     "-s",
     "./crates/",
     "--binary-path",
-    "./target/debug/",
+    "./target/coverage/",
     "-t",
     "lcov",
     "--branch",
@@ -58,7 +66,7 @@ args = [
     "--ignore",
     "**/.cargo/**",
     "-o",
-    "./target/debug/coverage/lcov.info",
+    "./target/coverage/lcov.info",
 ]
 install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--version" }
 
@@ -69,7 +77,7 @@ args = [
     "-s",
     "./crates/",
     "--binary-path",
-    "./target/debug/",
+    "./target/coverage/",
     "-t",
     "markdown",
     "--branch",
@@ -79,7 +87,7 @@ args = [
     "--ignore",
     "**/.cargo/**",
     "-o",
-    "./target/debug/coverage/coverage.md",
+    "./target/coverage/coverage.md",
 ]
 install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--version" }
 
@@ -98,11 +106,6 @@ dependencies = [
 
 [tasks.coverage]
 dependencies = ["coverage-cli"]
-
-# Enable backtrace & coverage for tests
-[tasks.coverage-cli-setup.env]
-RUST_BACKTRACE = "1"
-RUSTFLAGS = '-Cinstrument-coverage --cfg uuid_unstable'
 
 [tasks.lint-check-cli-fmt]
 command = "cargo"
@@ -220,4 +223,4 @@ args = ["-rf", "data/db"]
 default_to_workspace = false
 
 [env]
-LLVM_PROFILE_FILE = '${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/debug/coverage/cargo-test-%p-%m.profraw'
+LLVM_PROFILE_FILE = '${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage/raw/cargo-test-%p-%m.profraw'

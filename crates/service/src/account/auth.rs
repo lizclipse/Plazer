@@ -448,7 +448,7 @@ pub mod testing {
             let (jwt_enc_key, jwt_dec_key) = generate_keys();
             Self {
                 persist: persist().await,
-                current: Default::default(),
+                current: CurrentAccount::default(),
                 csrng: SystemRandom::new(),
                 jwt_enc_key,
                 jwt_dec_key,
