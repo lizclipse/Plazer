@@ -165,10 +165,13 @@ mod private {
         pub fn account(&self) -> Result<&PartialAccount> {
             match &self.0 {
                 Inner::Unauthenticated => Err(Error::Unauthenticated),
-                Inner::Authenticated(acc, expiry) => match Utc::now() >= *expiry {
-                    true => Err(Error::Unauthenticated),
-                    false => Ok(acc),
-                },
+                Inner::Authenticated(acc, expiry) => {
+                    if Utc::now() >= *expiry {
+                        Err(Error::Unauthenticated)
+                    } else {
+                        Ok(acc)
+                    }
+                }
             }
         }
 

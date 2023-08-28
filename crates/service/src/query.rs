@@ -88,27 +88,6 @@ where
             last,
         }: PaginationArgs,
     ) -> Result<Self> {
-        let direction = match (first, last) {
-            (Some(_), Some(_)) => {
-                return Err(Error::PaginationInvalid(
-                    "The \"first\" and \"last\" parameters cannot exist at the same time".into(),
-                ))
-            }
-            (Some(first), None) if first >= 0 => Some(PaginationDirection::First(first as i64)),
-            (Some(_), None) => {
-                return Err(Error::PaginationInvalid(
-                    "The \"first\" parameter must be a non-negative number".into(),
-                ))
-            }
-            (None, Some(last)) if last >= 0 => Some(PaginationDirection::Last(last as i64)),
-            (None, Some(_)) => {
-                return Err(Error::PaginationInvalid(
-                    "The \"last\" parameter must be a non-negative number".into(),
-                ))
-            }
-            (None, None) => None,
-        };
-
         fn parse_cursor<Cursor>(cursor: Option<String>) -> Result<Option<Cursor>>
         where
             Cursor: CursorType + Debug + Default + Clone,
@@ -120,6 +99,27 @@ where
                 })
                 .transpose()
         }
+
+        let direction = match (first, last) {
+            (Some(_), Some(_)) => {
+                return Err(Error::PaginationInvalid(
+                    "The \"first\" and \"last\" parameters cannot exist at the same time".into(),
+                ))
+            }
+            (Some(first), None) if first >= 0 => Some(PaginationDirection::First(i64::from(first))),
+            (Some(_), None) => {
+                return Err(Error::PaginationInvalid(
+                    "The \"first\" parameter must be a non-negative number".into(),
+                ))
+            }
+            (None, Some(last)) if last >= 0 => Some(PaginationDirection::Last(i64::from(last))),
+            (None, Some(_)) => {
+                return Err(Error::PaginationInvalid(
+                    "The \"last\" parameter must be a non-negative number".into(),
+                ))
+            }
+            (None, None) => None,
+        };
 
         Ok(PaginationInput {
             direction,
@@ -206,8 +206,7 @@ impl From<PaginationInput<OpaqueCursor<String>>> for PaginationOptions {
                     std::cmp::min(
                         direction
                             .as_ref()
-                            .map(PaginationDirection::limit)
-                            .unwrap_or(MAX_LIMIT),
+                            .map_or(MAX_LIMIT, PaginationDirection::limit),
                         MAX_LIMIT,
                     ) + PAGE_EXTRA,
                 )
@@ -226,7 +225,7 @@ impl From<Option<PaginationInput<OpaqueCursor<String>>>> for PaginationOptions {
     fn from(pagination: Option<PaginationInput<OpaqueCursor<String>>>) -> Self {
         match pagination {
             Some(pagination) => pagination.into(),
-            None => Default::default(),
+            None => PaginationOptions::default(),
         }
     }
 }
@@ -319,7 +318,7 @@ where
     fn encode_cursor(&self) -> String {
         use base64::prelude::*;
         let value = serde_json::to_vec(&self.0).unwrap_or_default();
-        BASE64_URL_SAFE_NO_PAD.encode(&value)
+        BASE64_URL_SAFE_NO_PAD.encode(value)
     }
 }
 
@@ -346,7 +345,7 @@ mod tests {
         };
         let pagination_input: PaginationInput<OpaqueCursor<String>> =
             pagination_args.validate().unwrap();
-        println!("{:?}", pagination_input);
+        println!("{pagination_input:?}");
         assert_eq!(
             pagination_input.direction,
             Some(PaginationDirection::First(10))
@@ -365,7 +364,7 @@ mod tests {
         };
         let pagination_input: PaginationInput<OpaqueCursor<String>> =
             pagination_args.validate().unwrap();
-        println!("{:?}", pagination_input);
+        println!("{pagination_input:?}");
         assert_eq!(
             pagination_input.direction,
             Some(PaginationDirection::Last(5))
@@ -384,7 +383,7 @@ mod tests {
         };
         let pagination_input: PaginationInput<OpaqueCursor<String>> =
             pagination_args.validate().unwrap();
-        println!("{:?}", pagination_input);
+        println!("{pagination_input:?}");
         assert_eq!(pagination_input.direction, None);
         assert_eq!(pagination_input.after, None);
         assert_eq!(pagination_input.before, None);
@@ -396,7 +395,7 @@ mod tests {
             last: Some(5),
         };
         let result: Result<PaginationInput<OpaqueCursor<String>>> = pagination_args.validate();
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::PaginationInvalid(_)));
 
@@ -408,7 +407,7 @@ mod tests {
         };
         let pagination_input: PaginationInput<OpaqueCursor<String>> =
             pagination_args.validate().unwrap();
-        println!("{:?}", pagination_input);
+        println!("{pagination_input:?}");
         assert_eq!(
             pagination_input.direction,
             Some(PaginationDirection::First(10))
@@ -429,7 +428,7 @@ mod tests {
             last: Some(5),
         };
         let result: Result<PaginationInput<OpaqueCursor<String>>> = pagination_args.validate();
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::PaginationInvalid(_)));
 
@@ -440,7 +439,7 @@ mod tests {
             last: None,
         };
         let result: Result<PaginationInput<OpaqueCursor<String>>> = pagination_args.validate();
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::PaginationInvalid(_)));
 
@@ -451,7 +450,7 @@ mod tests {
             last: Some(-5),
         };
         let result: Result<PaginationInput<OpaqueCursor<String>>> = pagination_args.validate();
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::PaginationInvalid(_)));
     }
@@ -464,7 +463,7 @@ mod tests {
             before: None,
         };
         let pagination_options: PaginationOptions = pagination_input.into();
-        println!("{:?}", pagination_options);
+        println!("{pagination_options:?}");
         assert_eq!(
             pagination_options.cond,
             Some(srql::Cond(
@@ -493,7 +492,7 @@ mod tests {
             Some(ID("abc".to_string()))
         );
         assert_eq!(pagination_options.result_slice_opts.before, None);
-        assert_eq!(pagination_options.result_slice_opts.reverse_results, false);
+        assert!(!pagination_options.result_slice_opts.reverse_results);
 
         let pagination_input = PaginationInput {
             direction: Some(PaginationDirection::Last(5)),
@@ -501,7 +500,7 @@ mod tests {
             before: Some(OpaqueCursor("def".to_string())),
         };
         let pagination_options: PaginationOptions = pagination_input.into();
-        println!("{:?}", pagination_options);
+        println!("{pagination_options:?}");
         assert_eq!(
             pagination_options.cond,
             Some(srql::Cond(
@@ -530,7 +529,7 @@ mod tests {
             pagination_options.result_slice_opts.before,
             Some(ID("def".to_string()))
         );
-        assert_eq!(pagination_options.result_slice_opts.reverse_results, true);
+        assert!(pagination_options.result_slice_opts.reverse_results);
 
         let pagination_input = PaginationInput {
             direction: Some(PaginationDirection::Last(111)),
@@ -538,7 +537,7 @@ mod tests {
             before: Some(OpaqueCursor("def".to_string())),
         };
         let pagination_options: PaginationOptions = pagination_input.into();
-        println!("{:?}", pagination_options);
+        println!("{pagination_options:?}");
         assert_eq!(
             pagination_options.limit,
             Some(srql::Limit(srql::Number::Int(102).into()))
@@ -550,7 +549,7 @@ mod tests {
             before: Some(OpaqueCursor("def".to_string())),
         };
         let pagination_options: PaginationOptions = pagination_input.into();
-        println!("{:?}", pagination_options);
+        println!("{pagination_options:?}");
         assert_eq!(
             pagination_options.cond,
             Some(srql::Cond(

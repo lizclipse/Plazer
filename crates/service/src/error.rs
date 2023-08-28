@@ -114,7 +114,7 @@ impl From<JwtError> for Error {
             | JwtErrorKind::InvalidKeyFormat => Self::JwtMalformed,
             JwtErrorKind::InvalidEcdsaKey => Self::ServerMisconfigured("EcDSA key invalid".into()),
             JwtErrorKind::InvalidRsaKey(err) => {
-                Self::ServerMisconfigured(format!("RSA key is invalid: {}", err))
+                Self::ServerMisconfigured(format!("RSA key is invalid: {err}"))
             }
             JwtErrorKind::RsaFailedSigning => {
                 Self::ServerMisconfigured("RSA signing failed".into())
@@ -128,7 +128,7 @@ impl From<JwtError> for Error {
 
 impl From<SrlError> for Error {
     fn from(err: SrlError) -> Self {
-        println!("SurrealDB error: {:?}", err);
+        println!("SurrealDB error: {err:?}");
         match err {
             // This error only occurs when SurrealDB is misconfigured.
             SrlError::Db(SrlDbError::Ds(err)) => Self::ServerMisconfigured(err),

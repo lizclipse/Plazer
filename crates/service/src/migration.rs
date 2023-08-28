@@ -44,7 +44,7 @@ impl Migrations<'_> {
     async fn iterate<M: Migration>(&self) -> surrealdb::Result<()> {
         let mut prng = WyRand::new();
         while let Some(update) = self.next_update::<M>().await? {
-            match self
+            if let Some(res) = self
                 .persist
                 .execute_in_lock(M::SUBSYSTEM, || async {
                     update
@@ -63,17 +63,14 @@ impl Migrations<'_> {
                 })
                 .await?
             {
-                Some(res) => {
-                    res?.check()?;
-                }
-                None => {
-                    trace!("Migration locked, sleeping");
-                    // Introduce a bit of jitter to avoid thundering herd.
-                    sleep(Duration::from_millis(
-                        5000 + prng.generate_range(0..=10_000),
-                    ))
-                    .await;
-                }
+                res?.check()?;
+            } else {
+                trace!("Migration locked, sleeping");
+                // Introduce a bit of jitter to avoid thundering herd.
+                sleep(Duration::from_millis(
+                    5000 + prng.generate_range(0..=10_000),
+                ))
+                .await;
             }
         }
 
@@ -85,27 +82,23 @@ impl Migrations<'_> {
     where
         M: Migration,
     {
-        match self
+        if let Some::<Update<M>>(Update { current }) = self
             .persist
             .db()
             .select((UPDATE_TABLE, M::SUBSYSTEM))
             .await?
         {
-            Some::<Update<M>>(Update { current }) => match current.next() {
-                Some(next) => {
-                    debug!(?next, "Next migration step");
-                    Ok(Some(next))
-                }
-                None => {
-                    debug!("Migration complete");
-                    Ok(None)
-                }
-            },
-            None => {
-                let update = M::default();
-                debug!(?update, "Beginning migration");
-                Ok(Some(update))
+            if let Some(next) = current.next() {
+                debug!(?next, "Next migration step");
+                Ok(Some(next))
+            } else {
+                debug!("Migration complete");
+                Ok(None)
             }
+        } else {
+            let update = M::default();
+            debug!(?update, "Beginning migration");
+            Ok(Some(update))
         }
     }
 }

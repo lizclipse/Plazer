@@ -53,7 +53,7 @@ impl Board {
     /// but is only used for informational purposes, so should not be used for
     /// authorisation.
     async fn creator_id(&self) -> Option<ID> {
-        self.creator_id.as_ref().map(|id| id.to_gql_id())
+        self.creator_id.as_ref().map(ToGqlId::to_gql_id)
     }
 }
 

@@ -69,7 +69,7 @@ impl<'a> BoardPersist<'a> {
             .bind(("tbl", TABLE_NAME))
             .bind((
                 "creator_id",
-                self.current.id().map(|id| id.to_account_thing()).ok(),
+                self.current.id().map(ToAccountThing::to_account_thing).ok(),
             ))
             .bind(("handle", handle))
             .bind(("name", board.name))

@@ -50,7 +50,7 @@ impl ToGqlId for ID {
 
 impl ToGqlId for String {
     fn to_gql_id(&self) -> ID {
-        ID(self.to_owned())
+        ID(self.clone())
     }
 }
 
@@ -63,7 +63,7 @@ impl ToGqlId for str {
 impl ToGqlId for SrlId {
     fn to_gql_id(&self) -> ID {
         match self {
-            SrlId::String(s) => ID(s.to_owned()),
+            SrlId::String(s) => ID(s.clone()),
             id => ID(id.to_raw()),
         }
     }

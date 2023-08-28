@@ -116,22 +116,22 @@ pub fn authenticate(
     input: impl Into<AuthenticateInput>,
     dec_key: &DecodingKey,
 ) -> Result<CurrentAccount> {
-    fn inner(input: AuthenticateInput, dec_key: &DecodingKey) -> Result<CurrentAccount> {
-        let token = match &input {
+    fn inner(input: &AuthenticateInput, dec_key: &DecodingKey) -> Result<CurrentAccount> {
+        let token = match input {
             AuthenticateInput::Header(header) => header.as_ref().map(|h| h.0.token()),
             AuthenticateInput::Init(init) => {
                 let token = match init.as_object() {
                     Some(obj) => obj.get("token"),
                     None => {
-                        if !init.is_null() {
-                            return Err(Error::WsInitNotObject);
-                        } else {
+                        if init.is_null() {
                             None
+                        } else {
+                            return Err(Error::WsInitNotObject);
                         }
                     }
                 };
 
-                match token.map(|t| t.as_str()) {
+                match token.map(serde_json::Value::as_str) {
                     Some(Some(token)) => Some(token),
                     Some(None) => return Err(Error::WsInitTokenNotString),
                     None => None,
@@ -139,9 +139,8 @@ pub fn authenticate(
             }
         };
 
-        let token = match token {
-            Some(token) => token,
-            None => return Ok(Default::default()),
+        let Some(token) = token else {
+            return Ok(CurrentAccount::default());
         };
 
         let validation = default_validation();
@@ -153,7 +152,7 @@ pub fn authenticate(
         }
     }
 
-    inner(input.into(), dec_key)
+    inner(&input.into(), dec_key)
 }
 
 pub fn create_refresh_token(id: ID, enc_key: &jsonwebtoken::EncodingKey) -> Result<String> {

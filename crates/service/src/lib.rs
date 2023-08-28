@@ -1,3 +1,11 @@
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::enum_glob_use)]
+#![allow(clippy::match_wildcard_for_single_variants)]
+#![allow(clippy::missing_errors_doc)]
+#![forbid(unsafe_code)]
+
 mod account;
 mod board;
 mod conv;
@@ -47,6 +55,7 @@ pub struct ServeConfig {
 }
 
 impl ServeConfig {
+    #[must_use]
     pub fn new(
         db_address: String,
         jwt_enc_key: jsonwebtoken::EncodingKey,
@@ -61,19 +70,23 @@ impl ServeConfig {
         }
     }
 
+    #[must_use]
     pub fn host(self, host: String) -> Self {
         self.set_host(Some(host))
     }
 
+    #[must_use]
     pub fn set_host(mut self, host: Option<String>) -> Self {
         self.host = host;
         self
     }
 
+    #[must_use]
     pub fn port(self, port: u16) -> Self {
         self.set_port(Some(port))
     }
 
+    #[must_use]
     pub fn set_port(mut self, port: Option<u16>) -> Self {
         self.port = port;
         self

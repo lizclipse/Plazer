@@ -45,9 +45,8 @@ impl<'a> AccountPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn login(&self, creds: AuthCreds) -> Result<AuthenticatedAccount> {
-        let acc = match self.get_by_user_id(&creds.user_id).await? {
-            Some(acc) => acc,
-            None => return Err(Error::CredentialsInvalid),
+        let Some(acc) = self.get_by_user_id(&creds.user_id).await? else {
+            return Err(Error::CredentialsInvalid);
         };
 
         verify_creds(&creds.pword, &acc.pword_salt, &acc.pword_hash)?;
@@ -57,14 +56,12 @@ impl<'a> AccountPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn refresh(&self, refresh_token: String) -> Result<AuthenticatedAccount> {
-        let claims = match verify_refresh_token(&refresh_token, self.jwt_dec_key) {
-            Ok(claims) => claims,
-            Err(_) => return Err(Error::CredentialsInvalid),
+        let Ok(claims) = verify_refresh_token(&refresh_token, self.jwt_dec_key) else {
+            return Err(Error::CredentialsInvalid);
         };
 
-        let acc = match self.get(claims.id()).await? {
-            Some(acc) => acc,
-            None => return Err(Error::CredentialsInvalid),
+        let Some(acc) = self.get(claims.id()).await? else {
+            return Err(Error::CredentialsInvalid);
         };
 
         if let Some(revoked_at) = acc.revoked_at {
