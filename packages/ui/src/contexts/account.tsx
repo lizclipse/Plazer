@@ -23,7 +23,6 @@ export const GQL_ACCOUNT: TypedDocumentNode<AccountFieldsFragment, void> = gql`
       id
       userId
       revokedAt
-      createdAt
       updatedAt
     }
     accessToken
