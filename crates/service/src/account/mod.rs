@@ -47,8 +47,6 @@ pub struct Account {
     /// This is used to invalidate all tokens that were issued before the
     /// revocation.
     pub revoked_at: Option<DateTime<Utc>>,
-    /// A timestamp indicating when the account was created.
-    pub created_at: DateTime<Utc>,
     /// A timestamp indicating the last time the account was updated.
     pub updated_at: DateTime<Utc>,
 

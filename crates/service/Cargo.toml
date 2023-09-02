@@ -52,3 +52,6 @@ backend-mem = ["surrealdb/kv-mem"]
 backend-file = ["surrealdb/kv-rocksdb"]
 # Disabled at the moment due to CI build issues.
 # backend-tikv = ["surrealdb/kv-tikv"]
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"

@@ -105,7 +105,6 @@ impl<'a> AccountPersist<'a> {
                     pword_salt = $pword_salt,
                     pword_hash = $pword_hash,
 
-                    created_at = time::now(),
                     updated_at = time::now()
             "})
             .bind(("tbl", TABLE_NAME))

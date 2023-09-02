@@ -18,7 +18,7 @@ static TABLE_NAME: &str = "board";
 pub type BoardCursor = OpaqueCursor<String>;
 
 /// A registered account.
-#[derive(SimpleObject, Debug, Deserialize)]
+#[derive(SimpleObject, Debug, Clone, Deserialize)]
 #[graphql(complex)]
 pub struct Board {
     #[graphql(skip)]
@@ -34,8 +34,6 @@ pub struct Board {
     /// The board's description.
     pub description: Option<String>,
 
-    /// A timestamp indicating when the board was created.
-    pub created_at: DateTime<Utc>,
     /// A timestamp indicating the last time the board was updated.
     pub updated_at: DateTime<Utc>,
 }

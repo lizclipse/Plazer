@@ -25,9 +25,9 @@ impl Migration for BoardMigration {
     where
         C: Connection,
     {
-        use BoardMigration::*;
+        use BoardMigration as S;
         match self {
-            Init => Self::build_init(q),
+            S::Init => Self::build_init(q),
         }
     }
 }

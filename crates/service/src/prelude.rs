@@ -1,6 +1,7 @@
 //! Re-exports of common types and traits that are used throughout the service.
 
 pub use async_graphql::ResultExt as _;
+pub use futures::{Stream as AsyncIterator, StreamExt as _};
 
 pub use crate::{
     account::ToAccountThing,

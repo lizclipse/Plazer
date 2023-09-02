@@ -25,9 +25,9 @@ impl Migration for AccountMigration {
     where
         C: Connection,
     {
-        use AccountMigration::*;
+        use AccountMigration as S;
         match self {
-            Init => Self::build_init(q),
+            S::Init => Self::build_init(q),
         }
     }
 }
