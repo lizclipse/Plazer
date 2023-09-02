@@ -383,9 +383,9 @@ mod testing {
             let mut boards = Vec::with_capacity(count);
             for i in 0..count {
                 let board = CreateBoard {
-                    handle: Some(format!("test-{}", i)),
-                    name: Some(format!("Test {}", i)),
-                    description: Some(format!("Test {}", i)),
+                    handle: Some(format!("test-{i}")),
+                    name: Some(format!("Test {i}")),
+                    description: Some(format!("Test {i}")),
                 };
 
                 let res = board_persist.create(board).await;
