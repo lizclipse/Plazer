@@ -986,9 +986,8 @@ pub mod testing {
                 .map(|edge| edge.node.clone())
                 .collect::<Vec<_>>()
         );
-        let last = match edges.pop() {
-            Some(edge) => edge,
-            None => return (None, PaginatorState::Done),
+        let Some(last) = edges.pop() else {
+            return (None, PaginatorState::Done);
         };
         let state = if has_next_page {
             PaginatorState::Next(last.cursor)
@@ -1012,9 +1011,8 @@ pub mod testing {
         C: CursorType + Send + Sync,
     {
         let mut edges: VecDeque<_> = edges.into();
-        let first = match edges.pop_front() {
-            Some(edge) => edge,
-            None => return (None, PaginatorState::Done),
+        let Some(first) = edges.pop_front() else {
+            return (None, PaginatorState::Done);
         };
         let state = if has_previous_page {
             PaginatorState::Next(first.cursor)
