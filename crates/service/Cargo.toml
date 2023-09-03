@@ -33,10 +33,7 @@ ring = { version = "0.16.20", features = ["alloc"], default-features = false }
 secrecy = { version = "0.8.0", features = ["serde"] }
 serde = "1.0.185"
 serde_json = "1.0.105"
-# This is a workaround due to a cargo bug
-# https://github.com/rust-lang/cargo/issues/7180
-# TODO: Use crates.io version when beta.10 is released
-surrealdb = { git = "https://github.com/surrealdb/surrealdb.git", tag = "v1.0.0-beta.9+20230402" }
+surrealdb = "1.0.0-beta.10"
 test-case = "3.1.0"
 thiserror = "1.0.47"
 tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }

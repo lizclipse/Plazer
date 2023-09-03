@@ -1,9 +1,9 @@
-use async_graphql::{connection::Connection, Context, Object};
+use async_graphql::{connection::Connection, Context, Object, ID};
 use tracing::instrument;
 
 use crate::{prelude::*, query::PaginationArgs};
 
-use super::{Board, BoardCursor, CreateBoard};
+use super::{Board, BoardCursor, CreateBoard, UpdateBoard};
 
 #[derive(Default)]
 pub struct BoardQuery;
@@ -53,5 +53,16 @@ impl BoardMutation {
     #[instrument(skip_all)]
     async fn create_board(&self, ctx: &Context<'_>, create: CreateBoard) -> GqlResult<Board> {
         ctx.board_persist().create(create).await.extend()
+    }
+
+    /// Updates a board.
+    #[instrument(skip_all)]
+    async fn update_board(
+        &self,
+        ctx: &Context<'_>,
+        id: ID,
+        update: UpdateBoard,
+    ) -> GqlResult<Board> {
+        ctx.board_persist().update(&id, update).await.extend()
     }
 }

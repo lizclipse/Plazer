@@ -198,7 +198,7 @@ impl From<(PaginationInput<OpaqueCursor<String>>, &str)> for PaginationOptions {
         let (after_expr, after) = after
             .map(|OpaqueCursor(after)| {
                 (
-                    srql::Expression {
+                    srql::Expression::Binary {
                         l: srql_field("id").into(),
                         o: srql::Operator::LessThanOrEqual,
                         r: srql::Thing::from((table_name, after.as_str())).into(),
@@ -211,7 +211,7 @@ impl From<(PaginationInput<OpaqueCursor<String>>, &str)> for PaginationOptions {
         let (before_expr, before) = before
             .map(|OpaqueCursor(before)| {
                 (
-                    srql::Expression {
+                    srql::Expression::Binary {
                         l: srql_field("id").into(),
                         o: srql::Operator::MoreThanOrEqual,
                         r: srql::Thing::from((table_name, before.as_str())).into(),
@@ -237,7 +237,7 @@ impl From<(PaginationInput<OpaqueCursor<String>>, &str)> for PaginationOptions {
         PaginationOptions {
             cond: match (after_expr, before_expr) {
                 (Some(after), Some(before)) => srql::Cond(
-                    srql::Expression {
+                    srql::Expression::Binary {
                         l: after.into(),
                         o: srql::Operator::And,
                         r: before.into(),
@@ -594,7 +594,7 @@ mod tests {
         } =>
         PaginationOptions {
             cond: Some(srql::Cond(
-                srql::Expression {
+                srql::Expression::Binary {
                     l: srql_field("id").into(),
                     o: srql::Operator::LessThanOrEqual,
                     r: srql::Thing::from((TABLE_NAME, "abc")).into(),
@@ -624,7 +624,7 @@ mod tests {
         } =>
         PaginationOptions {
             cond: Some(srql::Cond(
-                srql::Expression {
+                srql::Expression::Binary {
                     l: srql_field("id").into(),
                     o: srql::Operator::MoreThanOrEqual,
                     r: srql::Thing::from((TABLE_NAME, "def")).into(),
@@ -654,7 +654,7 @@ mod tests {
         } =>
         PaginationOptions {
             cond: Some(srql::Cond(
-                srql::Expression {
+                srql::Expression::Binary {
                     l: srql_field("id").into(),
                     o: srql::Operator::MoreThanOrEqual,
                     r: srql::Thing::from((TABLE_NAME, "def")).into(),
@@ -684,15 +684,15 @@ mod tests {
         } =>
         PaginationOptions {
             cond: Some(srql::Cond(
-                srql::Expression {
-                    l: srql::Expression {
+                srql::Expression::Binary {
+                    l: srql::Expression::Binary {
                         l: srql_field("id").into(),
                         o: srql::Operator::LessThanOrEqual,
                         r: srql::Thing::from((TABLE_NAME, "abc")).into()
                     }
                     .into(),
                     o: srql::Operator::And,
-                    r: srql::Expression {
+                    r: srql::Expression::Binary {
                         l: srql_field("id").into(),
                         o: srql::Operator::MoreThanOrEqual,
                         r: srql::Thing::from((TABLE_NAME, "def")).into()

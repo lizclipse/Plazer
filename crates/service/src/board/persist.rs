@@ -9,7 +9,7 @@ use crate::{
     query::{values_table, OpaqueCursor, PaginationInput, PaginationOptions, ResultSlice},
 };
 
-use super::{Board, BoardCursor, CreateBoard, TABLE_NAME};
+use super::{Board, BoardCursor, CreateBoard, UpdateBoard, TABLE_NAME};
 
 pub struct BoardPersist<'a> {
     persist: &'a Persist,
@@ -80,6 +80,12 @@ impl<'a> BoardPersist<'a> {
             Some(board) => Ok(board),
             None => Err(Error::UnavailableIdent),
         }
+    }
+
+    #[instrument(skip_all)]
+    pub async fn update(&self, _id: &str, _update: UpdateBoard) -> Result<Board> {
+        // self.persist.db().update((TABLE_NAME, id)).patch(patch_op)
+        todo!()
     }
 
     #[instrument(skip_all)]

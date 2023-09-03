@@ -6,7 +6,7 @@ pub use migration::*;
 pub use persist::*;
 pub use schema::*;
 
-use async_graphql::{ComplexObject, InputObject, SimpleObject, ID};
+use async_graphql::{ComplexObject, InputObject, MaybeUndefined, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use surrealdb::sql::Thing;
@@ -71,4 +71,19 @@ pub struct CreateBoard {
     /// The board's description.
     #[graphql(validator(min_length = 1, max_length = 32_768))]
     description: Option<String>,
+}
+
+#[derive(InputObject, Debug)]
+pub struct UpdateBoard {
+    /// The new handle. If not given, the handle is not changed.
+    #[graphql(validator(min_length = 1, max_length = 128))]
+    handle: Option<String>,
+    /// The new name. If not given, the name is not changed. If null is given,
+    /// the name is cleared.
+    #[graphql(validator(max_length = 1024))]
+    name: MaybeUndefined<String>,
+    /// The new description. If not given, the description is not changed. If
+    /// null is given, the description is cleared.
+    #[graphql(validator(min_length = 1, max_length = 32_768))]
+    description: MaybeUndefined<String>,
 }
