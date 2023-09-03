@@ -1,10 +1,9 @@
 #[cfg(test)]
 use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine as _};
-#[cfg(test)]
-use ring::rand::SecureRandom as _;
-
 use chrono::{DateTime, Utc};
 use indoc::indoc;
+#[cfg(test)]
+use ring::rand::SecureRandom as _;
 use ring::rand::SystemRandom;
 use secrecy::ExposeSecret as _;
 use tracing::instrument;

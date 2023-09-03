@@ -3,7 +3,7 @@ use std::{future::IntoFuture, sync::Arc};
 use async_graphql::Context;
 use cfg_if::cfg_if;
 use ring::rand::SystemRandom;
-use surrealdb::{engine, Surreal};
+use surrealdb::{dbs::Capabilities, engine, opt::Config as SrlConfig, Surreal};
 use tracing::{error, instrument};
 
 use crate::{
@@ -11,6 +11,10 @@ use crate::{
     board::BoardPersist,
     DecodingKey,
 };
+
+fn config() -> SrlConfig {
+    SrlConfig::new().capabilities(Capabilities::all())
+}
 
 cfg_if! {
     if #[cfg(all(
@@ -21,7 +25,7 @@ cfg_if! {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(_: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::Mem>(()).await
+            Surreal::new::<engine::local::Mem>(config()).await
         }
     } else if #[cfg(all(
         not(feature = "backend-mem"),
@@ -31,7 +35,7 @@ cfg_if! {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::RocksDb>(address).await
+            Surreal::new::<engine::local::RocksDb>((address, config())).await
         }
     } else if #[cfg(all(
         not(feature = "backend-mem"),
@@ -41,13 +45,13 @@ cfg_if! {
         pub type DbLayer = Surreal<engine::local::Db>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::TiKv>(address).await
+            Surreal::new::<engine::local::TiKv>((address, config())).await
         }
     } else {
         pub type DbLayer = Surreal<engine::any::Any>;
 
         async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            engine::any::connect(address).await
+            engine::any::connect((address, config())).await
         }
     }
 }

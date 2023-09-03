@@ -2,14 +2,13 @@ use async_graphql::connection::{Connection, Edge};
 use indoc::indoc;
 use tracing::instrument;
 
+use super::{Board, BoardCursor, CreateBoard, UpdateBoard, TABLE_NAME};
 use crate::{
     account::CurrentAccount,
     persist::Persist,
     prelude::*,
     query::{values_table, OpaqueCursor, PaginationInput, PaginationOptions, ResultSlice},
 };
-
-use super::{Board, BoardCursor, CreateBoard, UpdateBoard, TABLE_NAME};
 
 pub struct BoardPersist<'a> {
     persist: &'a Persist,

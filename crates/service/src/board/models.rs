@@ -1,19 +1,9 @@
-mod migration;
-mod persist;
-mod schema;
-
-pub use migration::*;
-pub use persist::*;
-pub use schema::*;
-
 use async_graphql::{ComplexObject, InputObject, MaybeUndefined, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use surrealdb::sql::Thing;
 
 use crate::{id_obj_impls, prelude::*, query::OpaqueCursor};
-
-static TABLE_NAME: &str = "board";
 
 pub type BoardCursor = OpaqueCursor<String>;
 
@@ -64,26 +54,26 @@ pub struct CreateBoard {
     ///
     /// This will default to the user's ID if not present.
     #[graphql(validator(min_length = 1, max_length = 128))]
-    handle: Option<String>,
+    pub handle: Option<String>,
     /// The board's display name. If not present, the handle is (usually) used instead.
     #[graphql(validator(max_length = 1024))]
-    name: Option<String>,
+    pub name: Option<String>,
     /// The board's description.
     #[graphql(validator(min_length = 1, max_length = 32_768))]
-    description: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(InputObject, Debug)]
 pub struct UpdateBoard {
     /// The new handle. If not given, the handle is not changed.
     #[graphql(validator(min_length = 1, max_length = 128))]
-    handle: Option<String>,
+    pub handle: Option<String>,
     /// The new name. If not given, the name is not changed. If null is given,
     /// the name is cleared.
     #[graphql(validator(max_length = 1024))]
-    name: MaybeUndefined<String>,
+    pub name: MaybeUndefined<String>,
     /// The new description. If not given, the description is not changed. If
     /// null is given, the description is cleared.
     #[graphql(validator(min_length = 1, max_length = 32_768))]
-    description: MaybeUndefined<String>,
+    pub description: MaybeUndefined<String>,
 }

@@ -1,13 +1,3 @@
-mod auth;
-mod migration;
-mod persist;
-mod schema;
-
-pub use auth::*;
-pub use migration::*;
-pub use persist::*;
-pub use schema::*;
-
 use async_graphql::{ComplexObject, Context, InputObject, SimpleObject, ID};
 use chrono::{DateTime, Utc};
 use secrecy::SecretString;
@@ -15,6 +5,7 @@ use serde::Deserialize;
 use surrealdb::sql::Thing;
 use tracing::instrument;
 
+use super::{create_access_token, create_refresh_token};
 use crate::{id_obj_impls, prelude::*, EncodingKey};
 
 static TABLE_NAME: &str = "account";
@@ -51,9 +42,9 @@ pub struct Account {
     pub updated_at: DateTime<Utc>,
 
     #[graphql(skip)]
-    pword_salt: SecretString,
+    pub(super) pword_salt: SecretString,
     #[graphql(skip)]
-    pword_hash: SecretString,
+    pub(super) pword_hash: SecretString,
 }
 
 #[ComplexObject]
@@ -111,15 +102,15 @@ pub struct CreateAccount {
     /// The account's unique user ID. This is used to create default names for
     /// resources and for logging in.
     #[graphql(validator(min_length = 1, max_length = 128))]
-    user_id: String,
+    pub user_id: String,
     /// The account's password.
     #[graphql(validator(min_length = 8, max_length = 1024), secret)]
-    pword: SecretString,
+    pub pword: SecretString,
     /// An optional invite code.
     ///
     /// Whether this is required will depend on the server's configuration.
     #[graphql(validator(min_length = 1, max_length = 1024))]
-    invite: Option<String>,
+    pub invite: Option<String>,
 }
 
 /// The information needed to authenticate an account.
@@ -127,10 +118,10 @@ pub struct CreateAccount {
 pub struct AuthCreds {
     /// The user ID of the account to authenticate.
     #[graphql(validator(min_length = 1, max_length = 64))]
-    user_id: String,
+    pub user_id: String,
     /// The account's password.
     #[graphql(validator(min_length = 8, max_length = 1024), secret)]
-    pword: SecretString,
+    pub pword: SecretString,
 }
 
 pub use private::{CurrentAccount, PartialAccount};

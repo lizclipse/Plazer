@@ -1,9 +1,8 @@
 use async_graphql::{connection::Connection, Context, Object, ID};
 use tracing::instrument;
 
-use crate::{prelude::*, query::PaginationArgs};
-
 use super::{Board, BoardCursor, CreateBoard, UpdateBoard};
+use crate::{prelude::*, query::PaginationArgs};
 
 #[derive(Default)]
 pub struct BoardQuery;

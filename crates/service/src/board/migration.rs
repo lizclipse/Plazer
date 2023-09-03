@@ -2,9 +2,8 @@ use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 use surrealdb::{method::Query, Connection};
 
-use crate::migration::Migration;
-
 use super::TABLE_NAME;
+use crate::migration::Migration;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BoardMigration {
