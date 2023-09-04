@@ -66,9 +66,7 @@ args = [
     "--ignore",
     "**/.cargo/**",
     "--ignore",
-    "**/target/coverage/**",
-    "--ignore",
-    "**/target/debug/**",
+    "**/target/**",
     "-o",
     "./target/coverage/lcov.info",
 ]
@@ -91,9 +89,7 @@ args = [
     "--ignore",
     "**/.cargo/**",
     "--ignore",
-    "**/target/coverage/**",
-    "--ignore",
-    "**/target/debug/**",
+    "**/target/**",
     "-o",
     "./target/coverage/coverage.md",
 ]
