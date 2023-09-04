@@ -20,9 +20,18 @@ pub trait IntoUpdateQuery {
 
         srql::Query(srql::Statements(vec![srql::Statement::Update(
             srql::UpdateStatement {
-                what: srql::Values(vec![thing.into()]),
+                what: srql::Values(vec![thing.clone().into()]),
                 data: srql::Data::UpdateExpression(update).into(),
                 output: srql::Output::After.into(),
+                cond: srql::Cond(
+                    srql::Expression::Binary {
+                        l: srql::field("id").into(),
+                        o: srql::Operator::Equal,
+                        r: thing.into(),
+                    }
+                    .into(),
+                )
+                .into(),
                 ..Default::default()
             },
         )]))

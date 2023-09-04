@@ -209,6 +209,10 @@ async fn test_empty_update() {
 
     let res = res.unwrap();
     println!("{res:?}");
+    assert!(res.is_some());
+
+    let res = res.unwrap();
+    println!("{res:?}");
     assert_eq!(res.id, board.id);
     assert_eq!(res.creator_id, board.creator_id);
     assert_eq!(res.handle, board.handle);
@@ -231,6 +235,10 @@ async fn test_update_handle() {
     let res = board_persist.update(&board.id.id.to_raw(), update).await;
     println!("{res:?}");
     assert!(res.is_ok());
+
+    let res = res.unwrap();
+    println!("{res:?}");
+    assert!(res.is_some());
 
     let res = res.unwrap();
     println!("{res:?}");
@@ -259,6 +267,10 @@ async fn test_update_name() {
 
     let res = res.unwrap();
     println!("{res:?}");
+    assert!(res.is_some());
+
+    let res = res.unwrap();
+    println!("{res:?}");
     assert_eq!(res.id, board.id);
     assert_eq!(res.creator_id, board.creator_id);
     assert_eq!(res.handle, board.handle);
@@ -281,6 +293,10 @@ async fn test_update_name_null() {
     let res = board_persist.update(&board.id.id.to_raw(), update).await;
     println!("{res:?}");
     assert!(res.is_ok());
+
+    let res = res.unwrap();
+    println!("{res:?}");
+    assert!(res.is_some());
 
     let res = res.unwrap();
     println!("{res:?}");
@@ -309,6 +325,10 @@ async fn test_update_description() {
 
     let res = res.unwrap();
     println!("{res:?}");
+    assert!(res.is_some());
+
+    let res = res.unwrap();
+    println!("{res:?}");
     assert_eq!(res.id, board.id);
     assert_eq!(res.creator_id, board.creator_id);
     assert_eq!(res.handle, board.handle);
@@ -334,10 +354,121 @@ async fn test_update_description_null() {
 
     let res = res.unwrap();
     println!("{res:?}");
+    assert!(res.is_some());
+
+    let res = res.unwrap();
+    println!("{res:?}");
     assert_eq!(res.id, board.id);
     assert_eq!(res.creator_id, board.creator_id);
     assert_eq!(res.handle, board.handle);
     assert_eq!(res.name, board.name);
     assert_eq!(res.description, None);
     assert_ne!(res.updated_at, board.updated_at);
+}
+
+#[tokio::test]
+async fn test_update_all() {
+    let data = TestData::new().await;
+    let board_persist = data.board();
+    let board = data.generate_board().await;
+
+    let update = UpdateBoard {
+        handle: Some("test".into()),
+        name: MaybeUndefined::Value("Test".into()),
+        description: MaybeUndefined::Value("Test".into()),
+    };
+
+    let res = board_persist.update(&board.id.id.to_raw(), update).await;
+    println!("{res:?}");
+    assert!(res.is_ok());
+
+    let res = res.unwrap();
+    println!("{res:?}");
+    assert!(res.is_some());
+
+    let res = res.unwrap();
+    println!("{res:?}");
+    assert_eq!(res.id, board.id);
+    assert_eq!(res.creator_id, board.creator_id);
+    assert_eq!(res.handle, "test");
+    assert_eq!(res.name, Some("Test".to_owned()));
+    assert_eq!(res.description, Some("Test".to_owned()));
+    assert_ne!(res.updated_at, board.updated_at);
+}
+
+#[tokio::test]
+async fn test_update_nonexistent() {
+    let data = TestData::new().await;
+    let board_persist = data.board();
+
+    let update = UpdateBoard {
+        handle: Some("test".into()),
+        name: MaybeUndefined::Value("Test".into()),
+        description: MaybeUndefined::Value("Test".into()),
+    };
+
+    let res = board_persist.update("test", update).await;
+    println!("{res:?}");
+    assert!(res.is_ok());
+
+    let res = res.unwrap();
+    println!("{res:?}");
+    assert!(res.is_none());
+
+    let res = board_persist.get("test").await;
+    println!("{res:?}");
+    assert!(res.is_ok());
+
+    let res = res.unwrap();
+    assert!(res.is_none());
+}
+
+#[tokio::test]
+async fn test_delete() {
+    let data = TestData::new().await;
+    let board_persist = data.board();
+    let board = data.generate_board().await;
+
+    let res = board_persist.delete(&board.id.id.to_raw()).await;
+    println!("{res:?}");
+    assert!(res.is_ok());
+
+    let res = res.unwrap();
+    println!("{res:?}");
+    assert!(res.is_some());
+
+    let res = res.unwrap();
+    assert_eq!(res.id, board.id);
+    assert_eq!(res.creator_id, board.creator_id);
+    assert_eq!(res.handle, board.handle);
+    assert_eq!(res.name, board.name);
+    assert_eq!(res.description, board.description);
+    assert_eq!(res.updated_at, board.updated_at);
+
+    let res = board_persist.get(&board.id.id.to_raw()).await;
+    println!("{res:?}");
+    assert!(res.is_ok());
+
+    let res = res.unwrap();
+    assert!(res.is_none());
+}
+
+#[tokio::test]
+async fn test_delete_nonexistent() {
+    let data = TestData::new().await;
+    let board_persist = data.board();
+
+    let res = board_persist.delete("test").await;
+    println!("{res:?}");
+    assert!(res.is_ok());
+
+    let res = res.unwrap();
+    assert!(res.is_none());
+
+    let res = board_persist.get("test").await;
+    println!("{res:?}");
+    assert!(res.is_ok());
+
+    let res = res.unwrap();
+    assert!(res.is_none());
 }

@@ -30,8 +30,6 @@ pub enum Error {
     MissingIdent,
     #[error("Pagination arguments are invalid: {0}")]
     PaginationInvalid(String),
-    #[error("Resource {0} not found")]
-    NotFound(String),
 
     #[error("JSON is malformed: {0}")]
     ParseError(String),
@@ -182,7 +180,6 @@ impl Error {
             | Error::ParseError(_)
             | Error::WsInitNotObject
             | Error::WsInitTokenNotString => StatusCode::BAD_REQUEST,
-            Error::NotFound(_) => StatusCode::NOT_FOUND,
             Error::ServerMisconfigured(_)
             | Error::InternalServerError(_)
             | Error::NotImplemented => StatusCode::INTERNAL_SERVER_ERROR,

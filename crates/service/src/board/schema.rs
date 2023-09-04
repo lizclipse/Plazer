@@ -61,7 +61,13 @@ impl BoardMutation {
         ctx: &Context<'_>,
         id: ID,
         update: UpdateBoard,
-    ) -> GqlResult<Board> {
+    ) -> GqlResult<Option<Board>> {
         ctx.board_persist().update(&id, update).await.extend()
+    }
+
+    /// Deletes a board.
+    #[instrument(skip_all)]
+    async fn delete_board(&self, ctx: &Context<'_>, id: ID) -> GqlResult<Option<Board>> {
+        ctx.board_persist().delete(&id).await.extend()
     }
 }

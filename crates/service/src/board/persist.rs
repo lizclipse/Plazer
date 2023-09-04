@@ -42,6 +42,11 @@ impl<'a> BoardPersist<'a> {
     }
 
     #[instrument(skip_all)]
+    pub fn list(&self) -> BoardListRequest<'_> {
+        BoardListRequest::new(self.persist)
+    }
+
+    #[instrument(skip_all)]
     pub async fn create(&self, board: CreateBoard) -> Result<Board> {
         // TODO: check config to see if anon users can create boards
         // TODO: check perms to see if authd user can create boards
@@ -85,7 +90,7 @@ impl<'a> BoardPersist<'a> {
     }
 
     #[instrument(skip_all)]
-    pub async fn update(&self, id: &str, update: UpdateBoard) -> Result<Board> {
+    pub async fn update(&self, id: &str, update: UpdateBoard) -> Result<Option<Board>> {
         // TODO: check config to see if anon users can update boards
         // TODO: check perms to see if authd user can update boards
 
@@ -95,15 +100,13 @@ impl<'a> BoardPersist<'a> {
             self.get(id).await?
         };
 
-        match board {
-            Some(board) => Ok(board),
-            None => Err(Error::NotFound(format!("board {id}"))),
-        }
+        Ok(board)
     }
 
     #[instrument(skip_all)]
-    pub fn list(&self) -> BoardListRequest<'_> {
-        BoardListRequest::new(self.persist)
+    pub async fn delete(&self, id: &str) -> Result<Option<Board>> {
+        let board = self.persist.db().delete((TABLE_NAME, id)).await?;
+        Ok(board)
     }
 }
 
