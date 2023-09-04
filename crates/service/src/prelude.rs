@@ -8,5 +8,5 @@ pub use crate::{
     conv::{AsMaybeStr, IntoGqlId, ToGqlId},
     error::{Error, GqlError, GqlResult, Result, SrlDbError, SrlError},
     persist::PersistExt as _,
-    query::srql,
+    query::{srql, IntoUpdateQuery, QueryUpdateValue},
 };

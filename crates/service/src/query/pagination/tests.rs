@@ -143,14 +143,14 @@ static TABLE_NAME: &str = "test_table";
     PaginationOptions {
         cond: Some(srql::Cond(
             srql::Expression::Binary {
-                l: srql_field("id").into(),
+                l: srql::field("id").into(),
                 o: srql::Operator::LessThanOrEqual,
                 r: srql::Thing::from((TABLE_NAME, "abc")).into(),
             }
             .into()
         )),
         order: Some(srql::Order {
-            order: srql_field("id"),
+            order: srql::field("id"),
             direction: SRQL_ORDER_DESC,
             ..Default::default()
         }),
@@ -173,14 +173,14 @@ static TABLE_NAME: &str = "test_table";
     PaginationOptions {
         cond: Some(srql::Cond(
             srql::Expression::Binary {
-                l: srql_field("id").into(),
+                l: srql::field("id").into(),
                 o: srql::Operator::MoreThanOrEqual,
                 r: srql::Thing::from((TABLE_NAME, "def")).into(),
             }
             .into()
         )),
         order: Some(srql::Order {
-            order: srql_field("id"),
+            order: srql::field("id"),
             direction: SRQL_ORDER_ASC,
             ..Default::default()
         }),
@@ -203,14 +203,14 @@ static TABLE_NAME: &str = "test_table";
     PaginationOptions {
         cond: Some(srql::Cond(
             srql::Expression::Binary {
-                l: srql_field("id").into(),
+                l: srql::field("id").into(),
                 o: srql::Operator::MoreThanOrEqual,
                 r: srql::Thing::from((TABLE_NAME, "def")).into(),
             }
             .into()
         )),
         order: Some(srql::Order {
-            order: srql_field("id"),
+            order: srql::field("id"),
             direction: SRQL_ORDER_ASC,
             ..Default::default()
         }),
@@ -234,14 +234,14 @@ static TABLE_NAME: &str = "test_table";
         cond: Some(srql::Cond(
             srql::Expression::Binary {
                 l: srql::Expression::Binary {
-                    l: srql_field("id").into(),
+                    l: srql::field("id").into(),
                     o: srql::Operator::LessThanOrEqual,
                     r: srql::Thing::from((TABLE_NAME, "abc")).into()
                 }
                 .into(),
                 o: srql::Operator::And,
                 r: srql::Expression::Binary {
-                    l: srql_field("id").into(),
+                    l: srql::field("id").into(),
                     o: srql::Operator::MoreThanOrEqual,
                     r: srql::Thing::from((TABLE_NAME, "def")).into()
                 }
@@ -250,7 +250,7 @@ static TABLE_NAME: &str = "test_table";
             .into()
         )),
         order: Some(srql::Order {
-            order: srql_field("id"),
+            order: srql::field("id"),
             direction: SRQL_ORDER_DESC,
             ..Default::default()
         }),

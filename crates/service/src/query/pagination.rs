@@ -1,7 +1,7 @@
 #[cfg(test)]
-mod test;
-#[cfg(test)]
 pub mod testing;
+#[cfg(test)]
+mod tests;
 
 use std::{
     fmt::Debug,
@@ -13,30 +13,10 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::prelude::*;
 
-pub mod srql {
-    pub use surrealdb::sql::{statements::*, *};
-}
-
 pub const MAX_LIMIT: i64 = 100;
 pub const PAGE_EXTRA: i64 = 2;
 pub const SRQL_ORDER_ASC: bool = true;
 pub const SRQL_ORDER_DESC: bool = false;
-
-pub fn values_table(table: impl Into<String>) -> srql::Values {
-    srql::Values(vec![srql::Table(table.into()).into()])
-}
-
-pub fn srql_field(field: impl Into<String>) -> srql::Idiom {
-    srql::Idiom(vec![srql::Part::Field(srql::Ident(field.into()))])
-}
-
-// pub fn srql_param(param: impl Into<String>) -> srql::Param {
-//     srql::Param(srql::Ident(param.into()))
-// }
-
-// pub fn srql_string(str: impl Into<String>) -> srql::Strand {
-//     srql::Strand(str.into())
-// }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PaginationArgs {
@@ -204,7 +184,7 @@ impl From<(PaginationInput<OpaqueCursor<String>>, &str)> for PaginationOptions {
             .map(|OpaqueCursor(after)| {
                 (
                     srql::Expression::Binary {
-                        l: srql_field("id").into(),
+                        l: srql::field("id").into(),
                         o: srql::Operator::LessThanOrEqual,
                         r: srql::Thing::from((table_name, after.as_str())).into(),
                     },
@@ -217,7 +197,7 @@ impl From<(PaginationInput<OpaqueCursor<String>>, &str)> for PaginationOptions {
             .map(|OpaqueCursor(before)| {
                 (
                     srql::Expression::Binary {
-                        l: srql_field("id").into(),
+                        l: srql::field("id").into(),
                         o: srql::Operator::MoreThanOrEqual,
                         r: srql::Thing::from((table_name, before.as_str())).into(),
                     },
@@ -259,7 +239,7 @@ impl From<(PaginationInput<OpaqueCursor<String>>, &str)> for PaginationOptions {
             // a query would require an understanding beyond mere mortals.
             // Instead, we just fix it later before returning the results.
             order: Some(srql::Order {
-                order: srql_field("id"),
+                order: srql::field("id"),
                 direction: match direction {
                     Some(PaginationDirection::Last(_)) => SRQL_ORDER_ASC,
                     _ => SRQL_ORDER_DESC,

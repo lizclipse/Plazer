@@ -158,7 +158,7 @@ mod test {
         let (a, b) = join!(
             async {
                 p.execute_in_lock(id, || async {
-                    sleep(Duration::from_millis(10)).await;
+                    sleep(Duration::from_millis(30)).await;
                 })
                 .await
             },

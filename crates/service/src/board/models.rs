@@ -47,7 +47,7 @@ impl Board {
 
 id_obj_impls!(Board);
 
-#[derive(InputObject, Debug)]
+#[derive(InputObject, Debug, Default, Clone, PartialEq, Eq)]
 pub struct CreateBoard {
     /// The board's unique handle. This is used to refer to the board in URLs
     /// and by users. It must be unique, but can be changed (if the server allows it).
@@ -56,24 +56,35 @@ pub struct CreateBoard {
     #[graphql(validator(min_length = 1, max_length = 128))]
     pub handle: Option<String>,
     /// The board's display name. If not present, the handle is (usually) used instead.
-    #[graphql(validator(max_length = 1024))]
+    #[graphql(validator(min_length = 1, max_length = 1024))]
     pub name: Option<String>,
     /// The board's description.
     #[graphql(validator(min_length = 1, max_length = 32_768))]
     pub description: Option<String>,
 }
 
-#[derive(InputObject, Debug)]
+#[derive(InputObject, Debug, Default, Clone, PartialEq, Eq)]
 pub struct UpdateBoard {
     /// The new handle. If not given, the handle is not changed.
     #[graphql(validator(min_length = 1, max_length = 128))]
     pub handle: Option<String>,
     /// The new name. If not given, the name is not changed. If null is given,
     /// the name is cleared.
-    #[graphql(validator(max_length = 1024))]
+    #[graphql(validator(min_length = 1, max_length = 1024))]
     pub name: MaybeUndefined<String>,
     /// The new description. If not given, the description is not changed. If
     /// null is given, the description is cleared.
     #[graphql(validator(min_length = 1, max_length = 32_768))]
     pub description: MaybeUndefined<String>,
+}
+
+impl IntoUpdateQuery for UpdateBoard {
+    fn into_update(self, thing: srql::Thing) -> Option<srql::Query> {
+        let mut update = vec![];
+        self.handle.apply_update(srql::field("handle"), &mut update);
+        self.name.apply_update(srql::field("name"), &mut update);
+        self.description
+            .apply_update(srql::field("description"), &mut update);
+        Self::update_query(thing, update)
+    }
 }
