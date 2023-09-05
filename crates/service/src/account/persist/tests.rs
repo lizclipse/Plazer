@@ -156,7 +156,7 @@ async fn test_revoke_tokens() {
     assert!(res.is_err());
 
     let res = res.unwrap_err();
-    assert_eq!(res, Error::Unauthenticated);
+    assert_eq!(res, Error::CredentialsInvalid);
 }
 
 #[tokio::test]
