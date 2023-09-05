@@ -256,7 +256,7 @@ args = [
     "packages/ui/src/__generated__/backend.d.ts",
     "crates/service",
 ]
-install_crate = { crate_name = "typeshare-crates", binary = "typeshare", test_arg = "--version" }
+install_crate = { crate_name = "typeshare-cli", binary = "typeshare", test_arg = "--version" }
 
 [tasks.codegen-scss]
 category = "Codegen"
