@@ -38,7 +38,8 @@ pub fn string(str: impl Into<String>) -> Strand {
     Strand(str.into())
 }
 
-pub type SetExpr = Vec<(Idiom, Operator, Value)>;
+pub type SetExprItem = (Idiom, Operator, Value);
+pub type SetExpr = Vec<SetExprItem>;
 
 pub fn obj_create_query(table: &str, mut data: SetExpr) -> Query {
     data.push((field("updated_at"), Operator::Equal, time_now()));

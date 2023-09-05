@@ -67,7 +67,7 @@ impl<'a> AccountPersist<'a> {
 
         if let Some(revoked_at) = acc.revoked_at {
             if revoked_at >= claims.issued_at()? {
-                return Err(Error::Unauthenticated);
+                return Err(Error::CredentialsInvalid);
             }
         }
 

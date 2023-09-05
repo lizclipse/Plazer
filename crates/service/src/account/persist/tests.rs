@@ -1,6 +1,5 @@
-use crate::account::{create_refresh_token, testing::*};
-
 use super::*;
+use crate::account::{create_refresh_token, testing::*};
 
 #[tokio::test]
 async fn test_create() {

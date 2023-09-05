@@ -67,13 +67,13 @@ jobs:
         run: pnpm install
 
       - name: Build Crates
-        run: cargo make build-cli
+        run: cargo make build-crates
 
       - name: Codegen
         run: cargo make codegen
 
       - name: Build Packages
-        run: cargo make build-ui
+        run: cargo make build-packages
 
       - name: Test
         run: cargo make test

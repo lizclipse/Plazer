@@ -414,9 +414,11 @@ pub mod testing {
     use secrecy::SecretString;
     use surrealdb::sql::Thing;
 
-    use crate::account::{Account, AccountPersist, CurrentAccount};
-    use crate::persist::Persist;
-    use crate::{account::PartialAccount, conv::ToGqlId as _, persist::testing::persist};
+    use crate::{
+        account::{Account, AccountPersist, CurrentAccount, PartialAccount},
+        persist::{testing::persist, Persist},
+        prelude::*,
+    };
 
     pub fn generate_keys() -> (jsonwebtoken::EncodingKey, jsonwebtoken::DecodingKey) {
         let rng = SystemRandom::new();
