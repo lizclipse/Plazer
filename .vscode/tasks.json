@@ -16,10 +16,10 @@
       }
     },
     {
-      "label": "build - cli",
+      "label": "build - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["build-cli"],
+      "args": ["build-crates"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -31,10 +31,10 @@
       }
     },
     {
-      "label": "build - ui",
+      "label": "build - packages",
       "type": "cargo",
       "command": "make",
-      "args": ["build-ui"],
+      "args": ["build-packages"],
       "problemMatcher": "$tsc",
       "presentation": {
         "echo": true,
@@ -46,10 +46,10 @@
       }
     },
     {
-      "label": "test - cli",
+      "label": "test - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["test-cli"],
+      "args": ["test-crates"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -93,10 +93,10 @@
       }
     },
     {
-      "label": "lint - fix - cli",
+      "label": "lint - fix - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["lint-fix-cli"],
+      "args": ["lint-fix-crates"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -108,10 +108,10 @@
       }
     },
     {
-      "label": "lint - check - cli",
+      "label": "lint - check - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["lint-check-cli"],
+      "args": ["lint-check-crates"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -123,10 +123,10 @@
       }
     },
     {
-      "label": "lint - fix - ui",
+      "label": "lint - fix - packages",
       "type": "cargo",
       "command": "make",
-      "args": ["lint-fix-ui"],
+      "args": ["lint-fix-packages"],
       // TODO: add proper matcher
       "problemMatcher": [],
       "presentation": {
@@ -196,10 +196,10 @@
       }
     },
     {
-      "label": "serve - cli",
+      "label": "serve - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["serve-cli"],
+      "args": ["serve-crates"],
       "problemMatcher": [
         {
           "base": "$rustc",
@@ -221,10 +221,10 @@
       }
     },
     {
-      "label": "serve - ui",
+      "label": "serve - packages",
       "type": "cargo",
       "command": "make",
-      "args": ["serve-ui"],
+      "args": ["serve-packages"],
       // TODO: add proper matcher
       "problemMatcher": [],
       "isBackground": true,
