@@ -128,7 +128,7 @@ impl<'a> AccountPersist<'a> {
 
         let mut updates = vec![];
         now.push_field(srql::field("revoked_at"), &mut updates);
-        let Some(update) = srql::update_obj_query((TABLE_NAME, &***acc).into(), updates) else {
+        let Some(update) = srql::obj_update_query((TABLE_NAME, &***acc).into(), updates) else {
             return Err("".into());
         };
 

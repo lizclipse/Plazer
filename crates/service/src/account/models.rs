@@ -69,7 +69,7 @@ impl Account {
         creds
             .hash
             .push_field(srql::field("pword_hash"), &mut create);
-        srql::create_obj_query(TABLE_NAME, create)
+        srql::obj_create_query(TABLE_NAME, create)
     }
 }
 

@@ -40,7 +40,7 @@ pub fn string(str: impl Into<String>) -> Strand {
 
 pub type SetExpr = Vec<(Idiom, Operator, Value)>;
 
-pub fn create_obj_query(table: &str, mut data: SetExpr) -> Query {
+pub fn obj_create_query(table: &str, mut data: SetExpr) -> Query {
     data.push((field("updated_at"), Operator::Equal, time_now()));
 
     let thing = Thing {
@@ -56,7 +56,7 @@ pub fn create_obj_query(table: &str, mut data: SetExpr) -> Query {
     })])
 }
 
-pub fn update_obj_query(thing: Thing, mut update: SetExpr) -> Option<Query> {
+pub fn obj_update_query(thing: Thing, mut update: SetExpr) -> Option<Query> {
     if update.is_empty() {
         return None;
     }

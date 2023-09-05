@@ -53,7 +53,7 @@ impl Board {
         let mut create = vec![];
         creator_id.push_field(srql::field("creator_id"), &mut create);
         params.append(&mut create);
-        srql::create_obj_query(TABLE_NAME, create)
+        srql::obj_create_query(TABLE_NAME, create)
     }
 }
 
@@ -104,6 +104,6 @@ impl IntoUpdateQuery for UpdateBoard {
         self.name.push_field(srql::field("name"), &mut update);
         self.description
             .push_field(srql::field("description"), &mut update);
-        srql::update_obj_query(thing, update)
+        srql::obj_update_query(thing, update)
     }
 }
