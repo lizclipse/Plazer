@@ -4,7 +4,6 @@ mod tests;
 #[cfg(test)]
 use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine as _};
 use chrono::{DateTime, Utc};
-use indoc::indoc;
 #[cfg(test)]
 use ring::rand::SecureRandom as _;
 use ring::rand::SystemRandom;
@@ -85,9 +84,20 @@ impl<'a> AccountPersist<'a> {
         let acc = self
             .persist
             .db()
-            .query("SELECT * FROM type::table($tbl) WHERE user_id = $user_id")
-            .bind(("tbl", TABLE_NAME))
-            .bind(("user_id", user_id))
+            .query(srql::SelectStatement {
+                expr: srql::Fields::all(),
+                what: srql::table(TABLE_NAME),
+                cond: srql::Cond(
+                    srql::Expression::Binary {
+                        l: srql::field("user_id").into(),
+                        o: srql::Operator::Equal,
+                        r: srql::string(user_id).into(),
+                    }
+                    .into(),
+                )
+                .into(),
+                ..Default::default()
+            })
             .await?
             .take(0)?;
         Ok(acc)
@@ -101,18 +111,7 @@ impl<'a> AccountPersist<'a> {
         let acc: Option<Account> = self
             .persist
             .db()
-            .query(indoc! {"
-                CREATE type::thing($tbl, rand::uuid::v7()) SET
-                    user_id = $user_id,
-                    pword_salt = $pword_salt,
-                    pword_hash = $pword_hash,
-
-                    updated_at = time::now()
-            "})
-            .bind(("tbl", TABLE_NAME))
-            .bind(("user_id", acc.user_id))
-            .bind(("pword_salt", creds.salt.expose_secret()))
-            .bind(("pword_hash", creds.hash.expose_secret()))
+            .query(Account::create(creds, acc))
             .await?
             .take(0)?;
 
@@ -127,16 +126,13 @@ impl<'a> AccountPersist<'a> {
         let acc = self.current.id()?;
         let now = Utc::now();
 
-        self.persist
-            .db()
-            .query(indoc! {"
-                UPDATE type::thing($tbl, $id) SET
-                    revoked_at = $revoked_at
-            "})
-            .bind(("tbl", TABLE_NAME))
-            .bind(("id", acc))
-            .bind(("revoked_at", now))
-            .await?;
+        let mut updates = vec![];
+        now.push_field(srql::field("revoked_at"), &mut updates);
+        let Some(update) = srql::update_obj_query((TABLE_NAME, &***acc).into(), updates) else {
+            return Err("".into());
+        };
+
+        self.persist.db().query(update).await?;
 
         Ok(now)
     }

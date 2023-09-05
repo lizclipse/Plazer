@@ -2,7 +2,6 @@
 mod tests;
 
 use async_graphql::connection::{Connection, Edge};
-use indoc::indoc;
 use tracing::instrument;
 
 use super::{Board, BoardCursor, CreateBoard, UpdateBoard, TABLE_NAME};
@@ -33,9 +32,20 @@ impl<'a> BoardPersist<'a> {
         let board = self
             .persist
             .db()
-            .query("SELECT * FROM type::table($tbl) WHERE handle = $handle")
-            .bind(("tbl", TABLE_NAME))
-            .bind(("handle", handle))
+            .query(srql::SelectStatement {
+                expr: srql::Fields::all(),
+                what: srql::table(TABLE_NAME),
+                cond: srql::Cond(
+                    srql::Expression::Binary {
+                        l: srql::field("handle").into(),
+                        o: srql::Operator::Equal,
+                        r: srql::string(handle).into(),
+                    }
+                    .into(),
+                )
+                .into(),
+                ..Default::default()
+            })
             .await?
             .take(0)?;
         Ok(board)
@@ -47,39 +57,26 @@ impl<'a> BoardPersist<'a> {
     }
 
     #[instrument(skip_all)]
-    pub async fn create(&self, board: CreateBoard) -> Result<Board> {
+    pub async fn create(&self, mut board: CreateBoard) -> Result<Board> {
         // TODO: check config to see if anon users can create boards
         // TODO: check perms to see if authd user can create boards
 
-        let handle = match board.handle {
-            Some(handle) => handle,
-            None => self
+        if board.handle.is_none() {
+            board.handle = self
                 .current
                 .user_id()
                 .map_err(|_| Error::MissingIdent)?
-                .to_owned(),
-        };
+                .to_owned()
+                .into();
+        }
 
         let board = self
             .persist
             .db()
-            .query(indoc! {"
-                CREATE type::thing($tbl, rand::uuid::v7()) SET
-                    creator_id = $creator_id,
-                    handle = $handle,
-                    name = $name,
-                    description = $description,
-
-                    updated_at = time::now()
-            "})
-            .bind(("tbl", TABLE_NAME))
-            .bind((
-                "creator_id",
+            .query(Board::create(
                 self.current.id().map(ToAccountThing::to_account_thing).ok(),
+                board,
             ))
-            .bind(("handle", handle))
-            .bind(("name", board.name))
-            .bind(("description", board.description))
             .await?
             .take(0)?;
 
@@ -142,7 +139,7 @@ impl<'a> BoardListRequest<'a> {
 
         let query = srql::SelectStatement {
             expr: srql::Fields::all(),
-            what: srql::values_table(TABLE_NAME),
+            what: srql::table(TABLE_NAME),
             order: srql::Orders(order.into_iter().collect()).into(),
             cond,
             limit,

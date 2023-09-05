@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use surrealdb::sql::Thing;
 
+use super::TABLE_NAME;
 use crate::{id_obj_impls, prelude::*, query::OpaqueCursor};
 
 pub type BoardCursor = OpaqueCursor<String>;
@@ -47,6 +48,15 @@ impl Board {
 
 id_obj_impls!(Board);
 
+impl Board {
+    pub fn create(creator_id: Option<Thing>, params: CreateBoard) -> srql::Query {
+        let mut create = vec![];
+        creator_id.push_field(srql::field("creator_id"), &mut create);
+        params.append(&mut create);
+        srql::create_obj_query(TABLE_NAME, create)
+    }
+}
+
 #[derive(InputObject, Debug, Default, Clone, PartialEq, Eq)]
 pub struct CreateBoard {
     /// The board's unique handle. This is used to refer to the board in URLs
@@ -61,6 +71,15 @@ pub struct CreateBoard {
     /// The board's description.
     #[graphql(validator(min_length = 1, max_length = 32_768))]
     pub description: Option<String>,
+}
+
+impl CreateObject for CreateBoard {
+    fn append(self, expr: &mut srql::SetExpr) {
+        self.handle.push_field(srql::field("handle"), expr);
+        self.name.push_field(srql::field("name"), expr);
+        self.description
+            .push_field(srql::field("description"), expr);
+    }
 }
 
 #[derive(InputObject, Debug, Default, Clone, PartialEq, Eq)]
@@ -81,10 +100,10 @@ pub struct UpdateBoard {
 impl IntoUpdateQuery for UpdateBoard {
     fn into_update(self, thing: srql::Thing) -> Option<srql::Query> {
         let mut update = vec![];
-        self.handle.apply_update(srql::field("handle"), &mut update);
-        self.name.apply_update(srql::field("name"), &mut update);
+        self.handle.push_field(srql::field("handle"), &mut update);
+        self.name.push_field(srql::field("name"), &mut update);
         self.description
-            .apply_update(srql::field("description"), &mut update);
-        Self::update_query(thing, update)
+            .push_field(srql::field("description"), &mut update);
+        srql::update_obj_query(thing, update)
     }
 }

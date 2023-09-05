@@ -1,9 +1,8 @@
-use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 use surrealdb::{method::Query, Connection};
 
 use super::TABLE_NAME;
-use crate::migration::Migration;
+use crate::{migration::Migration, prelude::*};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AccountMigration {
@@ -36,11 +35,10 @@ impl AccountMigration {
     where
         C: Connection,
     {
-        q.query(formatdoc! {"
-            DEFINE INDEX account_user_id_index
-            ON {tbl}
-            FIELDS
-                user_id UNIQUE
-        ", tbl = TABLE_NAME})
+        q.query(srql::define_uniq_index(
+            "account_user_id_index",
+            TABLE_NAME,
+            [srql::field("user_id")],
+        ))
     }
 }

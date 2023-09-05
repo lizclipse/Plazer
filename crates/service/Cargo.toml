@@ -20,20 +20,21 @@ cfg-if = "1.0.0"
 chrono = "0.4.26"
 futures = "0.3.28"
 hyper = "0.14.27"
-indoc = "2.0.3"
 jsonwebtoken = "8.3.0"
 log = "0.4.20"
 name-variant = "0.1.0"
-nanorand = { version = "0.7.0", default-features = false, features = [
+nanorand = { version = "0.7.0", features = [
     "wyrand",
     "std",
-] }
+], default-features = false }
 pkcs8 = { version = "0.10.2", features = ["alloc", "pem"] }
 ring = { version = "0.16.20", features = ["alloc"], default-features = false }
 secrecy = { version = "0.8.0", features = ["serde"] }
 serde = "1.0.185"
 serde_json = "1.0.105"
-surrealdb = "1.0.0-beta.10"
+surrealdb = { version = "1.0.0-beta.10", features = [
+    "rustls",
+], default-features = false }
 test-case = "3.1.0"
 thiserror = "1.0.47"
 tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
@@ -41,10 +42,12 @@ tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-subscriber = { version = "0.3.17", features = ["json"] }
 typeshare = "1.0.1"
+ulid = "1.0.1"
 
 [features]
 default = ["backend-mem", "backend-file"]
 graphiql = ["async-graphql/graphiql"]
+backend-ws = ["surrealdb/protocol-ws"]
 backend-mem = ["surrealdb/kv-mem"]
 backend-file = ["surrealdb/kv-rocksdb"]
 # Disabled at the moment due to CI build issues.

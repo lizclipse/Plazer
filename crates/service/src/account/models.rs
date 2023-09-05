@@ -5,7 +5,7 @@ use serde::Deserialize;
 use surrealdb::sql::Thing;
 use tracing::instrument;
 
-use super::{create_access_token, create_refresh_token};
+use super::{create_access_token, create_refresh_token, StoredPword};
 use crate::{id_obj_impls, prelude::*, EncodingKey};
 
 static TABLE_NAME: &str = "account";
@@ -59,6 +59,20 @@ impl Account {
 
 id_obj_impls!(Account);
 
+impl Account {
+    pub fn create(creds: StoredPword, params: CreateAccount) -> srql::Query {
+        let mut create = vec![];
+        params.append(&mut create);
+        creds
+            .salt
+            .push_field(srql::field("pword_salt"), &mut create);
+        creds
+            .hash
+            .push_field(srql::field("pword_hash"), &mut create);
+        srql::create_obj_query(TABLE_NAME, create)
+    }
+}
+
 /// An account that has been authenticated, along with tokens to access it.
 #[derive(SimpleObject, Debug, Deserialize)]
 #[graphql(complex)]
@@ -111,6 +125,13 @@ pub struct CreateAccount {
     /// Whether this is required will depend on the server's configuration.
     #[graphql(validator(min_length = 1, max_length = 1024))]
     pub invite: Option<String>,
+}
+
+impl CreateObject for CreateAccount {
+    fn append(self, expr: &mut srql::SetExpr) {
+        self.user_id.push_field(srql::field("user_id"), expr);
+        // Other fields are intentionally omitted.
+    }
 }
 
 /// The information needed to authenticate an account.

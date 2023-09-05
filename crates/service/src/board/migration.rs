@@ -1,9 +1,8 @@
-use indoc::formatdoc;
 use serde::{Deserialize, Serialize};
 use surrealdb::{method::Query, Connection};
 
 use super::TABLE_NAME;
-use crate::migration::Migration;
+use crate::{migration::Migration, prelude::*};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BoardMigration {
@@ -36,11 +35,10 @@ impl BoardMigration {
     where
         C: Connection,
     {
-        q.query(formatdoc! {"
-            DEFINE INDEX board_handle_index
-            ON {tbl}
-            FIELDS
-                handle UNIQUE
-        ", tbl = TABLE_NAME})
+        q.query(srql::define_uniq_index(
+            "board_handle_index",
+            TABLE_NAME,
+            [srql::field("handle")],
+        ))
     }
 }

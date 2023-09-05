@@ -3,12 +3,15 @@ use std::{future::IntoFuture, sync::Arc};
 use async_graphql::Context;
 use cfg_if::cfg_if;
 use ring::rand::SystemRandom;
-use surrealdb::{dbs::Capabilities, engine, opt::Config as SrlConfig, Surreal};
+use surrealdb::{
+    dbs::Capabilities, engine, opt::Config as SrlConfig, Result as SrlResult, Surreal,
+};
 use tracing::{error, instrument};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
     board::BoardPersist,
+    prelude::*,
     DecodingKey,
 };
 
@@ -24,7 +27,7 @@ cfg_if! {
     ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(_: String) -> surrealdb::Result<DbLayer> {
+        async fn connect(_: String) -> SrlResult<DbLayer> {
             Surreal::new::<engine::local::Mem>(config()).await
         }
     } else if #[cfg(all(
@@ -34,7 +37,7 @@ cfg_if! {
     ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
+        async fn connect(address: String) -> SrlResult<DbLayer> {
             Surreal::new::<engine::local::RocksDb>((address, config())).await
         }
     } else if #[cfg(all(
@@ -44,13 +47,13 @@ cfg_if! {
     ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
+        async fn connect(address: String) -> SrlResult<DbLayer> {
             Surreal::new::<engine::local::TiKv>((address, config())).await
         }
     } else {
         pub type DbLayer = Surreal<engine::any::Any>;
 
-        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
+        async fn connect(address: String) -> SrlResult<DbLayer> {
             engine::any::connect((address, config())).await
         }
     }
@@ -67,7 +70,7 @@ pub struct Persist(DbLayer);
 static LOCK_TABLE: &str = "locks";
 
 impl Persist {
-    pub async fn new(address: String) -> surrealdb::Result<Self> {
+    pub async fn new(address: String) -> SrlResult<Self> {
         let db = connect(address).await?;
         // TODO: select ns & db from config
         db.use_ns("test").use_db("test").await?;
@@ -79,16 +82,18 @@ impl Persist {
     }
 
     #[instrument(skip(self, f))]
-    pub async fn execute_in_lock<F, Fut, O>(&self, id: &str, f: F) -> surrealdb::Result<Option<O>>
+    pub async fn execute_in_lock<F, Fut, O>(&self, id: &str, f: F) -> SrlResult<Option<O>>
     where
         F: FnOnce() -> Fut,
         Fut: IntoFuture<Output = O>,
     {
         match self
             .db()
-            .query("CREATE type::thing($tbl, $id) RETURN NONE")
-            .bind(("tbl", LOCK_TABLE))
-            .bind(("id", id))
+            .query(srql::CreateStatement {
+                what: srql::thing((LOCK_TABLE, id)),
+                output: srql::Output::None.into(),
+                ..Default::default()
+            })
             .await
             .and_then(|mut r| r.take(0))
         {
@@ -97,9 +102,11 @@ impl Persist {
 
                 match self
                     .db()
-                    .query("DELETE type::thing($tbl, $id) RETURN NONE")
-                    .bind(("tbl", LOCK_TABLE))
-                    .bind(("id", id))
+                    .query(srql::DeleteStatement {
+                        what: srql::thing((LOCK_TABLE, id)),
+                        output: srql::Output::None.into(),
+                        ..Default::default()
+                    })
                     .await
                     .and_then(|mut r| r.take(0))
                 {
