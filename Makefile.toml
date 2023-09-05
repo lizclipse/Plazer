@@ -7,6 +7,7 @@ dependencies = [
     "build-ui",
     "test",
     "lint-check",
+    "coverage",
 ]
 
 [tasks.install]
@@ -38,6 +39,7 @@ dependencies = ["test-cli"]
 
 [tasks.coverage-cli-setup]
 script = [
+    "mkdir -p ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage",
     "rm -rf ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage/raw/*.profraw",
 ]
 
@@ -66,7 +68,9 @@ args = [
     "--ignore",
     "**/.cargo/**",
     "--ignore",
-    "**/target/**",
+    "**/target/coverage/**",
+    "--ignore",
+    "**/target/debug/**",
     "-o",
     "./target/coverage/lcov.info",
 ]
@@ -89,7 +93,9 @@ args = [
     "--ignore",
     "**/.cargo/**",
     "--ignore",
-    "**/target/**",
+    "**/target/coverage/**",
+    "--ignore",
+    "**/target/debug/**",
     "-o",
     "./target/coverage/coverage.md",
 ]
