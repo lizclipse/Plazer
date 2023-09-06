@@ -32,6 +32,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - name: Free Disk Space
+        if: runner.os == 'ubuntu-latest'
+        uses: jlumbroso/free-disk-space@main
+
       - name: Checkout
         uses: actions/checkout@v3
 
