@@ -13,17 +13,10 @@
   left: var(--hub-button-x);
   top: var(--hub-button-y);
 
-  --hub-inner-colour: var(--colour-primary) 40%;
-  --hub-outer-colour: #c9acac;
-
-  @media (prefers-color-scheme: dark) {
-    --hub-outer-colour: #6b3d31;
-  }
-
   --colour-text: var(--hub-outer-colour);
 
   --colour-hover: radial-gradient(
-    var(--hub-inner-colour),
+    var(--hub-inner-colour) 40%,
     var(--hub-outer-colour)
   );
   background: var(--colour-hover);

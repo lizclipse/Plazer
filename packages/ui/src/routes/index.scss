@@ -4,7 +4,7 @@
   --colour-primary: #ffebeb;
   --colour-secondary: #ffe3e3;
   --colour-tertiary: #b08686;
-  --colour-hover: #ffe8bd;
+  --colour-hover: #ffe8bd99;
   --colour-error: #be2727;
   --colour-text: #050505;
   --colour-text-unfocused: #7f7f7f;
@@ -12,15 +12,21 @@
   --colour-text-error: #ffffff;
   --font-size: 16px;
 
+  --hub-inner-colour: #ffebeb99;
+  --hub-outer-colour: #c9acac55;
+
   @media (prefers-color-scheme: dark) {
     --colour-primary: #270000;
     --colour-secondary: #440e00;
     --colour-tertiary: #a16e6e;
-    --colour-hover: #3c2800;
+    --colour-hover: #3c280099;
     --colour-error: #bd0000;
     --colour-text: #ffffff;
     --colour-text-unfocused: #b3b3b3;
     --colour-text-clickable: #4d91ff;
+
+    --hub-inner-colour: #27000099;
+    --hub-outer-colour: #6b3d3155;
   }
 }
 
@@ -71,7 +77,10 @@ a {
 }
 
 %generic-input {
-  background: var(--colour-secondary);
+  $blur: 0.5rem;
+  -webkit-backdrop-filter: blur($blur);
+  backdrop-filter: blur($blur);
+  background: transparent;
   color: var(--colour-text);
   border: 0.07rem solid var(--colour-tertiary);
 
@@ -113,6 +122,7 @@ textarea,
   padding: 0.4rem 0.6rem;
 }
 
+.btn,
 button,
 input[type="button"],
 input[type="reset"],

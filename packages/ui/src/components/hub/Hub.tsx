@@ -32,6 +32,7 @@ function NavButtons() {
       <A
         href="/"
         title={t().core.nav.home()}
+        class="btn"
         activeClass={styles.activeNav}
         end
       >
@@ -40,6 +41,7 @@ function NavButtons() {
       <A
         href="/search"
         title={t().core.nav.search()}
+        class="btn"
         activeClass={styles.activeNav}
       >
         <span>🔍</span>
@@ -53,14 +55,18 @@ function AnonLinks() {
     <>
       <A
         href="/register"
-        class={styles.navRegister}
+        class={styles.navRegister + " btn"}
         activeClass={styles.activeNav}
       >
         <Trans>
           {(t) => t.core.nav.register({ span: { class: styles.inner } })}
         </Trans>
       </A>
-      <A href="/login" class={styles.navLogin} activeClass={styles.activeNav}>
+      <A
+        href="/login"
+        class={styles.navLogin + " btn"}
+        activeClass={styles.activeNav}
+      >
         <Trans>
           {(t) => t.core.nav.login({ span: { class: styles.inner } })}
         </Trans>
@@ -76,7 +82,7 @@ function AccountLinks({ close }: { readonly close: () => void }) {
     <>
       <A
         href="/settings"
-        class={styles.navSettings}
+        class={styles.navSettings + " btn"}
         activeClass={styles.activeNav}
       >
         <Trans>
@@ -84,7 +90,7 @@ function AccountLinks({ close }: { readonly close: () => void }) {
         </Trans>
       </A>
       <button
-        class={styles.navLogout}
+        class={styles.navLogout + " btn"}
         onClick={() => {
           logout();
           // Logout seems to suppress the event bubbling.

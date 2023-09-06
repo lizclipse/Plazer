@@ -1,7 +1,14 @@
 @use "../../routes/index.scss";
 
 %trans {
-  transition-property: opacity, top, left, right, bottom;
+  transition-property:
+    opacity,
+    top,
+    left,
+    right,
+    bottom,
+    backdrop-filter,
+    -webkit-backdrop-filter;
   transition-duration: 0.15s;
   transition-timing-function: ease-in-out;
 }
@@ -17,10 +24,14 @@
     @extend %trans;
     background-color: rgba(0, 0, 0, 0.1);
     opacity: 0;
+    backdrop-filter: blur(0);
   }
 
   &.open:not(.fadeOut)::backdrop {
     opacity: 1;
+    $blur: 0.1rem;
+    -webkit-backdrop-filter: blur($blur);
+    backdrop-filter: blur($blur);
   }
 }
 
@@ -95,7 +106,6 @@ $midTop: 50svh;
 .navRegister,
 .navSettings {
   @extend %navControl;
-  @extend %button;
   top: 2rem;
   right: 2rem;
 }
@@ -103,7 +113,6 @@ $midTop: 50svh;
 .navLogin,
 .navLogout {
   @extend %navControl;
-  @extend %button;
   top: 5rem;
   right: 2rem;
 }
@@ -121,7 +130,6 @@ $nav-button-size: 3rem;
   gap: 1rem;
 
   a {
-    @extend %button;
     width: $nav-button-size;
     height: $nav-button-size;
     display: flex;

@@ -46,7 +46,7 @@ pub fn obj_create_query(table: &str, mut data: SetExpr) -> Query {
 
     let thing = Thing {
         tb: table.into(),
-        id: Ulid::new().to_string().into(),
+        id: Ulid::new().to_string().to_ascii_lowercase().into(),
     };
 
     query([Statement::Create(CreateStatement {
