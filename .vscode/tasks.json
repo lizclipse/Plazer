@@ -196,10 +196,10 @@
       }
     },
     {
-      "label": "serve - crates",
+      "label": "serve - cli",
       "type": "cargo",
       "command": "make",
-      "args": ["serve-crates"],
+      "args": ["serve-cli"],
       "problemMatcher": [
         {
           "base": "$rustc",
@@ -221,10 +221,10 @@
       }
     },
     {
-      "label": "serve - packages",
+      "label": "serve - ui",
       "type": "cargo",
       "command": "make",
-      "args": ["serve-packages"],
+      "args": ["serve-ui"],
       // TODO: add proper matcher
       "problemMatcher": [],
       "isBackground": true,
