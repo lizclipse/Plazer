@@ -72,7 +72,7 @@ jobs:
       # https://github.com/1Password/typeshare/releases
       # https://github.com/mozilla/sccache/releases
 
-      - name: Install tooling
+      - name: Setup build tools
         run: |
           nu ./scripts/install-build-tools.nu --make-version 0.36.13 --typeshare-version 1.7.0 --sccache-version 0.5.4
           echo "$(pwd)/.local/bin" >> $GITHUB_PATH
@@ -109,9 +109,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Setup build tools
+      - name: Setup other build tools
         run: |
-          cargo install --locked cargo-make
           pnpm install --global turbo
           # Disabled until tikv starts working
           # sudo apt-get update && sudo apt-get install -y protobuf-compiler
