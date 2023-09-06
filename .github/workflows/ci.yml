@@ -15,27 +15,67 @@ concurrency:
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [stable]
+        include:
+          - os: ubuntu-latest
+            sccache-path: /home/runner/.cache/sccache
+
+    env:
+      RUST_BACKTRACE: full
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 2G
+      SCCACHE_DIR: ${{ matrix.sccache-path }}
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Setup Nu
+        uses: hustcer/setup-nu@v3
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         id: rust-toolchain
         with:
+          toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy, llvm-tools
 
       - name: Setup node toolchain
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x.x
+          node-version: 20.x.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
           run_install: false
+
+      - name: Print versions
+        run: |
+          nu --version
+          rustup --version
+          cargo --version
+          rustc --version
+          rustfmt --version
+          cargo clippy --version
+          node --version
+          npm --version
+          pnpm --version
+
+      # https://github.com/sagiegurari/cargo-make/releases
+      # https://github.com/1Password/typeshare/releases
+      # https://github.com/mozilla/sccache/releases
+
+      - name: Install tooling
+        run: |
+          nu ./scripts/install-build-tools.nu --make-version 0.36.13 --typeshare-version 1.7.0 --sccache-version 0.5.4
+          echo "$(pwd)/.local/bin" >> $GITHUB_PATH
 
       - name: Setup cargo cache
         uses: actions/cache@v3
@@ -44,7 +84,18 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-${{ steps.rust-toolchain.outputs.cachekey }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup sccache cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: ${{ matrix.sccache-path }}
+          key: ${{ runner.os }}-sccache-${{ steps.rust-toolchain.outputs.cachekey }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-
 
       - name: Get pnpm store path
         id: pnpm-store
@@ -55,6 +106,8 @@ jobs:
         with:
           path: ${{ steps.pnpm-store.outputs.PNPM_STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Setup build tools
         run: |
@@ -62,6 +115,9 @@ jobs:
           pnpm install --global turbo
           # Disabled until tikv starts working
           # sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Start sccache server
+        run: sccache --start-server
 
       - name: Install node dependencies
         run: pnpm install
@@ -84,3 +140,11 @@ jobs:
       # TODO: Upload coverage somewhere
       - name: Coverage
         run: cargo make coverage
+
+      - name: Print sccache stats
+        if: always()
+        run: sccache --show-stats
+
+      - name: Stop sccache server
+        if: always()
+        run: sccache --stop-server || true
