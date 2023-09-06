@@ -22,7 +22,7 @@ export def main [
     download --zip ($cache | path join $'cargo-make-($make_version)') |
     binned 'cargo-make' --bin=$bin
   durl typeshare --version=$typeshare_version --arch=$typeshare_arch |
-    download ($cache | path join $'typeshare-($typeshare_version)') |
+    download --xz ($cache | path join $'typeshare-($typeshare_version)') |
     binned 'typeshare' --bin=$bin 
   durl sccache --version=$sccache_version --arch=$sccache_arch |
     download ($cache | path join $'sccache-($sccache_version)') |
@@ -57,7 +57,7 @@ def durl [
   $'https://github.com/($org)/($repo)/releases/download/($tag)/($asset)'
 }
 
-def download [--zip output: string]: string -> string {
+def download [--zip --xz output: string]: string -> string {
   let it = $in
 
   if ($output | path exists) {
@@ -72,8 +72,10 @@ def download [--zip output: string]: string -> string {
     http get $it | save $tmp
     ^unzip -j $tmp -d $output
     rm $tmp
+  } else if $xz {
+    http get $it | ^tar xJf - --directory $output --strip-components=1
   } else {
-    http get $it | ^tar xf - --directory $output --strip-components=1
+    http get $it | ^tar xzf - --directory $output --strip-components=1
   }
 
   print $"Downloaded ($it) to ($output)"
