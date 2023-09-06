@@ -29,7 +29,7 @@ export type DeepPartial<T> = {
 
 export function createTransProxy<T extends TransTree<T>>(
   base: T,
-  tree: DeepPartial<T>
+  tree: DeepPartial<T>,
 ): T {
   return new Proxy(base, {
     get(target, p) {
@@ -73,7 +73,7 @@ export function TransProvider<T>(props: ParentProps<TransProviderProps<T>>) {
       : props.base;
 
   const [current, setCurrent] = createSignal<TransTree<any>>(
-    getTrans(language())
+    getTrans(language()),
   );
 
   createEffect(
@@ -82,8 +82,8 @@ export function TransProvider<T>(props: ParentProps<TransProviderProps<T>>) {
       () => {
         setCurrent(getTrans(language()));
       },
-      { defer: true }
-    )
+      { defer: true },
+    ),
   );
 
   return (

@@ -1,10 +1,12 @@
 use async_graphql::ErrorExtensions;
+pub use async_graphql::{Error as GqlError, Result as GqlResult};
 use axum::Json;
 use base64::DecodeError as Base64DecodeError;
 use hyper::StatusCode;
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
+use name_variant::NamedVariant;
 use serde::{Deserialize, Serialize};
-use surrealdb::{error::Db as SrlDbError, Error as SrlError};
+pub use surrealdb::{error::Db as SrlDbError, Error as SrlError};
 use thiserror::Error;
 use tracing::error;
 use typeshare::typeshare;
@@ -12,7 +14,7 @@ use typeshare::typeshare;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[typeshare]
-#[derive(Debug, Clone, Error, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Error, PartialEq, Eq, Serialize, Deserialize, NamedVariant)]
 #[serde(tag = "code", content = "message")]
 pub enum Error {
     #[error("Unauthenticated")]
@@ -24,6 +26,13 @@ pub enum Error {
 
     #[error("This identifier is already in use")]
     UnavailableIdent,
+    #[error("Missing identifier")]
+    MissingIdent,
+    #[error("Pagination arguments are invalid: {0}")]
+    PaginationInvalid(String),
+
+    #[error("JSON is malformed: {0}")]
+    ParseError(String),
 
     #[error("JWT is malformed")]
     JwtMalformed,
@@ -54,11 +63,7 @@ impl Error {
     }
 
     pub fn code(&self) -> String {
-        match self {
-            Self::ServerMisconfigured(_) => "ServerMisconfigured".into(),
-            Self::InternalServerError(_) => "InternalServerError".into(),
-            _ => format!("{:?}", self),
-        }
+        self.variant_name().into()
     }
 
     fn log(&self) {
@@ -90,12 +95,12 @@ impl From<&str> for Error {
 }
 
 impl ErrorExtensions for Error {
-    fn extend(&self) -> async_graphql::Error {
+    fn extend(&self) -> GqlError {
         // Since this is the end for our errors before they are sent to the client,
         // we should log important ones here.
         self.log();
 
-        async_graphql::Error::new(self.to_string()).extend_with(|_, e| {
+        GqlError::new(self.to_string()).extend_with(|_, e| {
             e.set("code", self.code());
         })
     }
@@ -109,7 +114,7 @@ impl From<JwtError> for Error {
             | JwtErrorKind::InvalidKeyFormat => Self::JwtMalformed,
             JwtErrorKind::InvalidEcdsaKey => Self::ServerMisconfigured("EcDSA key invalid".into()),
             JwtErrorKind::InvalidRsaKey(err) => {
-                Self::ServerMisconfigured(format!("RSA key is invalid: {}", err))
+                Self::ServerMisconfigured(format!("RSA key is invalid: {err}"))
             }
             JwtErrorKind::RsaFailedSigning => {
                 Self::ServerMisconfigured("RSA signing failed".into())
@@ -123,7 +128,7 @@ impl From<JwtError> for Error {
 
 impl From<SrlError> for Error {
     fn from(err: SrlError) -> Self {
-        println!("SurrealDB error: {:?}", err);
+        println!("SurrealDB error: {err:?}");
         match err {
             // This error only occurs when SurrealDB is misconfigured.
             SrlError::Db(SrlDbError::Ds(err)) => Self::ServerMisconfigured(err),
@@ -146,6 +151,12 @@ impl From<Base64DecodeError> for Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Self::ParseError(err.to_string())
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorData {
     code: String,
@@ -154,26 +165,35 @@ pub struct ErrorData {
 
 pub type ErrorResponse = (StatusCode, Json<ErrorData>);
 
-impl From<Error> for ErrorResponse {
-    fn from(err: Error) -> Self {
-        // This is the last point before the error is sent back to the client, so
-        // log the important ones here.
-        err.log();
-
-        let code = match err {
+impl Error {
+    fn as_status_code(&self) -> StatusCode {
+        match self {
             Error::Unauthenticated
             | Error::CredentialsInvalid
             | Error::JwtExpired
             | Error::JwtInvalid => StatusCode::UNAUTHORIZED,
             Error::Unauthorized => StatusCode::FORBIDDEN,
             Error::UnavailableIdent => StatusCode::CONFLICT,
-            Error::JwtMalformed | Error::WsInitNotObject | Error::WsInitTokenNotString => {
-                StatusCode::BAD_REQUEST
-            }
+            Error::MissingIdent
+            | Error::JwtMalformed
+            | Error::PaginationInvalid(_)
+            | Error::ParseError(_)
+            | Error::WsInitNotObject
+            | Error::WsInitTokenNotString => StatusCode::BAD_REQUEST,
             Error::ServerMisconfigured(_)
             | Error::InternalServerError(_)
             | Error::NotImplemented => StatusCode::INTERNAL_SERVER_ERROR,
-        };
+        }
+    }
+}
+
+impl From<Error> for ErrorResponse {
+    fn from(err: Error) -> Self {
+        // This is the last point before the error is sent back to the client, so
+        // log the important ones here.
+        err.log();
+
+        let code = err.as_status_code();
         let data = ErrorData {
             code: err.code(),
             message: err.to_string(),

@@ -1,13 +1,12 @@
 use std::{fmt::Debug, time::Duration};
 
-use indoc::indoc;
 use nanorand::{Rng as _, WyRand};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use surrealdb::{method::Query, Connection};
 use tokio::time::sleep;
 use tracing::{debug, instrument, trace};
 
-use crate::{account::AccountMigration, persist::Persist};
+use crate::{account::AccountMigration, board::BoardMigration, persist::Persist, prelude::*};
 
 pub trait Migration: Sized + Default + Serialize + DeserializeOwned + Debug + Send + Sync {
     const SUBSYSTEM: &'static str;
@@ -35,6 +34,7 @@ impl Migrations<'_> {
         let migrations = Migrations { persist };
 
         migrations.iterate::<AccountMigration>().await?;
+        migrations.iterate::<BoardMigration>().await?;
 
         Ok(())
     }
@@ -43,36 +43,33 @@ impl Migrations<'_> {
     async fn iterate<M: Migration>(&self) -> surrealdb::Result<()> {
         let mut prng = WyRand::new();
         while let Some(update) = self.next_update::<M>().await? {
-            match self
+            let complete = iterate_complete_update(M::SUBSYSTEM, srql::to_value(&update)?);
+
+            if let Some(res) = self
                 .persist
                 .execute_in_lock(M::SUBSYSTEM, || async {
                     update
-                        .build(self.persist.db().query("BEGIN"))
-                        .query(indoc! {"
-                            UPDATE type::thing($__update_tbl, $__update_subsys)
-                            SET
-                                current = $__update_done,
-                                history += [{ update: $__update_done, timestamp: time::now() }]
-                        "})
-                        .bind(("__update_tbl", UPDATE_TABLE))
-                        .bind(("__update_subsys", M::SUBSYSTEM))
-                        .bind(("__update_done", &update))
-                        .query("COMMIT")
+                        .build(
+                            self.persist
+                                .db()
+                                .query(srql::query([srql::Statement::Begin(srql::BeginStatement)])),
+                        )
+                        .query(complete)
+                        .query(srql::query([srql::Statement::Commit(
+                            srql::CommitStatement,
+                        )]))
                         .await
                 })
                 .await?
             {
-                Some(res) => {
-                    res?.check()?;
-                }
-                None => {
-                    trace!("Migration locked, sleeping");
-                    // Introduce a bit of jitter to avoid thundering herd.
-                    sleep(Duration::from_millis(
-                        5000 + prng.generate_range(0..=10_000),
-                    ))
-                    .await;
-                }
+                res?.check()?;
+            } else {
+                trace!("Migration locked, sleeping");
+                // Introduce a bit of jitter to avoid thundering herd.
+                sleep(Duration::from_millis(
+                    5000 + prng.generate_range(0..=10_000),
+                ))
+                .await;
             }
         }
 
@@ -84,27 +81,46 @@ impl Migrations<'_> {
     where
         M: Migration,
     {
-        match self
+        if let Some::<Update<M>>(Update { current }) = self
             .persist
             .db()
             .select((UPDATE_TABLE, M::SUBSYSTEM))
             .await?
         {
-            Some::<Update<M>>(Update { current }) => match current.next() {
-                Some(next) => {
-                    debug!(?next, "Next migration step");
-                    Ok(Some(next))
-                }
-                None => {
-                    debug!("Migration complete");
-                    Ok(None)
-                }
-            },
-            None => {
-                let update = M::default();
-                debug!(?update, "Beginning migration");
-                Ok(Some(update))
+            if let Some(next) = current.next() {
+                debug!(?next, "Next migration step");
+                Ok(Some(next))
+            } else {
+                debug!("Migration complete");
+                Ok(None)
             }
+        } else {
+            let update = M::default();
+            debug!(?update, "Beginning migration");
+            Ok(Some(update))
         }
+    }
+}
+
+fn iterate_complete_update(subsystem: &str, update: srql::Value) -> srql::UpdateStatement {
+    srql::UpdateStatement {
+        what: srql::thing((UPDATE_TABLE, subsystem)),
+        data: srql::Data::SetExpression(vec![
+            (
+                srql::field("current"),
+                srql::Operator::Equal,
+                update.clone(),
+            ),
+            (
+                srql::field("history"),
+                srql::Operator::Inc,
+                srql::array([srql::object([
+                    ("timestamp".into(), srql::time_now()),
+                    ("update".into(), update),
+                ])]),
+            ),
+        ])
+        .into(),
+        ..Default::default()
     }
 }

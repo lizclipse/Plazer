@@ -14,7 +14,7 @@ async function main() {
   const tsNoCheckFiles = [];
   const solidApolloFiles = [];
   for await (const f of walk(
-    new URL("../../../node_modules", import.meta.url).pathname
+    new URL("../../../node_modules", import.meta.url).pathname,
   )) {
     if (TS_NO_CHECK_RE.test(f) && !f.endsWith(".d.ts")) {
       tsNoCheckFiles.push(f);
@@ -25,7 +25,7 @@ async function main() {
 
   const results = await Promise.allSettled([
     ...tsNoCheckFiles.map(addTsNoCheck),
-    ...solidApolloFiles.map(remapApolloImport),
+    // ...solidApolloFiles.map(remapApolloImport),
   ]);
   let hasErrors = false;
 
@@ -70,7 +70,7 @@ async function remapApolloImport(file) {
   } else {
     await fs.writeFile(
       file,
-      content.replace(SOLID_APOLLO_ORIGINAL, SOLID_APOLLO_UPDATED)
+      content.replace(SOLID_APOLLO_ORIGINAL, SOLID_APOLLO_UPDATED),
     );
     console.debug("import fix applied to", stripped);
   }

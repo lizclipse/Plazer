@@ -5,13 +5,13 @@ use super::TABLE_NAME;
 use crate::{migration::Migration, prelude::*};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AccountMigration {
+pub enum BoardMigration {
     #[default]
     Init,
 }
 
-impl Migration for AccountMigration {
-    const SUBSYSTEM: &'static str = "subsys_account";
+impl Migration for BoardMigration {
+    const SUBSYSTEM: &'static str = "subsys_board";
 
     fn next(self) -> Option<Self> {
         match self {
@@ -23,22 +23,22 @@ impl Migration for AccountMigration {
     where
         C: Connection,
     {
-        use AccountMigration as S;
+        use BoardMigration as S;
         match self {
             S::Init => Self::build_init(q),
         }
     }
 }
 
-impl AccountMigration {
+impl BoardMigration {
     fn build_init<C>(q: Query<'_, C>) -> Query<'_, C>
     where
         C: Connection,
     {
         q.query(srql::define_uniq_index(
-            "account_user_id_index",
+            "board_handle_index",
             TABLE_NAME,
-            [srql::field("user_id")],
+            [srql::field("handle")],
         ))
     }
 }

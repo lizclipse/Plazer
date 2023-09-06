@@ -67,7 +67,7 @@ export default function ClientProvider(props: FlowProps) {
                 }
               },
             },
-          })
+          }),
         ),
     cache,
     ssrMode: isServer,
@@ -85,9 +85,9 @@ export default function ClientProvider(props: FlowProps) {
         setTimeout(gracefullyRestart);
         return token;
       },
-      { defer: true }
+      { defer: true },
     ),
-    accessToken()
+    accessToken(),
   );
 
   let tokenRefreshId = 0;
@@ -147,7 +147,7 @@ export default function ClientProvider(props: FlowProps) {
         const ref = setTimeout(() => refreshTokens(refresh), refreshAt);
         onCleanup(() => clearTimeout(ref));
       }
-    })
+    }),
   );
 
   return <ApolloProvider client={client}>{props.children}</ApolloProvider>;

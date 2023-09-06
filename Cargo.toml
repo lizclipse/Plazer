@@ -1,3 +1,4 @@
 [workspace]
-
 members = ["crates/cli", "crates/service"]
+resolver = "2"
+package.edition = "2021"

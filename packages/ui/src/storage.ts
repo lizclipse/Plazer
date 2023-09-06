@@ -34,7 +34,7 @@ export function createStorage<T>(
   key: string,
   initialValue: T,
   options?: UseStorageOptions<T>,
-  storage: StorageLike | undefined = globalThis.localStorage
+  storage: StorageLike | undefined = globalThis.localStorage,
 ): Signal<T> {
   if (isServer) {
     return createSignal(initialValue);

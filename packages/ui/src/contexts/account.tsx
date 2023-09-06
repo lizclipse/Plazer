@@ -5,10 +5,10 @@ import {
   batch,
   createContext,
   type FlowProps,
+  type JSX,
   onCleanup,
   useContext,
 } from "solid-js";
-import type { JSX } from "solid-js/web/types/jsx";
 import { StorageSerializers } from "solidjs-use";
 import { createStorage } from "~/storage";
 import type {
@@ -23,6 +23,7 @@ export const GQL_ACCOUNT: TypedDocumentNode<AccountFieldsFragment, void> = gql`
       id
       userId
       revokedAt
+      updatedAt
     }
     accessToken
     refreshToken
@@ -55,7 +56,7 @@ export interface RefreshToken {
 }
 
 export function tokenExpiry<T extends AccessToken | RefreshToken>(
-  token: string
+  token: string,
 ): number {
   const { exp } = jwtDecode<T>(token);
   return exp * 1000;
@@ -76,18 +77,18 @@ export default function AccountProvider(props: FlowProps): JSX.Element {
   const [account, setAccount] = createStorage<Account | undefined>(
     "account",
     undefined,
-    { serializer: StorageSerializers.object }
+    { serializer: StorageSerializers.object },
   );
   const [refreshToken, setRefreshToken] = createStorage<string | undefined>(
     "refreshToken",
     undefined,
-    { serializer: StorageSerializers.string }
+    { serializer: StorageSerializers.string },
   );
   const [accessToken, setAccessToken] = createStorage<string | undefined>(
     "accessToken",
     undefined,
     { serializer: StorageSerializers.string },
-    globalThis.sessionStorage
+    globalThis.sessionStorage,
   );
 
   // Remove expired tokens

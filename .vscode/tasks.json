@@ -2,10 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build - cli",
+      "label": "default",
       "type": "cargo",
       "command": "make",
-      "args": ["build-cli"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -17,10 +16,25 @@
       }
     },
     {
-      "label": "build - ui",
+      "label": "build - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["build-ui"],
+      "args": ["build-crates"],
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "build - packages",
+      "type": "cargo",
+      "command": "make",
+      "args": ["build-packages"],
       "problemMatcher": "$tsc",
       "presentation": {
         "echo": true,
@@ -32,11 +46,26 @@
       }
     },
     {
-      "label": "test - cli",
+      "label": "test - crates",
+      "type": "cargo",
+      "command": "make",
+      "args": ["test-crates"],
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "test",
       // Use a type of process so we can set as test command
       "type": "process",
       "command": "cargo",
-      "args": ["make", "test-cli"],
+      "args": ["make", "test"],
       "problemMatcher": "$rustc",
       "isTestCommand": true,
       "presentation": {
@@ -49,10 +78,25 @@
       }
     },
     {
-      "label": "lint - fix - cli",
+      "label": "coverage",
       "type": "cargo",
       "command": "make",
-      "args": ["lint-fix-cli"],
+      "args": ["coverage"],
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "lint - fix - crates",
+      "type": "cargo",
+      "command": "make",
+      "args": ["lint-fix-crates"],
       "problemMatcher": "$rustc",
       "presentation": {
         "echo": true,
@@ -64,10 +108,25 @@
       }
     },
     {
-      "label": "lint - fix - ui",
+      "label": "lint - check - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["lint-fix-ui"],
+      "args": ["lint-check-crates"],
+      "problemMatcher": "$rustc",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "lint - fix - packages",
+      "type": "cargo",
+      "command": "make",
+      "args": ["lint-fix-packages"],
       // TODO: add proper matcher
       "problemMatcher": [],
       "presentation": {
@@ -137,10 +196,10 @@
       }
     },
     {
-      "label": "serve - cli",
+      "label": "serve - crates",
       "type": "cargo",
       "command": "make",
-      "args": ["serve-cli"],
+      "args": ["serve-crates"],
       "problemMatcher": [
         {
           "base": "$rustc",
@@ -162,10 +221,10 @@
       }
     },
     {
-      "label": "serve - ui",
+      "label": "serve - packages",
       "type": "cargo",
       "command": "make",
-      "args": ["serve-ui"],
+      "args": ["serve-packages"],
       // TODO: add proper matcher
       "problemMatcher": [],
       "isBackground": true,

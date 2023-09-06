@@ -1,42 +1,175 @@
 [tasks.default]
-clear = true
-dependencies = ["lint-check", "test", "build"]
+category = "Meta"
+description = "Complete end-to-end build, test, and lint check."
+dependencies = [
+    "install",
+    "build-crates",
+    "codegen",
+    "build-packages",
+    "test",
+    "lint-check",
+    "coverage",
+]
 
-[tasks.build-cli]
+[tasks.install]
+category = "Setup"
+description = "Install all required dependencies."
+dependencies = ["install-packages"]
+
+[tasks.install-packages]
+category = "Setup"
+description = "Install all package dependencies."
+command = "pnpm"
+args = ["install"]
+
+[tasks.build-crates]
+category = "Build"
+description = "Build all crates."
 command = "cargo"
 args = ["build"]
 
-[tasks.build-ui]
+[tasks.build-packages]
+category = "Build"
+description = "Build all packages."
 command = "turbo"
 args = ["build"]
 dependencies = ["codegen-gql"]
 
 [tasks.build]
-dependencies = ["build-cli", "build-ui"]
+category = "Build"
+description = "Build whole project."
+dependencies = ["build-crates", "build-packages"]
 
-[tasks.test-cli]
+[tasks.test-crates]
+category = "Test"
+description = "Run tests for all crates."
 command = "cargo"
-args = ["test"]
+args = ["test", "--all-features"]
 
 [tasks.test]
-dependencies = ["test-cli"]
+category = "Test"
+description = "Run all tests."
+clear = true
+dependencies = ["test-crates"]
 
-[tasks.lint-check-cli-fmt]
+[tasks.coverage-crates-setup]
+category = "Coverage"
+description = "Setup coverage for all crates."
+script = [
+    "mkdir -p ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage",
+    "rm -rf ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage/raw/*.profraw",
+]
+
+# Enable backtrace & coverage for tests
+[tasks.coverage-crates-setup.env]
+RUST_BACKTRACE = "1"
+RUSTFLAGS = '-Cinstrument-coverage --cfg uuid_unstable'
+# To prevent the build cache from being smashed by the differences between the
+# coverage and non-coverage builds, we need to set a different target directory.
+CARGO_TARGET_DIR = '${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage'
+
+[tasks.coverage-crates-lcov]
+category = "Coverage"
+description = "Generate lcov report for all crates."
+command = "grcov"
+args = [
+    ".",
+    "-s",
+    "./crates/",
+    "--binary-path",
+    "./target/coverage/",
+    "-t",
+    "lcov",
+    "--branch",
+    "--ignore-not-existing",
+    "--keep-only",
+    "**/src/**",
+    "--ignore",
+    "**/.cargo/**",
+    "--ignore",
+    "**/target/coverage/*",
+    "--ignore",
+    "**/target/debug/**",
+    "-o",
+    "./target/coverage/lcov.info",
+]
+install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--version" }
+
+[tasks.coverage-crates-md]
+category = "Coverage"
+description = "Generate markdown report for all crates."
+command = "grcov"
+args = [
+    ".",
+    "-s",
+    "./crates/",
+    "--binary-path",
+    "./target/coverage/",
+    "-t",
+    "markdown",
+    "--branch",
+    "--ignore-not-existing",
+    "--keep-only",
+    "**/src/**",
+    "--ignore",
+    "**/.cargo/**",
+    "--ignore",
+    "**/target/coverage/*",
+    "--ignore",
+    "**/target/debug/**",
+    "-o",
+    "./target/coverage/coverage.md",
+]
+install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--version" }
+
+[tasks.coverage-crates-report]
+category = "Coverage"
+description = "Outputs the coverage report."
+command = "cat"
+args = ["./target/coverage/coverage.md"]
+
+[tasks.coverage-crates]
+category = "Coverage"
+description = "Generate coverage report for all crates."
+dependencies = [
+    "coverage-crates-setup",
+    "test-crates",
+    "coverage-crates-lcov",
+    "coverage-crates-md",
+    "coverage-crates-report",
+]
+
+[tasks.coverage]
+category = "Coverage"
+description = "Generate coverage report for whole project."
+dependencies = ["coverage-crates"]
+
+[tasks.lint-check-crates-fmt]
+category = "Lint"
+description = "Check formatting for all crates."
 command = "cargo"
 args = ["fmt", "--", "--check"]
 
-[tasks.lint-check-cli-clippy]
+[tasks.lint-check-crates-clippy]
+category = "Lint"
+description = "Check clippy for all crates."
 command = "cargo"
 args = ["clippy", "--all-targets", "--all-features", "--", "-D", "warnings"]
 
-[tasks.lint-check-cli]
-dependencies = ["lint-check-cli-fmt", "lint-check-cli-clippy"]
+[tasks.lint-check-crates]
+category = "Lint"
+description = "Check lint for all crates."
+dependencies = ["lint-check-crates-fmt", "lint-check-crates-clippy"]
 
-[tasks.lint-fix-cli-fmt]
+[tasks.lint-fix-crates-fmt]
+category = "Lint"
+description = "Fix formatting for all crates."
 command = "cargo"
 args = ["fmt"]
 
-[tasks.lint-fix-cli-clippy]
+[tasks.lint-fix-crates-clippy]
+category = "Lint"
+description = "Fix clippy for all crates."
 command = "cargo"
 args = [
     "clippy",
@@ -49,48 +182,72 @@ args = [
     "warnings",
 ]
 
-[tasks.lint-fix-cli]
-dependencies = ["lint-fix-cli-fmt", "lint-fix-cli-clippy"]
+[tasks.lint-fix-crates]
+category = "Lint"
+description = "Fix lint for all crates."
+dependencies = ["lint-fix-crates-fmt", "lint-fix-crates-clippy"]
 
-[tasks.lint-check-ui]
+[tasks.lint-check-packages]
+category = "Lint"
+description = "Check lint for all packages."
 command = "turbo"
 args = ["lint"]
 
-[tasks.lint-fix-ui]
+[tasks.lint-fix-packages]
+category = "Lint"
+description = "Fix lint for all packages."
 command = "turbo"
 args = ["lint:fix"]
 
 [tasks.lint-check-style]
+category = "Lint"
+description = "Check formatting for project."
 command = "pnpm"
 args = ["run", "lint"]
 
 [tasks.lint-fix-style]
+category = "Lint"
+description = "Fix formatting for project."
 command = "pnpm"
 args = ["run", "lint:fix"]
 
 [tasks.lint-check]
-dependencies = ["lint-check-cli", "lint-check-ui", "lint-check-style"]
+category = "Lint"
+description = "Check lint for whole project."
+dependencies = ["lint-check-crates", "lint-check-packages", "lint-check-style"]
 
 [tasks.lint-fix]
-dependencies = ["lint-fix-cli", "lint-fix-ui", "lint-fix-style"]
+category = "Lint"
+description = "Fix lint for whole project."
+dependencies = ["lint-fix-crates", "lint-fix-packages", "lint-fix-style"]
 
 [tasks.serve-service]
+category = "Dev"
+description = "Run and watch service."
 command = "cargo"
 args = ["watch", "-x", "run -p plazer_service", "-w", "crates"]
 
 [tasks.serve-cli]
+category = "Dev"
+description = "Run and watch CLI."
 command = "cargo"
 args = ["watch", "-x", "run -p plazer", "-w", "crates"]
 
 [tasks.serve-ui]
+category = "Dev"
+description = "Run and watch UI."
 command = "pnpm"
 args = ["run", "--filter", "{packages/ui}", "dev"]
 
 [tasks.codegen-schema]
+category = "Codegen"
+description = "Generate GraphQL schema."
 command = "cargo"
 args = ["run", "-p", "plazer", "--", "schema", "--output", "schema.gql"]
 
 [tasks.codegen-typeshare]
+category = "Codegen"
+description = "Generate TypeScript types from crates."
 command = "typeshare"
 args = [
     "--lang",
@@ -102,42 +259,56 @@ args = [
 install_crate = { crate_name = "typeshare-cli", binary = "typeshare", test_arg = "--version" }
 
 [tasks.codegen-scss]
+category = "Codegen"
+description = "Generate TypeScript types from SCSS."
 command = "turbo"
 args = ["codegen:scss"]
 
 [tasks.codegen-scss-watch]
+category = "Codegen"
+description = "Generate TypeScript types from SCSS and watch for changes."
 command = "turbo"
 args = ["codegen:scss:watch"]
 
 [tasks.codegen-gql]
+category = "Codegen"
+description = "Generate TypeScript types from GraphQL schema."
 command = "turbo"
 args = ["codegen:gql"]
 dependencies = ["codegen-schema"]
 
 [tasks.codegen-gql-watch]
+category = "Codegen"
+description = "Generate TypeScript types from GraphQL schema and watch for changes."
 command = "turbo"
 args = ["codegen:gql:watch"]
 
 [tasks.codegen]
+category = "Codegen"
+description = "Generate all codegen artifacts."
 dependencies = ["codegen-scss", "codegen-gql", "codegen-typeshare"]
 
 [tasks.surreal-db]
-script_runner = "@shell"
-script = '''
-docker run --rm -it -v "$(pwd)/data/db:/data" -p 8000:8000 surrealdb/surrealdb start "file:///data" --pass root "$@"
-'''
+category = "Tools"
+description = "Runs a local surreal database."
+command = "surreal"
+args = ["start", "file://./data/db", "--pass", "root"]
 
 [tasks.surreal-sql]
-script_runner = "@shell"
-script = '''
-docker run --rm -it surrealdb/surrealdb sql "$@"
-'''
+category = "Tools"
+description = "Runs a local surreal SQL client."
+command = "surreal"
+args = ["sql", "--conn", "ws://localhost:8000"]
 
 [tasks.reset-local-db]
-script_runner = "@shell"
-script = '''
-rm -rf data/db
-'''
+category = "Tools"
+description = "Resets the local database."
+command = "rm"
+args = ["-rf", "data/db"]
 
 [config]
+skip_core_tasks = true
 default_to_workspace = false
+
+[env]
+LLVM_PROFILE_FILE = '${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/target/coverage/raw/cargo-test-%p-%m.profraw'

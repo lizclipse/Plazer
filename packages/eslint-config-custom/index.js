@@ -28,5 +28,9 @@ module.exports = {
       },
     ],
     "prettier/prettier": "warn",
+
+    // Disabled because they're bloody broken
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
   },
 };

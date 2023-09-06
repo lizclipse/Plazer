@@ -3,44 +3,66 @@ use std::{future::IntoFuture, sync::Arc};
 use async_graphql::Context;
 use cfg_if::cfg_if;
 use ring::rand::SystemRandom;
-use surrealdb::{engine, Surreal};
+use surrealdb::{
+    dbs::Capabilities, engine, opt::Config as SrlConfig, Result as SrlResult, Surreal,
+};
 use tracing::{error, instrument};
 
 use crate::{
     account::{AccountPersist, CurrentAccount},
+    board::BoardPersist,
+    prelude::*,
     DecodingKey,
 };
 
+fn config() -> SrlConfig {
+    SrlConfig::new().capabilities(Capabilities::all())
+}
+
 cfg_if! {
-    if #[cfg(all(feature = "backend-mem", not(feature = "backend-file"), not(feature = "backend-tikv")))] {
+    if #[cfg(all(
+        feature = "backend-mem",
+        not(feature = "backend-file"),
+        not(feature = "backend-tikv")
+    ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(_: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::Mem>(()).await
+        async fn connect(_: String) -> SrlResult<DbLayer> {
+            Surreal::new::<engine::local::Mem>(config()).await
         }
-    } else if #[cfg(all(not(feature = "backend-mem"), feature = "backend-file", not(feature = "backend-tikv")))] {
+    } else if #[cfg(all(
+        not(feature = "backend-mem"),
+        feature = "backend-file",
+        not(feature = "backend-tikv")
+    ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::RocksDb>(address).await
+        async fn connect(address: String) -> SrlResult<DbLayer> {
+            Surreal::new::<engine::local::RocksDb>((address, config())).await
         }
-    } else if #[cfg(all(not(feature = "backend-mem"), not(feature = "backend-file"), feature = "backend-tikv"))] {
+    } else if #[cfg(all(
+        not(feature = "backend-mem"),
+        not(feature = "backend-file"),
+        feature = "backend-tikv"
+    ))] {
         pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            Surreal::new::<engine::local::TiKv>(address).await
+        async fn connect(address: String) -> SrlResult<DbLayer> {
+            Surreal::new::<engine::local::TiKv>((address, config())).await
         }
     } else {
         pub type DbLayer = Surreal<engine::any::Any>;
 
-        async fn connect(address: String) -> surrealdb::Result<DbLayer> {
-            engine::any::connect(address).await
+        async fn connect(address: String) -> SrlResult<DbLayer> {
+            engine::any::connect((address, config())).await
         }
     }
 }
 
 pub trait PersistExt {
+    fn current_account(&self) -> &CurrentAccount;
     fn account_persist(&self) -> AccountPersist;
+    fn board_persist(&self) -> BoardPersist;
 }
 
 pub struct Persist(DbLayer);
@@ -48,7 +70,7 @@ pub struct Persist(DbLayer);
 static LOCK_TABLE: &str = "locks";
 
 impl Persist {
-    pub async fn new(address: String) -> surrealdb::Result<Self> {
+    pub async fn new(address: String) -> SrlResult<Self> {
         let db = connect(address).await?;
         // TODO: select ns & db from config
         db.use_ns("test").use_db("test").await?;
@@ -60,16 +82,18 @@ impl Persist {
     }
 
     #[instrument(skip(self, f))]
-    pub async fn execute_in_lock<F, Fut, O>(&self, id: &str, f: F) -> surrealdb::Result<Option<O>>
+    pub async fn execute_in_lock<F, Fut, O>(&self, id: &str, f: F) -> SrlResult<Option<O>>
     where
         F: FnOnce() -> Fut,
         Fut: IntoFuture<Output = O>,
     {
         match self
             .db()
-            .query("CREATE type::thing($tbl, $id) RETURN NONE")
-            .bind(("tbl", LOCK_TABLE))
-            .bind(("id", id))
+            .query(srql::CreateStatement {
+                what: srql::thing((LOCK_TABLE, id)),
+                output: srql::Output::None.into(),
+                ..Default::default()
+            })
             .await
             .and_then(|mut r| r.take(0))
         {
@@ -78,9 +102,11 @@ impl Persist {
 
                 match self
                     .db()
-                    .query("DELETE type::thing($tbl, $id) RETURN NONE")
-                    .bind(("tbl", LOCK_TABLE))
-                    .bind(("id", id))
+                    .query(srql::DeleteStatement {
+                        what: srql::thing((LOCK_TABLE, id)),
+                        output: srql::Output::None.into(),
+                        ..Default::default()
+                    })
                     .await
                     .and_then(|mut r| r.take(0))
                 {
@@ -103,14 +129,22 @@ impl Persist {
 }
 
 impl PersistExt for Context<'_> {
+    fn current_account(&self) -> &CurrentAccount {
+        self.data_opt::<CurrentAccount>()
+            .unwrap_or_else(|| self.data_unchecked::<Arc<CurrentAccount>>())
+    }
+
     fn account_persist(&self) -> AccountPersist {
         AccountPersist::new(
             self.data_unchecked::<Persist>(),
-            self.data_opt::<CurrentAccount>()
-                .unwrap_or_else(|| self.data_unchecked::<Arc<CurrentAccount>>()),
+            self.current_account(),
             self.data_unchecked::<SystemRandom>(),
             self.data_unchecked::<DecodingKey>(),
         )
+    }
+
+    fn board_persist(&self) -> BoardPersist {
+        BoardPersist::new(self.data_unchecked::<Persist>(), self.current_account())
     }
 }
 
@@ -131,7 +165,7 @@ mod test {
         let (a, b) = join!(
             async {
                 p.execute_in_lock(id, || async {
-                    sleep(Duration::from_millis(10)).await;
+                    sleep(Duration::from_millis(30)).await;
                 })
                 .await
             },

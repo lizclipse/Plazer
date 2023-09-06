@@ -1,6 +1,9 @@
 {
   "extends": "tsconfig/tsconfig.json",
   "compilerOptions": {
+    "module": "es2022",
+    "moduleResolution": "bundler",
+
     "jsxImportSource": "solid-js",
     "jsx": "preserve",
 
@@ -9,7 +12,10 @@
     "rootDirs": ["./src", "./src/__generated__/scss/src"],
     "paths": {
       "~gen/*": ["./src/__generated__/*"],
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+
+      // Dependency fix
+      "@merged/solid-apollo": ["./node_modules/@merged/solid-apollo/dist/types"]
     },
 
     "noEmit": true

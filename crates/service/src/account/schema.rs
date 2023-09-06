@@ -1,9 +1,9 @@
-use async_graphql::{Context, Object, Result, ResultExt as _};
+use async_graphql::{Context, Object};
 use chrono::{DateTime, Utc};
 use tracing::instrument;
 
 use super::{Account, AuthCreds, AuthenticatedAccount, CreateAccount};
-use crate::persist::PersistExt as _;
+use crate::prelude::*;
 
 #[derive(Default)]
 pub struct AccountQuery;
@@ -15,7 +15,7 @@ impl AccountQuery {
     /// If this returns `null`, then it means that the account associated with
     /// the current session has been deleted.
     #[instrument(skip_all)]
-    async fn me(&self, ctx: &Context<'_>) -> Result<Option<Account>> {
+    async fn me(&self, ctx: &Context<'_>) -> GqlResult<Option<Account>> {
         ctx.account_persist().current().await.extend()
     }
 }
@@ -27,7 +27,7 @@ pub struct AccountMutation;
 impl AccountMutation {
     /// Log into the target account.
     #[instrument(skip_all)]
-    async fn login(&self, ctx: &Context<'_>, creds: AuthCreds) -> Result<AuthenticatedAccount> {
+    async fn login(&self, ctx: &Context<'_>, creds: AuthCreds) -> GqlResult<AuthenticatedAccount> {
         ctx.account_persist().login(creds).await.extend()
     }
 
@@ -37,7 +37,7 @@ impl AccountMutation {
         &self,
         ctx: &Context<'_>,
         #[graphql(validator(min_length = 1, max_length = 256))] refresh_token: String,
-    ) -> Result<AuthenticatedAccount> {
+    ) -> GqlResult<AuthenticatedAccount> {
         ctx.account_persist().refresh(refresh_token).await.extend()
     }
 
@@ -47,13 +47,13 @@ impl AccountMutation {
         &self,
         ctx: &Context<'_>,
         create: CreateAccount,
-    ) -> Result<AuthenticatedAccount> {
+    ) -> GqlResult<AuthenticatedAccount> {
         ctx.account_persist().create(create).await.extend()
     }
 
     /// Revoke all tokens issued for the current account.
     #[instrument(skip_all)]
-    async fn revoke_tokens(&self, ctx: &Context<'_>) -> Result<DateTime<Utc>> {
+    async fn revoke_tokens(&self, ctx: &Context<'_>) -> GqlResult<DateTime<Utc>> {
         ctx.account_persist().revoke_tokens().await.extend()
     }
 }
