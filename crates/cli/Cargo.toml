@@ -10,7 +10,7 @@ anyhow = "1.0.75"
 plazer_service = { version = "0.1.0", path = "../service", features = [
     "graphiql",
 ] }
-clap = { version = "4.3.23", features = ["cargo", "derive"] }
+clap = { version = "4.4.2", features = ["cargo", "derive"] }
 jsonwebtoken = "8.3.0"
 pkcs8 = { version = "0.10.2", features = ["pem"] }
 ring = "0.16.20"

@@ -7,17 +7,17 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-async-graphql = { version = "6.0.4", features = [
+async-graphql = { version = "6.0.5", features = [
     "chrono",
     "secrecy",
 ], default-features = false }
-async-graphql-axum = "6.0.4"
+async-graphql-axum = "6.0.5"
 async-stream = "0.3.5"
 async-trait = "0.1.73"
 axum = { version = "0.6.20", features = ["headers", "ws"] }
-base64 = "0.21.2"
+base64 = "0.21.3"
 cfg-if = "1.0.0"
-chrono = "0.4.26"
+chrono = "0.4.29"
 futures = "0.3.28"
 hyper = "0.14.27"
 jsonwebtoken = "8.3.0"
@@ -30,13 +30,13 @@ nanorand = { version = "0.7.0", features = [
 pkcs8 = { version = "0.10.2", features = ["alloc", "pem"] }
 ring = { version = "0.16.20", features = ["alloc"], default-features = false }
 secrecy = { version = "0.8.0", features = ["serde"] }
-serde = "1.0.185"
+serde = "1.0.188"
 serde_json = "1.0.105"
-surrealdb = { version = "1.0.0-beta.10", features = [
+surrealdb = { version = "1.0.0-beta.11", features = [
     "rustls",
 ], default-features = false }
 test-case = "3.1.0"
-thiserror = "1.0.47"
+thiserror = "1.0.48"
 tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.37"
 tracing-appender = "0.2.2"
