@@ -86,16 +86,14 @@ pub fn define_uniq_index(
     index: impl Into<String>,
     table: &str,
     fields: impl Into<Vec<Idiom>>,
-) -> Query {
-    query([Statement::Define(DefineStatement::Index(
-        DefineIndexStatement {
-            name: index.into().into(),
-            what: table.into(),
-            cols: Idioms(fields.into()),
-            index: Index::Uniq,
-            ..Default::default()
-        },
-    ))])
+) -> Statement {
+    Statement::Define(DefineStatement::Index(DefineIndexStatement {
+        name: index.into().into(),
+        what: table.into(),
+        cols: Idioms(fields.into()),
+        index: Index::Uniq,
+        ..Default::default()
+    }))
 }
 
 #[inline]
