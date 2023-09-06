@@ -71,10 +71,11 @@ jobs:
       # https://github.com/sagiegurari/cargo-make/releases
       # https://github.com/1Password/typeshare/releases
       # https://github.com/mozilla/sccache/releases
+      # https://github.com/mozilla/grcov/releases
 
       - name: Setup build tools
         run: |
-          nu ./scripts/install-build-tools.nu --make-version 0.36.13 --typeshare-version 1.7.0 --sccache-version 0.5.4
+          nu ./scripts/install-build-tools.nu --make-version 0.36.13 --typeshare-version 1.7.0 --sccache-version 0.5.4 --grcov-version 0.8.18
           echo "$(pwd)/.local/bin" >> $GITHUB_PATH
 
       - name: Setup cargo cache

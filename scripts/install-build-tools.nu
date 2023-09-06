@@ -7,7 +7,9 @@ export def main [
   --typeshare-arch: string = 'x86_64-unknown-linux-gnu'
   --sccache-version: string = '0.5.4'
   --sccache-arch: string = 'x86_64-unknown-linux-musl'
-  --reset]: nothing -> nothing {
+  --grcov-version: string = '0.8.18'
+  --grcov-arch: string = 'x86_64-unknown-linux-musl'
+  --reset]: nothing -> string {
   let local: string = ($env.FILE_PWD | path join '..' '.local' | path expand)
   let cache: string = ($local | path join 'cache')
   let bin: string = ($local | path join 'bin')
@@ -19,16 +21,30 @@ export def main [
   mkdir $cache $bin
   
   durl make --version=$make_version --arch=$make_arch |
-    download --zip ($cache | path join $'cargo-make-($make_version)') |
+    download ($cache | path join $'cargo-make-($make_version)') |
     binned 'cargo-make' --bin=$bin
   durl typeshare --version=$typeshare_version --arch=$typeshare_arch |
-    download --xz ($cache | path join $'typeshare-($typeshare_version)') |
+    download ($cache | path join $'typeshare-($typeshare_version)') |
     binned 'typeshare' --bin=$bin 
   durl sccache --version=$sccache_version --arch=$sccache_arch |
     download ($cache | path join $'sccache-($sccache_version)') |
     binned 'sccache' --bin=$bin
+  durl grcov --version=$grcov_version --arch=$grcov_arch |
+    download ($cache | path join $'grcov-($grcov_version)') --strip-components=0 |
+    binned 'grcov' --bin=$bin
 
   chmod +x ($bin | path join '*')
+
+  [
+    $make_version,
+    $make_arch,
+    $typeshare_version,
+    $typeshare_arch,
+    $sccache_version,
+    $sccache_arch,
+    $grcov_version,
+    $grcov_arch
+  ] | str join '-' | hash sha256
 }
 
 def 'durl make' [
@@ -49,6 +65,12 @@ def 'durl sccache' [
   durl --org=mozilla --repo=sccache --tag=$'v($version)' --asset=$'sccache-v($version)-($arch).tar.gz'
 }
 
+def 'durl grcov' [
+  --version: string
+  --arch: string]: nothing -> string {
+  durl --org=mozilla --repo=grcov --tag=$'v($version)' --asset=$'grcov-($arch).tar.bz2'
+}
+
 def durl [
   --org: string
   --repo: string
@@ -57,8 +79,8 @@ def durl [
   $'https://github.com/($org)/($repo)/releases/download/($tag)/($asset)'
 }
 
-def download [--zip --xz output: string]: string -> string {
-  let it = $in
+def download [output: string --strip-components: int = 1]: string -> string {
+  let url = $in
 
   if ($output | path exists) {
     print $"Already downloaded ($output)"
@@ -66,19 +88,26 @@ def download [--zip --xz output: string]: string -> string {
   }
 
   mkdir $output
-  
-  if $zip {
-    let tmp = ([$output, '.zip'] | str join)
-    http get $it | save $tmp
-    ^unzip -j $tmp -d $output
-    rm $tmp
-  } else if $xz {
-    http get $it | ^tar xJf - --directory $output --strip-components=1
-  } else {
-    http get $it | ^tar xzf - --directory $output --strip-components=1
-  }
 
-  print $"Downloaded ($it) to ($output)"
+  match $url { 
+    $zip if $url =~ '.*\.zip$' => {
+      let tmp = ([$output, '.zip'] | str join)
+      http get $url | save $tmp
+      ^unzip -j $tmp -d $output
+      rm $tmp
+    },
+    $xz if $url =~ '.*\.tar\.xz$' => {
+      http get $url | ^tar xJf - --directory $output --strip-components $strip_components
+    },
+    $bz2 if $url =~ '.*\.tar\.bz2$' => {
+      http get $url | ^tar xjf - --directory $output --strip-components $strip_components
+    },
+    _ => {
+      http get $url | ^tar xzf - --directory $output --strip-components $strip_components
+    }
+  }
+  
+  print $"Downloaded ($url) to ($output)"
   $output
 }
 
