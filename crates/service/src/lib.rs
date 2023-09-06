@@ -35,7 +35,7 @@ use ring::{
     signature::{self, KeyPair as _},
 };
 use thiserror::Error;
-use tracing::{error, info, instrument, metadata::LevelFilter, Level};
+use tracing::{debug, error, info, instrument, metadata::LevelFilter, trace, Level};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, Layer as _};
 
@@ -118,6 +118,8 @@ pub fn init_logging(
         tracing::subscriber::set_global_default(collector)
             .expect("Unable to set a global subscriber");
 
+        trace!(?stdout_level, ?file_level, "Logging initialised");
+
         guard
     }
 
@@ -134,6 +136,7 @@ pub async fn serve(
         port,
     }: ServeConfig,
 ) -> Result<(), ServeError> {
+    debug!("Initialising RNG");
     // Call fill once before starting to initialize the RNG.
     let csrng = SystemRandom::new();
     let mut rng_buf = [0u8; 1];

@@ -51,7 +51,7 @@ struct RunCommand {
         short,
         long,
         help = "The address of the remote database or the path to a local file",
-        default_value = "file://./data/db"
+        default_value = "file:./data/db"
     )]
     db_address: String,
 
