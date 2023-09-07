@@ -74,10 +74,13 @@ pub struct Persist(DbLayer);
 static LOCK_TABLE: &str = "locks";
 
 impl Persist {
-    pub async fn new(address: String) -> SrlResult<Self> {
-        let db = connect(address).await?;
-        // TODO: select ns & db from config
-        db.use_ns("test").use_db("test").await?;
+    pub async fn new(
+        address: impl Into<String>,
+        namespace: impl Into<String>,
+        database: impl Into<String>,
+    ) -> SrlResult<Self> {
+        let db = connect(address.into()).await?;
+        db.use_ns(namespace).use_db(database).await?;
         Ok(Self(db))
     }
 
@@ -196,7 +199,7 @@ pub mod testing {
     use super::*;
 
     pub async fn persist() -> Persist {
-        let persist = Persist::new("memory".into()).await.unwrap();
+        let persist = Persist::new("memory", "test", "test").await.unwrap();
         Migrations::run(&persist).await.unwrap();
         persist
     }

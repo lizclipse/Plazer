@@ -36,7 +36,7 @@ impl AccountMutation {
     async fn refresh(
         &self,
         ctx: &Context<'_>,
-        #[graphql(validator(min_length = 1, max_length = 256))] refresh_token: String,
+        #[graphql(validator(min_length = 1, max_length = 1024))] refresh_token: String,
     ) -> GqlResult<AuthenticatedAccount> {
         ctx.account_persist().refresh(refresh_token).await.extend()
     }

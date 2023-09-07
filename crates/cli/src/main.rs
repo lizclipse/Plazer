@@ -1,11 +1,20 @@
-use std::path::Path;
+use std::{
+    fs::{self, File},
+    io::Write as _,
+    path::Path,
+};
 
 use anyhow::Context as _;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use pkcs8::der::Decode;
-use plazer_service::{init_logging, read_key, schema, serve, ServeConfig};
+use plazer_service::{
+    config::{
+        ServiceConfig, DEFAULT_ADDRESS, DEFAULT_DATABASE, DEFAULT_HOST, DEFAULT_LOG_DIR,
+        DEFAULT_NAMESPACE, DEFAULT_PORT, DEFAULT_PRIVATE_KEY_PATH,
+    },
+    init_logging, schema, serve,
+};
 use ring::{rand, signature};
-use tokio::{fs::File, io::AsyncWriteExt};
 use tracing::Level;
 
 #[derive(Parser)]
@@ -22,7 +31,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Run server")]
+    #[command(about = "Run server (default)")]
     Run(RunCommand),
     #[command(about = "Generate schema")]
     Schema(SchemaCommand),
@@ -33,34 +42,55 @@ enum Commands {
 #[derive(Args)]
 #[command(about = "Starts the server")]
 struct RunCommand {
-    #[arg(short, long, help = "The port to listen on [default: 8080]")]
+    #[arg(
+        short,
+        long,
+        help = format!("The port to listen on [default: {DEFAULT_PORT}]")
+    )]
     port: Option<u16>,
 
-    #[arg(long, help = "The host to listen on")]
+    #[arg(long, help = format!("The host to listen on [default: {DEFAULT_HOST}]"))]
     host: Option<String>,
 
     #[arg(
         short,
         long,
-        help = "The directory to store logs in",
-        default_value = "./data/logs"
+        help = format!("The address of the remote database or the path to a local file [default: {DEFAULT_ADDRESS}]")
     )]
-    log_dir: String,
+    address: Option<String>,
 
     #[arg(
         short,
         long,
-        help = "The address of the remote database or the path to a local file",
-        default_value = "file:./data/db"
+        help = format!("The namespace to use in the database [default: {DEFAULT_NAMESPACE}]")
     )]
-    db_address: String,
+    namespace: Option<String>,
+
+    #[arg(
+        short,
+        long,
+        help = format!("The database to use in the namespace [default: {DEFAULT_DATABASE}]")
+    )]
+    database: Option<String>,
 
     #[arg(
         long,
-        help = "The private key for authenticating",
-        default_value = "./data/private_key.pem"
+        help = "The private key for authenticating (overrides --private-key-path)"
     )]
-    private_key: String,
+    private_key: Option<String>,
+
+    #[arg(
+        long,
+        help = format!("The path to the private key for authenticating [default: {DEFAULT_PRIVATE_KEY_PATH}]")
+    )]
+    private_key_path: Option<String>,
+
+    #[arg(
+        short,
+        long,
+        help = format!("The directory to store logs in [default: {DEFAULT_LOG_DIR}]")
+    )]
+    log_dir: Option<String>,
 
     #[arg(long, help = "The level of logs to show on stdout", value_enum)]
     #[cfg_attr(debug_assertions, arg(default_value = "debug"))]
@@ -113,7 +143,7 @@ struct GenerateKeyCommand {
         short,
         long,
         help = "The output file",
-        default_value = "data/private_key.pem"
+        default_value = DEFAULT_PRIVATE_KEY_PATH
     )]
     output: String,
 }
@@ -124,8 +154,10 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command.unwrap_or(Commands::Run(cli.run)) {
         Commands::Run(cmd) => run(cmd).await?,
-        Commands::Schema(cmd) => output_schema(cmd).await?,
-        Commands::GenerateKey(cmd) => generate_key(&cmd.output).await?,
+        Commands::Schema(cmd) => output_schema(cmd)?,
+        Commands::GenerateKey(cmd) => {
+            generate_key(cmd.output)?;
+        }
     };
 
     Ok(())
@@ -135,37 +167,43 @@ async fn run(
     RunCommand {
         port,
         host,
-        log_dir,
-        db_address,
+        address,
+        namespace,
+        database,
         private_key,
+        private_key_path,
+        log_dir,
         log_level_stdout,
         log_level_file,
     }: RunCommand,
 ) -> anyhow::Result<()> {
-    let _guard = init_logging(log_dir, log_level_stdout.into(), log_level_file.into());
-
-    if !tokio::fs::try_exists(&private_key).await? {
-        generate_key(&private_key).await?;
-    }
-
-    let (enc_key, dec_key) = read_key(private_key).await?;
-
-    let config = ServeConfig::new(db_address, enc_key, dec_key)
+    let (serve_config, log_config) = ServiceConfig::new()
+        .set_port(port)
         .set_host(host)
-        .set_port(port);
+        .set_address(address)
+        .set_namespace(namespace)
+        .set_database(database)
+        .set_private_key(private_key)
+        .set_private_key_path(private_key_path)
+        .private_key_create(|path| generate_key(path))
+        .set_log_dir(log_dir)
+        .log_level_stdout(log_level_stdout)
+        .log_level_file(log_level_file)
+        .try_into()?;
 
-    serve(config).await?;
+    let _guard = init_logging(log_config);
+    serve(serve_config).await?;
 
     Ok(())
 }
 
-async fn output_schema(SchemaCommand { output }: SchemaCommand) -> anyhow::Result<()> {
+fn output_schema(SchemaCommand { output }: SchemaCommand) -> anyhow::Result<()> {
     let schema = schema(|s| s).sdl();
 
     match output {
         Some(output) => {
-            let mut file = File::create(output).await?;
-            file.write_all(schema.as_bytes()).await?;
+            let mut file = File::create(output)?;
+            file.write_all(schema.as_bytes())?;
         }
         None => println!("{}", schema),
     }
@@ -173,30 +211,25 @@ async fn output_schema(SchemaCommand { output }: SchemaCommand) -> anyhow::Resul
     Ok(())
 }
 
-async fn generate_key(path: impl AsRef<Path>) -> anyhow::Result<()> {
-    async fn inner(path: &Path) -> anyhow::Result<()> {
+fn generate_key(path: impl AsRef<Path>) -> anyhow::Result<String> {
+    fn inner(path: &Path) -> anyhow::Result<String> {
         let rng = rand::SystemRandom::new();
         let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)?;
 
         if let Some(path) = path.parent() {
-            tokio::fs::create_dir_all(path)
-                .await
+            fs::create_dir_all(path)
                 .context("Unable to create containing directories for private key")?;
         }
 
-        tokio::fs::write(
-            path,
-            pkcs8::Document::from_der(pkcs8_bytes.as_ref())
-                .unwrap()
-                .to_pem("PRIVATE KEY", pkcs8::LineEnding::LF)
-                .unwrap(),
-        )
-        .await
-        .context("Unable to write private key")?;
+        let pem = pkcs8::Document::from_der(pkcs8_bytes.as_ref())
+            .unwrap()
+            .to_pem("PRIVATE KEY", pkcs8::LineEnding::LF)
+            .unwrap();
+        fs::write(path, &pem).context("Unable to write private key")?;
 
         println!("Private key written to {}", path.display());
-        Ok(())
+        Ok(pem)
     }
 
-    inner(path.as_ref()).await
+    inner(path.as_ref())
 }
