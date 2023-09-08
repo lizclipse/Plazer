@@ -2,7 +2,6 @@ use std::{fmt::Debug, time::Duration};
 
 use nanorand::{Rng as _, WyRand};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use surrealdb::{method::Query, Connection};
 use tokio::time::sleep;
 use tracing::{debug, instrument, trace};
 
@@ -12,9 +11,7 @@ pub trait Migration: Sized + Default + Serialize + DeserializeOwned + Debug + Se
     const SUBSYSTEM: &'static str;
 
     fn next(self) -> Option<Self>;
-    fn build<'a, C>(&self, q: Query<'a, C>) -> Query<'a, C>
-    where
-        C: Connection;
+    fn build(&self, statements: &mut Vec<srql::Statement>);
 }
 
 pub struct Migrations<'a> {
@@ -33,8 +30,10 @@ impl Migrations<'_> {
     pub async fn run(persist: &Persist) -> surrealdb::Result<()> {
         let migrations = Migrations { persist };
 
+        debug!("Running migrations");
         migrations.iterate::<AccountMigration>().await?;
         migrations.iterate::<BoardMigration>().await?;
+        debug!("Migrations complete");
 
         Ok(())
     }
@@ -42,27 +41,25 @@ impl Migrations<'_> {
     #[instrument(skip_all, fields(subsystem = M::SUBSYSTEM))]
     async fn iterate<M: Migration>(&self) -> surrealdb::Result<()> {
         let mut prng = WyRand::new();
+        let mut migrated = false;
         while let Some(update) = self.next_update::<M>().await? {
-            let complete = iterate_complete_update(M::SUBSYSTEM, srql::to_value(&update)?);
-
             if let Some(res) = self
                 .persist
                 .execute_in_lock(M::SUBSYSTEM, || async {
-                    update
-                        .build(
-                            self.persist
-                                .db()
-                                .query(srql::query([srql::Statement::Begin(srql::BeginStatement)])),
-                        )
-                        .query(complete)
-                        .query(srql::query([srql::Statement::Commit(
-                            srql::CommitStatement,
-                        )]))
-                        .await
+                    let mut statements = vec![srql::Statement::Begin(srql::BeginStatement)];
+                    update.build(&mut statements);
+                    statements.push(srql::Statement::Update(iterate_complete_update(
+                        M::SUBSYSTEM,
+                        srql::to_value(&update)?,
+                    )));
+                    statements.push(srql::Statement::Commit(srql::CommitStatement));
+
+                    self.persist.db().query(srql::query(statements)).await
                 })
                 .await?
             {
                 res?.check()?;
+                migrated = true;
             } else {
                 trace!("Migration locked, sleeping");
                 // Introduce a bit of jitter to avoid thundering herd.
@@ -71,6 +68,12 @@ impl Migrations<'_> {
                 ))
                 .await;
             }
+        }
+
+        if migrated {
+            debug!("Migration complete");
+        } else {
+            debug!("No migrations to run");
         }
 
         Ok(())
@@ -91,7 +94,6 @@ impl Migrations<'_> {
                 debug!(?next, "Next migration step");
                 Ok(Some(next))
             } else {
-                debug!("Migration complete");
                 Ok(None)
             }
         } else {

@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use surrealdb::{method::Query, Connection};
 
 use super::TABLE_NAME;
 use crate::{migration::Migration, prelude::*};
@@ -19,26 +18,20 @@ impl Migration for AccountMigration {
         }
     }
 
-    fn build<'a, C>(&self, q: Query<'a, C>) -> Query<'a, C>
-    where
-        C: Connection,
-    {
+    fn build(&self, statements: &mut Vec<srql::Statement>) {
         use AccountMigration as S;
         match self {
-            S::Init => Self::build_init(q),
+            S::Init => Self::build_init(statements),
         }
     }
 }
 
 impl AccountMigration {
-    fn build_init<C>(q: Query<'_, C>) -> Query<'_, C>
-    where
-        C: Connection,
-    {
-        q.query(srql::define_uniq_index(
+    fn build_init(statements: &mut Vec<srql::Statement>) {
+        statements.push(srql::define_uniq_index(
             "account_user_id_index",
             TABLE_NAME,
             [srql::field("user_id")],
-        ))
+        ));
     }
 }

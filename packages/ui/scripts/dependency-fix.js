@@ -25,7 +25,7 @@ async function main() {
 
   const results = await Promise.allSettled([
     ...tsNoCheckFiles.map(addTsNoCheck),
-    // ...solidApolloFiles.map(remapApolloImport),
+    ...solidApolloFiles.map(remapApolloImport),
   ]);
   let hasErrors = false;
 

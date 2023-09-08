@@ -292,7 +292,7 @@ dependencies = ["codegen-scss", "codegen-gql", "codegen-typeshare"]
 category = "Tools"
 description = "Runs a local surreal database."
 command = "surreal"
-args = ["start", "file://./data/db", "--pass", "root"]
+args = ["start", "file://./data/db"]
 
 [tasks.surreal-sql]
 category = "Tools"

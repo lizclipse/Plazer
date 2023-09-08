@@ -4,7 +4,9 @@ use async_graphql::Context;
 use cfg_if::cfg_if;
 use ring::rand::SystemRandom;
 use surrealdb::{
-    dbs::Capabilities, engine, opt::Config as SrlConfig, Result as SrlResult, Surreal,
+    engine,
+    opt::{capabilities::Capabilities, Config as SrlConfig},
+    Result as SrlResult, Surreal,
 };
 use tracing::{error, instrument};
 
@@ -20,43 +22,45 @@ fn config() -> SrlConfig {
 }
 
 cfg_if! {
-    if #[cfg(all(
-        feature = "backend-mem",
-        not(feature = "backend-file"),
-        not(feature = "backend-tikv")
-    ))] {
-        pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(_: String) -> SrlResult<DbLayer> {
-            Surreal::new::<engine::local::Mem>(config()).await
-        }
-    } else if #[cfg(all(
-        not(feature = "backend-mem"),
-        feature = "backend-file",
-        not(feature = "backend-tikv")
-    ))] {
-        pub type DbLayer = Surreal<engine::local::Db>;
+if #[cfg(all(
+    feature = "backend-mem",
+    not(feature = "backend-file"),
+    not(feature = "backend-tikv")
+))] {
+    pub type DbLayer = Surreal<engine::local::Db>;
 
-        async fn connect(address: String) -> SrlResult<DbLayer> {
-            Surreal::new::<engine::local::RocksDb>((address, config())).await
-        }
-    } else if #[cfg(all(
-        not(feature = "backend-mem"),
-        not(feature = "backend-file"),
-        feature = "backend-tikv"
-    ))] {
-        pub type DbLayer = Surreal<engine::local::Db>;
-
-        async fn connect(address: String) -> SrlResult<DbLayer> {
-            Surreal::new::<engine::local::TiKv>((address, config())).await
-        }
-    } else {
-        pub type DbLayer = Surreal<engine::any::Any>;
-
-        async fn connect(address: String) -> SrlResult<DbLayer> {
-            engine::any::connect((address, config())).await
-        }
+    async fn connect(_: String) -> SrlResult<DbLayer> {
+        Surreal::new::<engine::local::Mem>(config()).await
     }
+} else if #[cfg(all(
+    not(feature = "backend-mem"),
+    feature = "backend-file",
+    not(feature = "backend-tikv")
+))] {
+    pub type DbLayer = Surreal<engine::local::Db>;
+
+    async fn connect(address: String) -> SrlResult<DbLayer> {
+        Surreal::new::<engine::local::RocksDb>((address, config())).await
+    }
+} else if #[cfg(all(
+    not(feature = "backend-mem"),
+    not(feature = "backend-file"),
+    feature = "backend-tikv"
+))] {
+    pub type DbLayer = Surreal<engine::local::Db>;
+
+    async fn connect(address: String) -> SrlResult<DbLayer> {
+        Surreal::new::<engine::local::TiKv>((address, config())).await
+    }
+} else {
+    pub type DbLayer = Surreal<engine::any::Any>;
+
+    async fn connect(address: String) -> SrlResult<DbLayer> {
+        engine::any::connect((address, config())).await
+    }
+}
+
 }
 
 pub trait PersistExt {
@@ -70,10 +74,13 @@ pub struct Persist(DbLayer);
 static LOCK_TABLE: &str = "locks";
 
 impl Persist {
-    pub async fn new(address: String) -> SrlResult<Self> {
-        let db = connect(address).await?;
-        // TODO: select ns & db from config
-        db.use_ns("test").use_db("test").await?;
+    pub async fn new(
+        address: impl Into<String>,
+        namespace: impl Into<String>,
+        database: impl Into<String>,
+    ) -> SrlResult<Self> {
+        let db = connect(address.into()).await?;
+        db.use_ns(namespace).use_db(database).await?;
         Ok(Self(db))
     }
 
@@ -192,7 +199,7 @@ pub mod testing {
     use super::*;
 
     pub async fn persist() -> Persist {
-        let persist = Persist::new("memory".into()).await.unwrap();
+        let persist = Persist::new("memory", "test", "test").await.unwrap();
         Migrations::run(&persist).await.unwrap();
         persist
     }

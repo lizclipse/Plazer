@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use surrealdb::{method::Query, Connection};
 
 use super::TABLE_NAME;
 use crate::{migration::Migration, prelude::*};
@@ -19,26 +18,20 @@ impl Migration for BoardMigration {
         }
     }
 
-    fn build<'a, C>(&self, q: Query<'a, C>) -> Query<'a, C>
-    where
-        C: Connection,
-    {
+    fn build(&self, statements: &mut Vec<srql::Statement>) {
         use BoardMigration as S;
         match self {
-            S::Init => Self::build_init(q),
+            S::Init => Self::build_init(statements),
         }
     }
 }
 
 impl BoardMigration {
-    fn build_init<C>(q: Query<'_, C>) -> Query<'_, C>
-    where
-        C: Connection,
-    {
-        q.query(srql::define_uniq_index(
+    fn build_init(statements: &mut Vec<srql::Statement>) {
+        statements.push(srql::define_uniq_index(
             "board_handle_index",
             TABLE_NAME,
             [srql::field("handle")],
-        ))
+        ));
     }
 }
