@@ -5,17 +5,17 @@ use std::{
 };
 
 use anyhow::Context as _;
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand};
 use pkcs8::der::Decode;
 use plazer_service::{
     config::{
-        ServiceConfig, DEFAULT_ADDRESS, DEFAULT_DATABASE, DEFAULT_HOST, DEFAULT_LOG_DIR,
+        LogLevel, ServiceConfigBuilder, DEFAULT_ADDRESS, DEFAULT_CONFIG_PATH, DEFAULT_DATABASE,
+        DEFAULT_HOST, DEFAULT_LOG_DIR, DEFAULT_LOG_LEVEL_FILE, DEFAULT_LOG_LEVEL_STDOUT,
         DEFAULT_NAMESPACE, DEFAULT_PORT, DEFAULT_PRIVATE_KEY_PATH,
     },
     init_logging, schema, serve,
 };
 use ring::{rand, signature};
-use tracing::Level;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -45,31 +45,34 @@ struct RunCommand {
     #[arg(
         short,
         long,
-        help = format!("The port to listen on [default: {DEFAULT_PORT}]")
+        help = format!("The port to listen on\n\n[default: {DEFAULT_PORT}]")
     )]
     port: Option<u16>,
 
-    #[arg(long, help = format!("The host to listen on [default: {DEFAULT_HOST}]"))]
+    #[arg(
+        long,
+        help = format!("The host to listen on\n\n[default: {DEFAULT_HOST}]")
+    )]
     host: Option<String>,
 
     #[arg(
         short,
         long,
-        help = format!("The address of the remote database or the path to a local file [default: {DEFAULT_ADDRESS}]")
+        help = format!("The address of the remote database or the path to a local file\n\n[default: {DEFAULT_ADDRESS}]")
     )]
     address: Option<String>,
 
     #[arg(
         short,
         long,
-        help = format!("The namespace to use in the database [default: {DEFAULT_NAMESPACE}]")
+        help = format!("The namespace to use in the database\n\n[default: {DEFAULT_NAMESPACE}]")
     )]
     namespace: Option<String>,
 
     #[arg(
         short,
         long,
-        help = format!("The database to use in the namespace [default: {DEFAULT_DATABASE}]")
+        help = format!("The database to use in the namespace\n\n[default: {DEFAULT_DATABASE}]")
     )]
     database: Option<String>,
 
@@ -81,52 +84,38 @@ struct RunCommand {
 
     #[arg(
         long,
-        help = format!("The path to the private key for authenticating [default: {DEFAULT_PRIVATE_KEY_PATH}]")
+        help = format!("The path to the private key for authenticating\n\n[default: {DEFAULT_PRIVATE_KEY_PATH}]")
     )]
     private_key_path: Option<String>,
 
     #[arg(
         short,
         long,
-        help = format!("The directory to store logs in [default: {DEFAULT_LOG_DIR}]")
+        help = format!("The directory to store logs in\n\n[default: {DEFAULT_LOG_DIR}]")
     )]
     log_dir: Option<String>,
 
-    #[arg(long, help = "The level of logs to show on stdout", value_enum)]
-    #[cfg_attr(debug_assertions, arg(default_value = "debug"))]
-    #[cfg_attr(not(debug_assertions), arg(default_value = "info"))]
-    log_level_stdout: LogLevel,
+    #[arg(
+        long,
+        help = format!("The level of logs to show on stdout\n\n[default: {}]", DEFAULT_LOG_LEVEL_STDOUT),
+        value_enum
+    )]
+    log_level_stdout: Option<LogLevel>,
 
-    #[arg(long, help = "The level of logs to show in log files", value_enum)]
-    #[cfg_attr(debug_assertions, arg(default_value = "trace"))]
-    #[cfg_attr(not(debug_assertions), arg(default_value = "info"))]
-    log_level_file: LogLevel,
-}
+    #[arg(
+        long,
+        help = format!("The level of logs to show in log files\n\n[default: {}]", DEFAULT_LOG_LEVEL_FILE),
+        value_enum
+    )]
+    log_level_file: Option<LogLevel>,
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-enum LogLevel {
-    /// Only show errors
-    Error,
-    /// Show errors and warnings
-    Warn,
-    /// Show info and above
-    Info,
-    /// Show debug and above
-    Debug,
-    /// Show all logs
-    Trace,
-}
-
-impl From<LogLevel> for tracing::Level {
-    fn from(level: LogLevel) -> Self {
-        match level {
-            LogLevel::Error => Level::ERROR,
-            LogLevel::Warn => Level::WARN,
-            LogLevel::Info => Level::INFO,
-            LogLevel::Debug => Level::DEBUG,
-            LogLevel::Trace => Level::TRACE,
-        }
-    }
+    #[arg(
+        short,
+        long,
+        help = "Write the resolved configuration to the config file and exit",
+        default_value_t = false
+    )]
+    write_config: bool,
 }
 
 #[derive(Args)]
@@ -175,9 +164,10 @@ async fn run(
         log_dir,
         log_level_stdout,
         log_level_file,
+        write_config,
     }: RunCommand,
 ) -> anyhow::Result<()> {
-    let (serve_config, log_config) = ServiceConfig::new()
+    let config = ServiceConfigBuilder::new()
         .set_port(port)
         .set_host(host)
         .set_address(address)
@@ -187,9 +177,16 @@ async fn run(
         .set_private_key_path(private_key_path)
         .private_key_create(|path| generate_key(path))
         .set_log_dir(log_dir)
-        .log_level_stdout(log_level_stdout)
-        .log_level_file(log_level_file)
-        .try_into()?;
+        .set_log_level_stdout(log_level_stdout)
+        .set_log_level_file(log_level_file)
+        .build()?;
+
+    if write_config {
+        fs::write(DEFAULT_CONFIG_PATH, toml::to_string(&config)?)?;
+        return Ok(());
+    }
+
+    let (serve_config, log_config) = config.try_into()?;
 
     let _guard = init_logging(log_config);
     serve(serve_config).await?;

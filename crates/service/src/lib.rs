@@ -33,17 +33,16 @@ use axum::{
 use config::LogConfig;
 use ring::rand::{SecureRandom as _, SystemRandom};
 use thiserror::Error;
+use tokio::signal;
 use tracing::{debug, error, info, instrument, metadata::LevelFilter, trace};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, Layer as _};
 
-use account::authenticate;
-use config::ServeConfig;
-use error::ErrorResponse;
-pub use schema::schema;
-use schema::ServiceSchema;
-
-use crate::migration::Migrations;
+pub use crate::schema::schema;
+use crate::{
+    account::authenticate, config::ServeConfig, error::ErrorResponse, migration::Migrations,
+    schema::ServiceSchema,
+};
 
 /// Initialise logging.
 ///
@@ -135,9 +134,36 @@ pub async fn serve(
     info!("GraphQL Playground: http://localhost:{}/", addr.port());
     Server::try_bind(&addr)?
         .serve(app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
         .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    info!("Shutting down");
 }
 
 #[derive(Error, Debug)]
