@@ -128,7 +128,7 @@ pub async fn serve(
         .route("/api/graphql/ws", get(graphql_ws_handler))
         .with_state(state);
 
-    let addr = SocketAddr::new(host.parse()?, port);
+    let addr = SocketAddr::new(host, port);
     info!("Listening on {}", addr);
     #[cfg(feature = "graphiql")]
     info!("GraphQL Playground: http://localhost:{}/", addr.port());

@@ -1,4 +1,4 @@
-use std::{env, fmt, fs, path::Path};
+use std::{env, fmt, fs, net::IpAddr, path::Path};
 
 use anyhow::Context as _;
 use cfg_if::cfg_if;
@@ -433,7 +433,7 @@ impl TryFrom<ServiceConfig> for (ServeConfig, LogConfig) {
             database: value.database,
             jwt_enc_key: enc_key,
             jwt_dec_key: dec_key,
-            host: value.host,
+            host: value.host.parse()?,
             port: value.port,
         };
 
@@ -454,10 +454,11 @@ pub struct ServeConfig {
     pub database: String,
     pub jwt_enc_key: jsonwebtoken::EncodingKey,
     pub jwt_dec_key: jsonwebtoken::DecodingKey,
-    pub host: String,
+    pub host: IpAddr,
     pub port: u16,
 }
 
+#[derive(Clone)]
 pub struct LogConfig {
     pub dir: String,
     pub level_stdout: Level,
