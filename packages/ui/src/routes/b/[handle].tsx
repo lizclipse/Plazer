@@ -1,6 +1,5 @@
 import type { TypedDocumentNode } from "@apollo/client";
 import { createQuery, gql } from "@merged/solid-apollo";
-import type { Params } from "@solidjs/router";
 import { Show } from "solid-js";
 import { useParams } from "solid-start";
 import styles from "./handle.module.scss";
@@ -17,9 +16,9 @@ const GQL: TypedDocumentNode<GetBoardQuery, GetBoardQueryVariables> = gql`
   }
 `;
 
-interface BoardParams extends Params {
+type BoardParams = {
   handle: string;
-}
+};
 
 export default function BoardsItem() {
   const params = useParams<BoardParams>();
