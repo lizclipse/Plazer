@@ -1,4 +1,4 @@
-@use "../../routes/index.scss";
+@use "sass:math";
 
 %trans {
   transition-property:
@@ -57,6 +57,11 @@ button.hubButton {
   width: $size;
   height: $size;
   z-index: 1;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+  }
 
   > span {
     margin: auto;
@@ -69,6 +74,15 @@ button.hubButton {
 
 $midLeft: 50svw;
 $midTop: 50svh;
+$actionRadius: 6rem;
+
+@mixin actionButton($angle) {
+  $angle: $angle - 90deg;
+  $x: $actionRadius * math.cos($angle);
+  left: calc(#{$midLeft} + #{$x});
+  $y: $actionRadius * math.sin($angle);
+  top: calc(#{$midTop} + #{$y});
+}
 
 .dialog.open:not(.fadeOut) {
   .hubButton {
@@ -78,8 +92,7 @@ $midTop: 50svh;
 
   .createPost {
     opacity: 1;
-    left: $midLeft;
-    top: calc(#{$midTop} + 6rem);
+    @include actionButton(180deg);
   }
 }
 

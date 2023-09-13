@@ -1,0 +1,9 @@
+$pad: 1rem;
+$gap: 0.5rem;
+
+%generic-container {
+  background-color: var(--colour-background-container);
+  border-radius: 0.2rem;
+  border: 0.1rem solid var(--colour-border-container);
+  padding: $pad;
+}

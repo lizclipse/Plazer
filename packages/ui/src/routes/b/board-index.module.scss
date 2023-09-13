@@ -1,0 +1,10 @@
+@use "~/common.scss";
+
+.nav {
+  @extend %generic-container;
+  display: flex;
+}
+
+.create {
+  margin-left: auto;
+}

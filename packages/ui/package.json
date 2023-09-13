@@ -15,7 +15,7 @@
     "clean": "rm -rf dist build",
     "postinstall": "node scripts/dependency-fix.js",
     "codegen": "pnpm run codegen:scss && pnpm run codegen:gql",
-    "codegen:scss": "typed-scss-modules --nameFormat none --exportType default src --ignore '**/index.scss' --outputFolder src/__generated__/scss",
+    "codegen:scss": "typed-scss-modules --nameFormat none --exportType default src --ignore '**/index.scss' --outputFolder src/__generated__/scss --aliasPrefixes.~ 'src'",
     "codegen:scss:watch": "pnpm run codegen:scss --watch",
     "codegen:gql": "graphql-codegen --config .graphqlrc.yml",
     "codegen:gql:watch": "pnpm run codegen:gql --watch"
@@ -26,6 +26,7 @@
     "@graphql-codegen/near-operation-file-preset": "^2.5.0",
     "@graphql-codegen/typescript": "^4.0.1",
     "@graphql-codegen/typescript-operations": "^4.0.1",
+    "@parcel/watcher": "^2.3.0",
     "@rollup/plugin-babel": "^6.0.3",
     "@solidjs/meta": "^0.28.6",
     "@solidjs/router": "^0.8.3",

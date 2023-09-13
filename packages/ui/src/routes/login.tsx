@@ -1,19 +1,19 @@
 import type { TypedDocumentNode } from "@apollo/client";
 import { createMutation, gql } from "@merged/solid-apollo";
 import { createRouteAction, redirect } from "solid-start";
-import styles from "./register.module.scss";
 import DisplayError from "~/components/DisplayError";
 import { GQL_ACCOUNT, useAccount } from "~/contexts";
+import styles from "~/form.module.scss";
 import { Trans } from "~/i18n";
 import type { LoginMutation, LoginMutationVariables } from "~gen/graphql";
 
 const GQL: TypedDocumentNode<LoginMutation, LoginMutationVariables> = gql`
-  ${GQL_ACCOUNT}
   mutation Login($creds: AuthCreds!) {
     login(creds: $creds) {
       ...AccountFields
     }
   }
+  ${GQL_ACCOUNT}
 `;
 
 const inputs = {

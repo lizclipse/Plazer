@@ -1,7 +1,5 @@
 import type { JSX } from "solid-js";
-import type { Error as BackendError } from "~gen/backend";
-
-type ErrorCode = BackendError["code"];
+import type { ErrorI18n } from "~/types";
 
 export default {
   nav: {
@@ -34,6 +32,7 @@ export default {
     ),
 
     home: () => "Home",
+    boards: () => "Boards",
     search: () => "Search",
 
     createPost: () => "Create Post",
@@ -59,7 +58,7 @@ export default {
     ServerMisconfigured: () => "The server is misconfigured",
     InternalServerError: () => "An internal server error occurred",
     NotImplemented: () => "This feature is not implemented",
-  } satisfies Record<ErrorCode | "Unknown", () => string>,
+  } satisfies ErrorI18n,
   account: {
     userId: () => "Username",
     password: () => "Password",

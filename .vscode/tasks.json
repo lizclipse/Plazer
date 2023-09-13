@@ -16,6 +16,26 @@
       }
     },
     {
+      "label": "serve",
+      "dependsOn": [
+        "serve - service",
+        "serve - ui",
+        "codegen - scss - watch",
+        "codegen - gql - watch"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true
+      }
+    },
+    {
       "label": "build - crates",
       "type": "cargo",
       "command": "make",

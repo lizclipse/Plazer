@@ -1,9 +1,9 @@
 import { type TypedDocumentNode } from "@apollo/client/core";
 import { createMutation, gql } from "@merged/solid-apollo";
 import { createRouteAction, redirect } from "solid-start";
-import styles from "./register.module.scss";
 import DisplayError from "~/components/DisplayError";
 import { GQL_ACCOUNT, useAccount } from "~/contexts";
+import styles from "~/form.module.scss";
 import { Trans } from "~/i18n";
 import type {
   CreateAccountMutation,
@@ -14,12 +14,12 @@ const GQL: TypedDocumentNode<
   CreateAccountMutation,
   CreateAccountMutationVariables
 > = gql`
-  ${GQL_ACCOUNT}
   mutation CreateAccount($account: CreateAccount!) {
     createAccount(create: $account) {
       ...AccountFields
     }
   }
+  ${GQL_ACCOUNT}
 `;
 
 const inputs = {
