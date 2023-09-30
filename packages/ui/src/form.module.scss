@@ -1,6 +1,8 @@
+@use "~/common.scss";
+
 %flexy {
   display: flex;
-  gap: 0.5rem;
+  gap: common.$gap;
   flex-direction: column;
 }
 

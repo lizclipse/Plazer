@@ -1,0 +1,67 @@
+@use "~/common.scss";
+
+.article {
+  @extend %generic-container;
+
+  > * {
+    margin: common.$pad 0;
+  }
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  hgroup {
+    display: flex;
+    gap: common.$gap;
+
+    h2 {
+      flex: 1;
+      font-size: large;
+    }
+
+    a {
+      $size: 2rem;
+      width: $size;
+      height: $size;
+      display: flex;
+
+      > span {
+        margin: auto;
+      }
+
+      .default {
+        display: inline;
+      }
+
+      .hover {
+        display: none;
+      }
+    }
+
+    a:hover {
+      text-decoration: none;
+
+      .default {
+        display: none;
+      }
+
+      .hover {
+        display: inline;
+      }
+    }
+
+    > * {
+      margin: auto 0;
+    }
+  }
+
+  hr {
+    border: 0.05rem solid var(--colour-border-container);
+    margin: 0 -#{common.$pad};
+  }
+}

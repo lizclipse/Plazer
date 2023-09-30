@@ -63,13 +63,13 @@ pub struct CreateBoard {
     /// and by users. It must be unique, but can be changed (if the server allows it).
     ///
     /// This will default to the user's ID if not present.
-    #[graphql(validator(min_length = 1, max_length = 128))]
+    #[graphql(validator(max_length = 128))]
     pub handle: Option<String>,
     /// The board's display name. If not present, the handle is (usually) used instead.
-    #[graphql(validator(min_length = 1, max_length = 1024))]
+    #[graphql(validator(max_length = 1024))]
     pub name: Option<String>,
     /// The board's description.
-    #[graphql(validator(min_length = 1, max_length = 32_768))]
+    #[graphql(validator(max_length = 32_768))]
     pub description: Option<String>,
 }
 
@@ -85,15 +85,15 @@ impl CreateObject for CreateBoard {
 #[derive(InputObject, Debug, Default, Clone, PartialEq, Eq)]
 pub struct UpdateBoard {
     /// The new handle. If not given, the handle is not changed.
-    #[graphql(validator(min_length = 1, max_length = 128))]
+    #[graphql(validator(max_length = 128))]
     pub handle: Option<String>,
     /// The new name. If not given, the name is not changed. If null is given,
     /// the name is cleared.
-    #[graphql(validator(min_length = 1, max_length = 1024))]
+    #[graphql(validator(max_length = 1024))]
     pub name: MaybeUndefined<String>,
     /// The new description. If not given, the description is not changed. If
     /// null is given, the description is cleared.
-    #[graphql(validator(min_length = 1, max_length = 32_768))]
+    #[graphql(validator(max_length = 32_768))]
     pub description: MaybeUndefined<String>,
 }
 

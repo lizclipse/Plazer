@@ -1,9 +1,11 @@
 @use "../../node_modules/modern-normalize/modern-normalize.css";
+@use "~/common.scss";
 
 :root {
-  --colour-primary: #ffebeb;
-  --colour-secondary: #ffe3e3;
-  --colour-tertiary: #b08686;
+  --colour-background: #ffebeb;
+  --colour-background-container: #e7d7da;
+  --colour-border: #b08686;
+  --colour-border-container: #b6b6b6;
   --colour-hover: #ffe8bd99;
   --colour-error: #be2727;
   --colour-text: #050505;
@@ -12,18 +14,25 @@
   --colour-text-error: #ffffff;
   --font-size: 16px;
 
+  --colour-secondary: #ffe3e3;
+
   --hub-inner-colour: #ffebeb99;
   --hub-outer-colour: #c9acac55;
 
+  --size-container: 40rem;
+
   @media (prefers-color-scheme: dark) {
-    --colour-primary: #270000;
-    --colour-secondary: #440e00;
-    --colour-tertiary: #a16e6e;
+    --colour-background: #270000;
+    --colour-background-container: #221d1d;
+    --colour-border: #a16e6e;
+    --colour-border-container: #272b2e;
     --colour-hover: #3c280099;
     --colour-error: #bd0000;
     --colour-text: #ffffff;
     --colour-text-unfocused: #b3b3b3;
     --colour-text-clickable: #4d91ff;
+
+    --colour-secondary: #440e00;
 
     --hub-inner-colour: #27000099;
     --hub-outer-colour: #6b3d3155;
@@ -41,21 +50,22 @@ html {
 
 body {
   @extend %full-height;
-  background-color: var(--colour-primary);
+  background-color: var(--colour-background);
   color: var(--colour-text);
+  display: flex;
 }
 
 main {
   @extend %full-height;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem 0;
 
   display: flex;
-  gap: 0.5rem;
+  gap: common.$gap;
   flex-direction: column;
-
-  > * {
-    margin-left: auto;
-    margin-right: auto;
-  }
+  width: 40rem;
+  max-width: 100svw;
 }
 
 a {
@@ -82,14 +92,14 @@ a {
   backdrop-filter: blur($blur);
   background: transparent;
   color: var(--colour-text);
-  border: 0.07rem solid var(--colour-tertiary);
+  border: 0.07rem solid var(--colour-border);
 
   &:hover {
     background: var(--colour-hover);
   }
 
   &:focus {
-    outline: var(--colour-tertiary) solid 0;
+    outline: var(--colour-border) solid 0;
     outline-offset: -0.01rem;
     animation:
       flash-outline 0.3s ease-in 0s 1 normal,
@@ -97,7 +107,7 @@ a {
   }
 
   &:disabled {
-    background: var(--colour-primary);
+    background: var(--colour-background);
     color: var(--colour-text-unfocused);
   }
 }

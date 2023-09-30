@@ -1,0 +1,10 @@
+@use "~/common.scss";
+
+.pagination {
+  display: flex;
+  gap: common.$gap;
+
+  .next {
+    margin-left: auto;
+  }
+}

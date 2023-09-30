@@ -1,0 +1,24 @@
+@use "~/common.scss";
+
+.header {
+  @extend %generic-container;
+  display: flex;
+  flex-direction: column;
+  gap: common.$gap;
+
+  h1 {
+    font-size: large;
+  }
+
+  h2 {
+    font-size: medium;
+  }
+
+  > * {
+    margin: auto 0;
+  }
+}
+
+.desc {
+  @extend %generic-container;
+}

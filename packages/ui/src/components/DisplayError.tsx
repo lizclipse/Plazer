@@ -2,6 +2,7 @@ import { ApolloError } from "@apollo/client/core";
 import { Show } from "solid-js";
 import styles from "./DisplayError.module.scss";
 import { Trans } from "~/i18n";
+import type { ErrorI18n } from "~/types";
 import type { Error as BackendError } from "~gen/backend";
 
 export interface Err {
@@ -20,7 +21,7 @@ export function parseError(err: unknown): Err | undefined {
       return unknownError;
     }
     const { message, extensions } = gqlError;
-    return { message, code: extensions.code as BackendError["code"] };
+    return { message, code: extensions?.code as BackendError["code"] };
   } else if (err instanceof Error) {
     return unknownError;
   } else if (typeof err === "string") {
@@ -33,17 +34,15 @@ export function parseError(err: unknown): Err | undefined {
 export interface DisplayErrorProps {
   readonly error: () => unknown;
   readonly keepSpacing?: boolean;
+  readonly overrides?: () => Partial<ErrorI18n>;
 }
 
-export default function DisplayError({
-  error,
-  keepSpacing,
-}: DisplayErrorProps) {
+export default function DisplayError(props: DisplayErrorProps) {
   return (
     <Show
-      when={parseError(error())}
+      when={parseError(props.error())}
       fallback={
-        keepSpacing ? (
+        props.keepSpacing ? (
           <p classList={{ [styles.error]: true, [styles.hidden]: true }}>
             &nbsp;
           </p>
@@ -52,7 +51,12 @@ export default function DisplayError({
     >
       {(err) => (
         <p class={styles.error} role="alert">
-          <Trans>{(t) => t.core.errors[err().code]()}</Trans>
+          <Show
+            when={props.overrides?.()[err().code]?.()}
+            fallback={<Trans>{(t) => t.core.errors[err().code]()}</Trans>}
+          >
+            {(override) => override()}
+          </Show>
         </p>
       )}
     </Show>
