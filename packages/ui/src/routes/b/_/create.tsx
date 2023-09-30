@@ -31,10 +31,7 @@ const inputs = {
 } as const;
 export default function BoardCreate() {
   const [t] = useTrans();
-  const [createBoard] = createMutation(GQL, {
-    // TODO: figure out why the cache is broken or scrap it because fuck it
-    refetchQueries: ["ListBoards"],
-  });
+  const [createBoard] = createMutation(GQL);
 
   const [create, { Form }] = createRouteAction(async (form: FormData) => {
     const board: CreateBoard = {

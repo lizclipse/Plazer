@@ -71,6 +71,12 @@ export default function ClientProvider(props: FlowProps) {
         ),
     cache,
     ssrMode: isServer,
+    // TODO: figure out why the cache is broken or scrap it because fuck it
+    defaultOptions: {
+      query: {
+        fetchPolicy: "no-cache",
+      },
+    },
   });
 
   createEffect(

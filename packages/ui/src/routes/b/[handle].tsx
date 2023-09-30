@@ -22,7 +22,7 @@ type BoardParams = {
 
 export default function BoardsItem() {
   const params = useParams<BoardParams>();
-  const handle = () => params.handle;
+  const handle = () => decodeURIComponent(params.handle);
 
   const data = createQuery(GQL, () => ({
     variables: {

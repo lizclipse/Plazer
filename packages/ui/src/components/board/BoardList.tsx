@@ -41,6 +41,7 @@ export default function BoardList() {
         after: dir === "forwards" ? cur : undefined,
         before: dir === "backwards" ? cur : undefined,
       },
+      fetchPolicy: "no-cache",
     };
   });
 
