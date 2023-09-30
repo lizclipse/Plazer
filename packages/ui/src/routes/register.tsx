@@ -5,6 +5,7 @@ import DisplayError from "~/components/DisplayError";
 import { GQL_ACCOUNT, useAccount } from "~/contexts";
 import styles from "~/form.module.scss";
 import { Trans } from "~/i18n";
+import type { FormFields, TFormData } from "~/types";
 import type {
   CreateAccountMutation,
   CreateAccountMutationVariables,
@@ -22,24 +23,32 @@ const GQL: TypedDocumentNode<
   ${GQL_ACCOUNT}
 `;
 
-const inputs = {
+interface Inputs {
+  userId: string;
+  pword: string;
+}
+
+const inputs: FormFields<Inputs> = {
   userId: "userId",
-  pword: "password",
-} as const;
+  pword: "pword",
+};
+
 export default function Register() {
   const { login } = useAccount();
   const [createAccount] = createMutation(GQL);
 
-  const [create, { Form }] = createRouteAction(async (form: FormData) => {
-    const account = {
-      userId: form.get(inputs.userId) as string,
-      pword: form.get(inputs.pword) as string,
-    };
+  const [create, { Form }] = createRouteAction(
+    async (form: TFormData<Inputs>) => {
+      const account = {
+        userId: form.get(inputs.userId),
+        pword: form.get(inputs.pword),
+      };
 
-    const result = await createAccount({ variables: { account } });
-    login(result.createAccount);
-    return redirect("/");
-  });
+      const result = await createAccount({ variables: { account } });
+      login(result.createAccount);
+      return redirect("/");
+    },
+  );
 
   return (
     <section class={styles.form}>

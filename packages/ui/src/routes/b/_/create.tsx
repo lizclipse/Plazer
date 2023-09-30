@@ -5,6 +5,7 @@ import { GQL_BOARD_CARD } from "~/components/board/BoardCard";
 import DisplayError from "~/components/DisplayError";
 import styles from "~/form.module.scss";
 import { Trans, useTrans } from "~/i18n";
+import type { FormFields, TFormData } from "~/types";
 import type {
   CreateBoard,
   CreateBoardMutation,
@@ -24,25 +25,34 @@ const GQL: TypedDocumentNode<
   ${GQL_BOARD_CARD}
 `;
 
-const inputs = {
+interface Inputs {
+  handle?: string;
+  name?: string;
+  desc?: string;
+}
+
+const inputs: FormFields<Inputs> = {
   handle: "handle",
   name: "name",
-  desc: "description",
-} as const;
+  desc: "desc",
+};
+
 export default function BoardCreate() {
   const [t] = useTrans();
   const [createBoard] = createMutation(GQL);
 
-  const [create, { Form }] = createRouteAction(async (form: FormData) => {
-    const board: CreateBoard = {
-      handle: form.get(inputs.handle) as string,
-      name: form.get(inputs.name) as string,
-      description: form.get(inputs.desc) as string,
-    };
+  const [create, { Form }] = createRouteAction(
+    async (form: TFormData<Inputs>) => {
+      const board: CreateBoard = {
+        handle: form.get(inputs.handle),
+        name: form.get(inputs.name),
+        description: form.get(inputs.desc),
+      };
 
-    await createBoard({ variables: { board } });
-    return redirect(`/b/${board.handle}`);
-  });
+      const result = await createBoard({ variables: { board } });
+      return redirect(`/b/${encodeURIComponent(result.createBoard.handle)}`);
+    },
+  );
 
   return (
     <section class={styles.form}>
