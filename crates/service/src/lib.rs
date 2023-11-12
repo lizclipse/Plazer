@@ -14,6 +14,7 @@ mod error;
 mod macros;
 mod migration;
 mod persist;
+mod post;
 mod prelude;
 mod query;
 mod schema;
@@ -159,8 +160,8 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        () = ctrl_c => {},
+        () = terminate => {},
     }
 
     info!("Shutting down");

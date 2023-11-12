@@ -1,4 +1,4 @@
-use async_graphql::MaybeUndefined;
+use async_graphql::{MaybeUndefined, ID};
 use chrono::{DateTime, Utc};
 use secrecy::{ExposeSecret as _, Secret, Zeroize};
 
@@ -24,6 +24,13 @@ impl QueryValue for String {
             srql::Operator::Equal,
             srql::Value::Strand(self.into()),
         ))
+    }
+}
+
+impl QueryValue for (&str, ID) {
+    fn into_query_value(self, field: srql::Idiom) -> Option<srql::SetExprItem> {
+        let (table, id) = self;
+        srql::Thing::from((table.to_owned(), id.0)).into_query_value(field)
     }
 }
 

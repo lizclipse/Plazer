@@ -1,11 +1,10 @@
-mod migration;
 mod models;
 mod persist;
 mod schema;
 
-pub use migration::*;
 pub use models::*;
 pub use persist::*;
 pub use schema::*;
 
-pub static BOARD_TABLE_NAME: &str = "board";
+static POST_TABLE_NAME: &str = "post";
+static CONTAINS_TABLE_NAME: &str = "contains_post";

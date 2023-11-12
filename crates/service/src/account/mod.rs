@@ -10,4 +10,4 @@ pub use models::*;
 pub use persist::*;
 pub use schema::*;
 
-static TABLE_NAME: &str = "account";
+static ACC_TABLE_NAME: &str = "account";

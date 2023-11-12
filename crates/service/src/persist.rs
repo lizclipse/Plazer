@@ -13,6 +13,7 @@ use tracing::{error, instrument};
 use crate::{
     account::{AccountPersist, CurrentAccount},
     board::BoardPersist,
+    post::PostPersist,
     prelude::*,
     DecodingKey,
 };
@@ -67,6 +68,7 @@ pub trait PersistExt {
     fn current_account(&self) -> &CurrentAccount;
     fn account_persist(&self) -> AccountPersist;
     fn board_persist(&self) -> BoardPersist;
+    fn post_persist(&self) -> PostPersist;
 }
 
 pub struct Persist(DbLayer);
@@ -152,6 +154,10 @@ impl PersistExt for Context<'_> {
 
     fn board_persist(&self) -> BoardPersist {
         BoardPersist::new(self.data_unchecked::<Persist>(), self.current_account())
+    }
+
+    fn post_persist(&self) -> PostPersist {
+        PostPersist::new(self.data_unchecked::<Persist>(), self.current_account())
     }
 }
 

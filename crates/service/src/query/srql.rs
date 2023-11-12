@@ -38,33 +38,51 @@ pub fn string(str: impl Into<String>) -> Strand {
     Strand(str.into())
 }
 
+#[inline]
+pub fn trans_begin() -> Statement {
+    Statement::Begin(BeginStatement)
+}
+
+#[inline]
+pub fn trans_end() -> Statement {
+    Statement::Commit(CommitStatement)
+}
+
 pub type SetExprItem = (Idiom, Operator, Value);
 pub type SetExpr = Vec<SetExprItem>;
 
-pub fn obj_create_query(table: &str, mut data: SetExpr) -> Query {
+pub fn ulid() -> String {
+    Ulid::new().to_string().to_ascii_lowercase()
+}
+
+pub fn obj_create_query(table: &str, data: SetExpr) -> CreateStatement {
+    obj_create_query_id(table, data, ulid().into())
+}
+
+pub fn obj_create_query_id(table: &str, mut data: SetExpr, id: Id) -> CreateStatement {
     data.push((field("updated_at"), Operator::Equal, time_now()));
 
     let thing = Thing {
         tb: table.into(),
-        id: Ulid::new().to_string().to_ascii_lowercase().into(),
+        id,
     };
 
-    query([Statement::Create(CreateStatement {
+    CreateStatement {
         what: Values(vec![thing.into()]),
         data: Data::SetExpression(data).into(),
         output: Output::After.into(),
         ..Default::default()
-    })])
+    }
 }
 
-pub fn obj_update_query(thing: Thing, mut update: SetExpr) -> Option<Query> {
+pub fn obj_update_query(thing: Thing, mut update: SetExpr) -> Option<UpdateStatement> {
     if update.is_empty() {
         return None;
     }
 
     update.push((field("updated_at"), Operator::Equal, time_now()));
 
-    query([Statement::Update(UpdateStatement {
+    UpdateStatement {
         what: Values(vec![thing.clone().into()]),
         data: Data::UpdateExpression(update).into(),
         output: Output::After.into(),
@@ -78,7 +96,7 @@ pub fn obj_update_query(thing: Thing, mut update: SetExpr) -> Option<Query> {
         )
         .into(),
         ..Default::default()
-    })])
+    }
     .into()
 }
 

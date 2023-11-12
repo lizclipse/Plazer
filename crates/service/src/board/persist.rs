@@ -4,7 +4,7 @@ mod tests;
 use async_graphql::connection::{Connection, Edge};
 use tracing::instrument;
 
-use super::{Board, BoardCursor, CreateBoard, UpdateBoard, TABLE_NAME};
+use super::{Board, BoardCursor, CreateBoard, UpdateBoard, BOARD_TABLE_NAME};
 use crate::{
     account::CurrentAccount,
     persist::Persist,
@@ -24,7 +24,7 @@ impl<'a> BoardPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn get(&self, id: &str) -> Result<Option<Board>> {
-        Ok(self.persist.db().select((TABLE_NAME, id)).await?)
+        Ok(self.persist.db().select((BOARD_TABLE_NAME, id)).await?)
     }
 
     #[instrument(skip_all)]
@@ -34,7 +34,7 @@ impl<'a> BoardPersist<'a> {
             .db()
             .query(srql::SelectStatement {
                 expr: srql::Fields::all(),
-                what: srql::table(TABLE_NAME),
+                what: srql::table(BOARD_TABLE_NAME),
                 cond: srql::Cond(
                     srql::Expression::Binary {
                         l: srql::field("handle").into(),
@@ -91,7 +91,7 @@ impl<'a> BoardPersist<'a> {
         // TODO: check config to see if anon users can update boards
         // TODO: check perms to see if authd user can update boards
 
-        let board = if let Some(update) = update.into_update((TABLE_NAME, id).into()) {
+        let board = if let Some(update) = update.into_update((BOARD_TABLE_NAME, id).into()) {
             self.persist.db().query(update).await?.take(0)?
         } else {
             self.get(id).await?
@@ -102,7 +102,10 @@ impl<'a> BoardPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn delete(&self, id: &str) -> Result<Option<Board>> {
-        let board = self.persist.db().delete((TABLE_NAME, id)).await?;
+        // TODO: check config to see if anon users can delete boards
+        // TODO: check perms to see if authd user can delete boards
+
+        let board = self.persist.db().delete((BOARD_TABLE_NAME, id)).await?;
         Ok(board)
     }
 }
@@ -135,11 +138,11 @@ impl<'a> BoardListRequest<'a> {
             order,
             limit,
             result_slice_opts,
-        } = (self.pagination, TABLE_NAME).into();
+        } = (self.pagination, BOARD_TABLE_NAME).into();
 
         let query = srql::SelectStatement {
             expr: srql::Fields::all(),
-            what: srql::table(TABLE_NAME),
+            what: srql::table(BOARD_TABLE_NAME),
             order: srql::Orders(order.into_iter().collect()).into(),
             cond,
             limit,
@@ -164,7 +167,7 @@ impl<'a> BoardListRequest<'a> {
 }
 
 #[cfg(test)]
-mod testing {
+pub mod testing {
     use async_trait::async_trait;
 
     use crate::{
@@ -177,15 +180,6 @@ mod testing {
     #[async_trait]
     pub trait BoardTestData {
         fn board(&self) -> BoardPersist<'_>;
-        async fn generate_board(&self) -> Board;
-        async fn generate_boards(&self, count: usize) -> Vec<Board>;
-    }
-
-    #[async_trait]
-    impl BoardTestData for TestData {
-        fn board(&self) -> BoardPersist<'_> {
-            BoardPersist::new(&self.persist, &self.current)
-        }
 
         async fn generate_board(&self) -> Board {
             let board_persist = self.board();
@@ -215,6 +209,13 @@ mod testing {
             }
             boards.sort_by(|a, b| b.id.cmp(&a.id));
             boards
+        }
+    }
+
+    #[async_trait]
+    impl BoardTestData for TestData {
+        fn board(&self) -> BoardPersist<'_> {
+            BoardPersist::new(&self.persist, &self.current)
         }
     }
 }

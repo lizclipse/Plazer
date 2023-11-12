@@ -12,7 +12,7 @@ use tracing::instrument;
 
 use super::{
     create_creds, verify_creds, verify_refresh_token, Account, AuthCreds, AuthenticatedAccount,
-    CreateAccount, CurrentAccount, TABLE_NAME,
+    CreateAccount, CurrentAccount, ACC_TABLE_NAME,
 };
 use crate::{persist::Persist, prelude::*};
 
@@ -76,7 +76,7 @@ impl<'a> AccountPersist<'a> {
 
     #[instrument(skip_all)]
     pub async fn get(&self, id: &str) -> Result<Option<Account>> {
-        Ok(self.persist.db().select((TABLE_NAME, id)).await?)
+        Ok(self.persist.db().select((ACC_TABLE_NAME, id)).await?)
     }
 
     #[instrument(skip_all)]
@@ -86,7 +86,7 @@ impl<'a> AccountPersist<'a> {
             .db()
             .query(srql::SelectStatement {
                 expr: srql::Fields::all(),
-                what: srql::table(TABLE_NAME),
+                what: srql::table(ACC_TABLE_NAME),
                 cond: srql::Cond(
                     srql::Expression::Binary {
                         l: srql::field("user_id").into(),
@@ -128,7 +128,7 @@ impl<'a> AccountPersist<'a> {
 
         let mut updates = vec![];
         now.push_field(srql::field("revoked_at"), &mut updates);
-        let Some(update) = srql::obj_update_query((TABLE_NAME, &***acc).into(), updates) else {
+        let Some(update) = srql::obj_update_query((ACC_TABLE_NAME, &***acc).into(), updates) else {
             return Err("".into());
         };
 

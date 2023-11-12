@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use surrealdb::sql::Thing;
 
-use super::TABLE_NAME;
+use super::BOARD_TABLE_NAME;
 use crate::{id_obj_impls, prelude::*, query::OpaqueCursor};
 
 pub type BoardCursor = OpaqueCursor<String>;
@@ -49,11 +49,11 @@ impl Board {
 id_obj_impls!(Board);
 
 impl Board {
-    pub fn create(creator_id: Option<Thing>, params: CreateBoard) -> srql::Query {
+    pub fn create(creator_id: Option<Thing>, params: CreateBoard) -> srql::CreateStatement {
         let mut create = vec![];
         creator_id.push_field(srql::field("creator_id"), &mut create);
         params.append(&mut create);
-        srql::obj_create_query(TABLE_NAME, create)
+        srql::obj_create_query(BOARD_TABLE_NAME, create)
     }
 }
 
@@ -98,7 +98,7 @@ pub struct UpdateBoard {
 }
 
 impl IntoUpdateQuery for UpdateBoard {
-    fn into_update(self, thing: srql::Thing) -> Option<srql::Query> {
+    fn into_update(self, thing: srql::Thing) -> Option<srql::UpdateStatement> {
         let mut update = vec![];
         self.handle.push_field(srql::field("handle"), &mut update);
         self.name.push_field(srql::field("name"), &mut update);

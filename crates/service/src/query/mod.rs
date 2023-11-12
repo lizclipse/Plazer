@@ -10,5 +10,5 @@ pub trait CreateObject {
 }
 
 pub trait IntoUpdateQuery {
-    fn into_update(self, thing: srql::Thing) -> Option<srql::Query>;
+    fn into_update(self, thing: srql::Thing) -> Option<srql::UpdateStatement>;
 }

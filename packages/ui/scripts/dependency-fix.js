@@ -39,6 +39,9 @@ async function main() {
   if (hasErrors) {
     process.exit(1);
   }
+
+  console.log(`${tsNoCheckFiles.length} files updated with ts-nocheck`);
+  console.log(`${solidApolloFiles.length} files updated with solid-apollo fix`);
 }
 
 async function* walk(dir) {

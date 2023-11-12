@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::TABLE_NAME;
+use super::ACC_TABLE_NAME;
 use crate::{migration::Migration, prelude::*};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ impl AccountMigration {
     fn build_init(statements: &mut Vec<srql::Statement>) {
         statements.push(srql::define_uniq_index(
             "account_user_id_index",
-            TABLE_NAME,
+            ACC_TABLE_NAME,
             [srql::field("user_id")],
         ));
     }

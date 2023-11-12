@@ -60,7 +60,7 @@ impl Account {
 id_obj_impls!(Account);
 
 impl Account {
-    pub fn create(creds: StoredPword, params: CreateAccount) -> srql::Query {
+    pub fn create(creds: StoredPword, params: CreateAccount) -> srql::CreateStatement {
         let mut create = vec![];
         params.append(&mut create);
         creds
