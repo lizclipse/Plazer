@@ -6,17 +6,15 @@ import styles from "./BoardCard.module.scss";
 import { useTrans } from "~/i18n";
 import type { BoardCardFieldsFragment } from "~gen/graphql";
 
-export const GQL_BOARD_CARD: TypedDocumentNode<
-  BoardCardFieldsFragment,
-  void
-> = gql`
-  fragment BoardCardFields on Board {
-    id
-    handle
-    name
-    description
-  }
-`;
+export const GQL_BOARD_CARD: TypedDocumentNode<BoardCardFieldsFragment, void> =
+  gql`
+    fragment BoardCardFields on Board {
+      id
+      handle
+      name
+      description
+    }
+  `;
 
 export interface BoardCardProps {
   readonly board: BoardCardFieldsFragment;

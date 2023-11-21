@@ -1,5 +1,5 @@
 import { gql, type TypedDocumentNode } from "@apollo/client/core";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import {
   type Accessor,
   batch,
