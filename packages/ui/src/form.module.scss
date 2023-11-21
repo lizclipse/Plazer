@@ -8,7 +8,7 @@
 
 .form {
   @extend %flexy;
-  min-height: 100vh;
+  min-height: 100dvh;
 
   > :first-child {
     margin-top: auto;

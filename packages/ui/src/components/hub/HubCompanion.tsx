@@ -5,6 +5,7 @@ import {
   useMouse,
   useMousePressed,
   useRafFn,
+  useWindowScroll,
   useWindowSize,
 } from "solidjs-use";
 import HubButton from "./HubButton";
@@ -44,11 +45,20 @@ interface ThrowableInit {
   readonly onClick?: (() => void) | undefined;
 }
 
+function useRelativeMousePos(): { x: Accessor<number>; y: Accessor<number> } {
+  const { x: rawX, y: rawY } = useMouse();
+  const { x: scrollX, y: scrollY } = useWindowScroll();
+  return {
+    x: () => rawX() - scrollX(),
+    y: () => rawY() - scrollY(),
+  };
+}
+
 function motion({ onClick }: ThrowableInit) {
   const { width: screenWidth, height: screenHeight } = useWindowSize();
   const [el, setEl] = createSignal<HTMLButtonElement>();
   const { width: buttonWidth, height: buttonHeight } = useElementSize(el);
-  const { x: mouseX, y: mouseY } = useMouse();
+  const { x: mouseX, y: mouseY } = useRelativeMousePos();
   const { pressed } = useMousePressed();
   const [containerDisplayed, setContainerDisplayed] =
     createSignal<boolean>(false);

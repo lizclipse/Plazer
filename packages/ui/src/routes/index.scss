@@ -2,7 +2,7 @@
 @use "~/common.scss";
 
 :root {
-  --colour-background: #ffebeb;
+  --colour-background: #e9e9e9;
   --colour-background-container: #e7d7da;
   --colour-border: #b08686;
   --colour-border-container: #b6b6b6;
@@ -16,13 +16,13 @@
 
   --colour-secondary: #ffe3e3;
 
-  --hub-inner-colour: #ffebeb99;
-  --hub-outer-colour: #c9acac55;
+  --hub-inner-colour: #ffebeb55;
+  --hub-outer-colour: #c9acac20;
 
   --size-container: 40rem;
 
   @media (prefers-color-scheme: dark) {
-    --colour-background: #270000;
+    --colour-background: #191919;
     --colour-background-container: #221d1d;
     --colour-border: #a16e6e;
     --colour-border-container: #272b2e;
@@ -34,8 +34,8 @@
 
     --colour-secondary: #440e00;
 
-    --hub-inner-colour: #27000099;
-    --hub-outer-colour: #6b3d3155;
+    --hub-inner-colour: #27000055;
+    --hub-outer-colour: #6b3d3120;
   }
 }
 
@@ -112,32 +112,36 @@ a {
   }
 }
 
-input:not([type]),
-input[type="date"],
-input[type="datetime-local"],
-input[type="email"],
-input[type="month"],
-input[type="number"],
-input[type="password"],
-input[type="search"],
-input[type="tel"],
-input[type="text"],
-input[type="time"],
-input[type="url"],
-input[type="week"],
-textarea,
-%input {
+:where(
+    input:not([type]),
+    input[type="date"],
+    input[type="datetime-local"],
+    input[type="email"],
+    input[type="month"],
+    input[type="number"],
+    input[type="password"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="text"],
+    input[type="time"],
+    input[type="url"],
+    input[type="week"],
+    textarea,
+    %input
+  ) {
   @extend %generic-input;
   border-radius: 0.1rem;
   padding: 0.4rem 0.6rem;
 }
 
-.btn,
-button,
-input[type="button"],
-input[type="reset"],
-input[type="submit"],
-%button {
+:where(
+    .btn,
+    button,
+    input[type="button"],
+    input[type="reset"],
+    input[type="submit"],
+    %button
+  ) {
   @extend %generic-input;
   border-radius: 0.2rem;
   cursor: pointer;
